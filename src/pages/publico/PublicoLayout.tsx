@@ -1,17 +1,22 @@
 import { Link, Outlet, useLocation } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 import { useCart } from '../../context/CartContext'
+import { useAuth } from '../../context/AuthContext'
+import { rtdb } from '../../service/firebase'
+import { ref, onValue, off } from 'firebase/database'
 // icons
-import { FiSearch } from "react-icons/fi";
+import { FiSearch, FiUser } from "react-icons/fi";
 import logo from '../../assets/logo.png'
 import { TiShoppingCart } from 'react-icons/ti';
 import { IoInformationOutline } from 'react-icons/io5';
 
 export default function PublicoLayout() {
   const [online, setOnline] = useState(true)
+  const [isLogista, setIsLogista] = useState(false)
   const location = useLocation()
   const { items } = useCart()
   const cartCount = useMemo(() => items.reduce((sum, i) => sum + i.qty, 0), [items])
+  const { user } = useAuth()
 
   useEffect(() => {
     const update = () => setOnline(navigator.onLine)
@@ -23,6 +28,21 @@ export default function PublicoLayout() {
       window.removeEventListener('offline', update)
     }
   }, [])
+
+  useEffect(() => {
+    if (!user) {
+      setIsLogista(false)
+      return
+    }
+    const logistaRef = ref(rtdb, `loja/arealogista/${user.uid}`)
+    const handleValue = (snapshot: any) => {
+      setIsLogista(!!snapshot.val())
+    }
+    onValue(logistaRef, handleValue)
+    return () => {
+      off(logistaRef, 'value', handleValue)
+    }
+  }, [user])
 
   const isActive = (path: string) => location.pathname === path
 
@@ -44,7 +64,7 @@ export default function PublicoLayout() {
             margin: '0 auto',
             padding: '10px 16px',
             display: 'grid',
-            gridTemplateColumns: '100px auto 60px',
+            gridTemplateColumns: '100px auto 60px auto',
             alignItems: 'center',
             gap: 12,
           }}
@@ -152,6 +172,30 @@ export default function PublicoLayout() {
               )}
             </Link>
           </div>
+          <Link
+            to={user ? (isLogista ? "/logista" : "/cliente") : "/login"}
+            style={{
+              textDecoration: 'none',
+              color: '#0f172a',
+              background: '#fff',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              padding: '8px 16px',
+              borderRadius: 999,
+              border: '1px solid #e2e8f0',
+            }}
+          >
+            <FiUser size={20} />
+            <div style={{ textAlign: 'left' }}>
+              <div style={{ fontSize: 12, fontWeight: 500 }}>
+                {user ? (isLogista ? `Área Logista` : `Olá!`) : 'olá, faça seu'}
+              </div>
+              <div style={{ fontSize: 12, fontWeight: 600 }}>
+                {user ? (user.phoneNumber || 'Usuário') : 'login ou cadastre-se'}
+              </div>
+            </div>
+          </Link>
         </div>
       </header>
 

@@ -6,6 +6,7 @@ export default function Cliente() {
     <div style={{ padding: 24 }}>
       <h1>Área do Cliente</h1>
       <div>Usuário: {user?.phoneNumber || user?.uid}</div>
+      <div>Usuário: {user?.uid}</div>
     </div>
   )
 }
