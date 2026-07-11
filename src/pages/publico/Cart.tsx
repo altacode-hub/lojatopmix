@@ -1,10 +1,10 @@
-import { useCart } from '../context/CartContext'
+import { useCart } from '../../context/CartContext'
 import { Link } from 'react-router-dom'
 
 export default function Cart() {
   const { items, remove, clear, total } = useCart()
   return (
-    <div style={{ padding: 24 }}>
+    <div>
       <h1>Carrinho</h1>
       {items.length === 0 ? (
         <div>Seu carrinho está vazio</div>

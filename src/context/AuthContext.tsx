@@ -1,13 +1,14 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { auth, setupRecaptcha } from '../service/firebase'
 import type { ConfirmationResult } from 'firebase/auth'
-import { onAuthStateChanged, signInWithPhoneNumber, signInAnonymously as fbSignInAnonymously } from 'firebase/auth'
+import { onAuthStateChanged, signInWithPhoneNumber, signInAnonymously as fbSignInAnonymously, signOut as fbSignOut } from 'firebase/auth'
 
 type AuthContextType = {
   user: { uid: string; phoneNumber: string | null } | null
   loading: boolean
   sendCode: (phone: string, recaptchaContainerId: string) => Promise<ConfirmationResult>
   signInAnonymously: () => Promise<void>
+  signOut: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -17,6 +18,9 @@ const AuthContext = createContext<AuthContextType>({
     throw new Error('not implemented')
   },
   signInAnonymously: async () => {
+    throw new Error('not implemented')
+  },
+  signOut: async () => {
     throw new Error('not implemented')
   },
 })
@@ -50,7 +54,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     await fbSignInAnonymously(auth)
   }
 
-  const value = useMemo(() => ({ user, loading, sendCode, signInAnonymously }), [user, loading])
+  const signOut = async () => {
+    await fbSignOut(auth)
+  }
+
+  const value = useMemo(() => ({ user, loading, sendCode, signInAnonymously, signOut }), [user, loading])
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 

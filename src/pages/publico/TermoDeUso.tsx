@@ -1,6 +1,6 @@
 export default function TermoDeUso() {
   return (
-    <div style={{ maxWidth: 800, margin: '40px auto', padding: '0 16px' }}>
+    <div style={{ maxWidth: 800, margin: '40px auto', padding: '0 16px', background: '#fff', borderRadius: 12 }}>
       <h1>Termos de Uso</h1>
       <p>
         Ao utilizar nossos serviços, você concorda com os termos abaixo. Leia atentamente para entender suas
@@ -19,9 +19,7 @@ export default function TermoDeUso() {
       </p>
 
       <h2>Uso adequado</h2>
-      <p>
-        É proibido utilizar o site para atividades ilegais, abusivas ou que violem direitos de terceiros.
-      </p>
+      <p>É proibido utilizar o site para atividades ilegais, abusivas ou que violem direitos de terceiros.</p>
 
       <h2>Limitação de responsabilidade</h2>
       <p>
@@ -30,14 +28,10 @@ export default function TermoDeUso() {
       </p>
 
       <h2>Alterações</h2>
-      <p>
-        Os Termos podem ser atualizados periodicamente. O uso contínuo implica concordância com as novas condições.
-      </p>
+      <p>Os Termos podem ser atualizados periodicamente. O uso contínuo implica concordância com as novas condições.</p>
 
       <h2>Contato</h2>
-      <p>
-        Em caso de dúvidas, entre em contato pelos canais oficiais de atendimento informados no site.
-      </p>
+      <p>Em caso de dúvidas, entre em contato pelos canais oficiais de atendimento informados no site.</p>
     </div>
   )
 }

@@ -1,6 +1,6 @@
 export default function PoliticaPrivacidade() {
   return (
-    <div style={{ maxWidth: 800, margin: '40px auto', padding: '0 16px' }}>
+    <div style={{ maxWidth: 800, margin: '40px auto', padding: '0 16px', background: '#fff', borderRadius: 12 }}>
       <h1>Política de Privacidade</h1>
       <p>
         Valorizamos a sua privacidade. Esta Política descreve como coletamos, utilizamos e protegemos suas informações
@@ -38,9 +38,7 @@ export default function PoliticaPrivacidade() {
       </p>
 
       <h2>Contato</h2>
-      <p>
-        Em caso de dúvidas, entre em contato pelos canais oficiais de atendimento informados no site.
-      </p>
+      <p>Em caso de dúvidas, entre em contato pelos canais oficiais de atendimento informados no site.</p>
     </div>
   )
 }
