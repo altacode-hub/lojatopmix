@@ -1,11 +1,18 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { FiHome, FiPlusSquare, FiClock, FiTag, FiHelpCircle, FiLogOut } from 'react-icons/fi'
+import { useMediaQuery } from '../../hooks/useMediaQuery'
 
-export default function SidebarLogista() {
+interface SidebarLogistaProps {
+  isOpen: boolean
+  onClose: () => void
+}
+
+export default function SidebarLogista({ isOpen, onClose }: SidebarLogistaProps) {
   const { user, signOut } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
+  const isMobile = useMediaQuery('(max-width: 768px)')
 
   const isActive = (path: string) => location.pathname === path
 
@@ -14,27 +21,57 @@ export default function SidebarLogista() {
     navigate('/login', { replace: true })
   }
 
+  const handleLinkClick = () => {
+    if (isMobile) {
+      onClose()
+    }
+  }
+
   return (
     <aside
       style={{
-        width: 240,
+        width: isMobile ? (isOpen ? 240 : 0) : 240,
         background: '#fdf2f8',
-        borderRight: '1px solid #f3e8ff',
+        borderRight: isMobile ? (isOpen ? '1px solid #f3e8ff' : 'none') : '1px solid #f3e8ff',
         display: 'flex',
         flexDirection: 'column',
-        padding: 16,
+        padding: isMobile ? (isOpen ? 16 : 0) : 16,
         minHeight: '100vh',
-        position: 'sticky',
-        top: 0,
+        position: isMobile ? 'fixed' : 'sticky',
+        top: isMobile ? 0 : 0,
+        left: isMobile ? (isOpen ? 0 : -240) : 0,
+        zIndex: isMobile ? 60 : 0,
         alignItems: 'flex-start',
+        overflow: isMobile ? (isOpen ? 'auto' : 'hidden') : 'auto',
+        transition: 'all 0.3s ease',
       }}
     >
-      <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 8, textAlign: 'left' }}>Top Mix Store</div>
-      <div style={{ color: '#6b7280', fontSize: 12, marginBottom: 16, textAlign: 'left' }}>Área do Logista</div>
+      <div style={{ 
+        fontWeight: 700, 
+        fontSize: 18, 
+        marginBottom: 8, 
+        textAlign: 'left', 
+        display: isMobile && !isOpen ? 'none' : 'block'
+      }}>Top Mix Store</div>
+      <div style={{ 
+        color: '#6b7280', 
+        fontSize: 12, 
+        marginBottom: 16, 
+        textAlign: 'left',
+        display: isMobile && !isOpen ? 'none' : 'block'
+      }}>Área do Logista</div>
 
-      <nav style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%' }}>
+      <nav style={{ 
+        display: 'flex', 
+        flexDirection: 'column', 
+        gap: 8, 
+        width: '100%',
+        opacity: isMobile && !isOpen ? 0 : 1,
+        pointerEvents: isMobile && !isOpen ? 'none' : 'auto',
+      }}>
         <Link
           to="/logista"
+          onClick={handleLinkClick}
           style={{
             padding: '10px 12px',
             borderRadius: 10,
@@ -49,10 +86,11 @@ export default function SidebarLogista() {
           }}
         >
           <FiHome size={18} />
-          Dashboard
+          {(!isMobile || isOpen) && <span>Dashboard</span>}
         </Link>
         <Link
           to="/logista/novo-pedido"
+          onClick={handleLinkClick}
           style={{
             padding: '10px 12px',
             borderRadius: 10,
@@ -67,7 +105,7 @@ export default function SidebarLogista() {
           }}
         >
           <FiPlusSquare size={18} />
-          Novo Pedido
+          {(!isMobile || isOpen) && <span>Novo Pedido</span>}
         </Link>
         <div
           style={{
@@ -83,7 +121,7 @@ export default function SidebarLogista() {
           title="Em breve"
         >
           <FiClock size={18} />
-          Histórico
+          {(!isMobile || isOpen) && <span>Histórico</span>}
         </div>
         <div
           style={{
@@ -99,7 +137,7 @@ export default function SidebarLogista() {
           title="Em breve"
         >
           <FiTag size={18} />
-          Categorias
+          {(!isMobile || isOpen) && <span>Categorias</span>}
         </div>
         <div
           style={{
@@ -115,11 +153,17 @@ export default function SidebarLogista() {
           title="Em breve"
         >
           <FiHelpCircle size={18} />
-          Como Funciona
+          {(!isMobile || isOpen) && <span>Como Funciona</span>}
         </div>
       </nav>
 
-      <div style={{ marginTop: 'auto', width: '100%', textAlign: 'left' }}>
+      <div style={{ 
+        marginTop: 'auto', 
+        width: '100%', 
+        textAlign: 'left',
+        opacity: isMobile && !isOpen ? 0 : 1,
+        pointerEvents: isMobile && !isOpen ? 'none' : 'auto',
+      }}>
         <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 6 }}>Logado como:</div>
         <div style={{ fontSize: 14, marginBottom: 8, wordBreak: 'break-all' }}>
           {user?.phoneNumber || user?.uid}
@@ -140,7 +184,7 @@ export default function SidebarLogista() {
           }}
         >
           <FiLogOut size={18} />
-          Sair
+          {(!isMobile || isOpen) && <span>Sair</span>}
         </button>
       </div>
     </aside>

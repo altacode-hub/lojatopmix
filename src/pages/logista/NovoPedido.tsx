@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { rtdb } from '../../service/firebase'
-import { ref, push, serverTimestamp } from 'firebase/database'
+import { ref, set, serverTimestamp } from 'firebase/database'
 
 export default function NovoPedido() {
   const { user } = useAuth()
@@ -38,17 +38,25 @@ export default function NovoPedido() {
     }
     setSalvando(true)
     try {
-      const pedidosRef = ref(rtdb, `pedidos/${user.uid}`)
+      const purchaseId = Date.now().toString()
+      const purchaseRef = ref(rtdb, `purchases/${purchaseId}`)
       const data = {
-        nome,
-        qtdPecas,
-        custoLogistica,
-        custoPorPeca,
-        status: 'rascunho',
+        name: nome,
+        date: Date.now(),
+        costs: {
+          freight: custoLogistica,
+          travel: 0,
+          consultancy: 0,
+          other: 0,
+        },
+        totalPieces: qtdPecas,
+        totalCost: custoLogistica,
+        status: 'draft',
         createdAt: serverTimestamp(),
+        uid: user.uid,
       }
-      const res = await push(pedidosRef, data)
-      navigate('/logista', { state: { novoPedidoId: res.key }, replace: true })
+      await set(purchaseRef, data)
+      navigate(`/logista/novo-pedido/${purchaseId}/produtos`, { replace: true })
     } catch (e: any) {
       setErro(e?.message || 'Erro ao salvar pedido')
     } finally {
@@ -102,7 +110,7 @@ export default function NovoPedido() {
             onChange={(e) => setNome(e.target.value)}
             placeholder="Ex: Pedido Fornecedor ABC - Janeiro 2026"
             style={{
-              width: '100%',
+              width: '-webkit-fill-available',
               padding: '12px 14px',
               borderRadius: 8,
               border: '1px solid #e5e7eb',
@@ -123,7 +131,7 @@ export default function NovoPedido() {
               onChange={(e) => setQtdPecas(e.target.value ? Number(e.target.value) : '')}
               placeholder="Ex: 50"
               style={{
-                width: '100%',
+                width: '-webkit-fill-available',
                 padding: '12px 14px',
                 borderRadius: 8,
                 border: '1px solid #e5e7eb',
@@ -151,7 +159,7 @@ export default function NovoPedido() {
                 onChange={(e) => setCustoLogistica(e.target.value ? Number(e.target.value) : '')}
                 placeholder="0,00"
                 style={{
-                  width: '100%',
+                  width: '-webkit-fill-available',
                   padding: '12px 14px 12px 36px',
                   borderRadius: 8,
                   border: '1px solid #e5e7eb',
