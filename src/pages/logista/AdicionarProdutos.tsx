@@ -42,6 +42,7 @@ export default function AdicionarProdutos() {
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [editingProductId, setEditingProductId] = useState<string | null>(null)
   
   // Current form state
   const [productName, setProductName] = useState('')
@@ -75,8 +76,9 @@ export default function AdicionarProdutos() {
       try {
         // Load purchase
         const purchaseSnap = await get(ref(rtdb, `purchases/${purchaseId}`))
-        if (purchaseSnap.exists()) {
-          setPurchase(purchaseSnap.val())
+        const purchaseData = purchaseSnap.exists() ? purchaseSnap.val() : null
+        if (purchaseData) {
+          setPurchase(purchaseData)
         }
         
         // Load categories
@@ -87,6 +89,73 @@ export default function AdicionarProdutos() {
             cats.push({ id: child.key, ...child.val() })
           })
           setCategories(cats.sort((a, b) => a.order - b.order))
+        }
+        
+        // Load existing products in the purchase
+        const purchaseItemsSnap = await get(ref(rtdb, `purchaseItems/${purchaseId}`))
+        if (purchaseItemsSnap.exists()) {
+          const loadedProducts: Product[] = []
+          const purchaseItems = purchaseItemsSnap.val()
+          
+          for (const productId in purchaseItems) {
+            const productSnap = await get(ref(rtdb, `products/${productId}`))
+            if (productSnap.exists()) {
+              const productData = productSnap.val()
+              const pricing = productData.pricing || {}
+              
+              // Convert variations from object to array
+              const variationsArray: ProductVariation[] = []
+              if (productData.variations) {
+                for (const key in productData.variations) {
+                  const v = productData.variations[key]
+                  variationsArray.push({
+                    size: v.size,
+                    color: v.color,
+                    quantity: v.stock || v.quantity || 0
+                  })
+                }
+              }
+              
+              // Calculate the additional fields we need (priceWithMargin, grossMarginPercentage, totalPieces)
+              const tempUnitCost = pricing.unitCost || 0
+              const tempPackaging = pricing.packaging || 0
+              const tempGifts = pricing.gifts || 0
+              const tempAccessories = pricing.accessories || 0
+              const tempLogisticsCost = purchaseData && purchaseData.totalPieces > 0 
+                ? Number(((purchaseData.costs?.freight || 0) + (purchaseData.costs?.travel || 0) + (purchaseData.costs?.consultancy || 0) + (purchaseData.costs?.other || 0)) / purchaseData.totalPieces)
+                : 0
+              const tempGrossMargin = pricing.grossMargin || 0
+              
+              const tempBaseCost = tempUnitCost + tempPackaging + tempGifts + tempAccessories + tempLogisticsCost
+              const tempPriceWithMargin = tempBaseCost + tempGrossMargin
+              const tempGrossMarginPercentage = tempBaseCost > 0 ? (tempGrossMargin / tempBaseCost) * 100 : 0
+              const tempTotalPieces = variationsArray.reduce((sum, v) => sum + v.quantity, 0)
+              
+              loadedProducts.push({
+                id: productId,
+                name: productData.name || '',
+                description: productData.description || '',
+                supplierName: productData.supplierName || '',
+                categoryId: productData.categoryId || '',
+                unitCost: tempUnitCost,
+                packaging: tempPackaging,
+                gifts: tempGifts,
+                accessories: tempAccessories,
+                sellerCommission: pricing.sellerCommission || 0,
+                taxes: pricing.taxes || 0,
+                operational: pricing.operational || 0,
+                grossMargin: tempGrossMargin,
+                cardFee: pricing.cardFee || 0,
+                salePrice: pricing.salePrice || 0,
+                priceWithMargin: tempPriceWithMargin,
+                grossMarginPercentage: tempGrossMarginPercentage,
+                totalPieces: tempTotalPieces,
+                variations: variationsArray
+              })
+            }
+          }
+          
+          setProducts(loadedProducts)
         }
       } catch (e) {
         console.error('Error loading data:', e)
@@ -226,31 +295,89 @@ export default function AdicionarProdutos() {
     const tempGrossMarginPercentage = tempBaseCost > 0 ? (tempGrossMargin / tempBaseCost) * 100 : 0
     const tempTotalPieces = variations.reduce((sum, v) => sum + v.quantity, 0)
     
-    const newProduct: Product = {
-      id: Date.now().toString(),
-      name: productName,
-      description: productDescription,
-      supplierName,
-      categoryId,
-      unitCost,
-      packaging: tempPackaging,
-      gifts: tempGifts,
-      accessories: tempAccessories,
-      sellerCommission: typeof sellerCommission === 'number' ? sellerCommission : 0,
-      taxes: typeof taxes === 'number' ? taxes : 0,
-      operational: typeof operational === 'number' ? operational : 0,
-      grossMargin: tempGrossMargin,
-      cardFee: typeof cardFee === 'number' ? cardFee : 0,
-      salePrice: calculateSalePrice(),
-      priceWithMargin: tempPriceWithMargin,
-      grossMarginPercentage: tempGrossMarginPercentage,
-      totalPieces: tempTotalPieces,
-      variations,
+    if (editingProductId) {
+      // Update existing product
+      const updatedProducts = products.map(product => {
+        if (product.id === editingProductId) {
+          return {
+            ...product,
+            name: productName,
+            description: productDescription,
+            supplierName,
+            categoryId,
+            unitCost,
+            packaging: tempPackaging,
+            gifts: tempGifts,
+            accessories: tempAccessories,
+            sellerCommission: typeof sellerCommission === 'number' ? sellerCommission : 0,
+            taxes: typeof taxes === 'number' ? taxes : 0,
+            operational: typeof operational === 'number' ? operational : 0,
+            grossMargin: tempGrossMargin,
+            cardFee: typeof cardFee === 'number' ? cardFee : 0,
+            salePrice: calculateSalePrice(),
+            priceWithMargin: tempPriceWithMargin,
+            grossMarginPercentage: tempGrossMarginPercentage,
+            totalPieces: tempTotalPieces,
+            variations,
+          }
+        }
+        return product
+      })
+      setProducts(updatedProducts)
+    } else {
+      // Add new product
+      const newProduct: Product = {
+        id: Date.now().toString(),
+        name: productName,
+        description: productDescription,
+        supplierName,
+        categoryId,
+        unitCost,
+        packaging: tempPackaging,
+        gifts: tempGifts,
+        accessories: tempAccessories,
+        sellerCommission: typeof sellerCommission === 'number' ? sellerCommission : 0,
+        taxes: typeof taxes === 'number' ? taxes : 0,
+        operational: typeof operational === 'number' ? operational : 0,
+        grossMargin: tempGrossMargin,
+        cardFee: typeof cardFee === 'number' ? cardFee : 0,
+        salePrice: calculateSalePrice(),
+        priceWithMargin: tempPriceWithMargin,
+        grossMarginPercentage: tempGrossMarginPercentage,
+        totalPieces: tempTotalPieces,
+        variations,
+      }
+      setProducts([...products, newProduct])
     }
     
-    setProducts([...products, newProduct])
-    
     // Reset form
+    cancelEdit()
+  }
+  
+  const removeProduct = (productId: string) => {
+    setProducts(products.filter(p => p.id !== productId))
+  }
+  
+  const handleEditProduct = (product: Product) => {
+    setEditingProductId(product.id)
+    setProductName(product.name)
+    setProductDescription(product.description)
+    setSupplierName(product.supplierName)
+    setCategoryId(product.categoryId)
+    setUnitCost(product.unitCost)
+    setPackaging(product.packaging)
+    setGifts(product.gifts)
+    setAccessories(product.accessories)
+    setSellerCommission(product.sellerCommission)
+    setTaxes(product.taxes)
+    setOperational(product.operational)
+    setGrossMargin(product.grossMargin)
+    setCardFee(product.cardFee)
+    setVariations(product.variations)
+  }
+  
+  const cancelEdit = () => {
+    setEditingProductId(null)
     setProductName('')
     setProductDescription('')
     setSupplierName('')
@@ -265,10 +392,6 @@ export default function AdicionarProdutos() {
     setGrossMargin('')
     setCardFee('')
     setVariations([])
-  }
-  
-  const removeProduct = (productId: string) => {
-    setProducts(products.filter(p => p.id !== productId))
   }
   
   const finalizePurchase = async () => {
@@ -1138,6 +1261,23 @@ export default function AdicionarProdutos() {
         >
           {saving ? 'Finalizando...' : 'Finalizar Pedido'}
         </button>
+        
+        {editingProductId && (
+          <button
+            onClick={cancelEdit}
+            style={{
+              padding: '12px 20px',
+              borderRadius: 12,
+              border: '1px solid #e5e7eb',
+              background: '#fff',
+              cursor: 'pointer',
+              alignSelf: 'flex-start',
+              fontSize: '14px',
+            }}
+          >
+            Cancelar
+          </button>
+        )}
 
         <button
           onClick={addProduct}
@@ -1155,7 +1295,7 @@ export default function AdicionarProdutos() {
             opacity: (!productName.trim() || typeof unitCost !== 'number' || unitCost <= 0 || variations.length === 0) ? 0.7 : 1,
           }}
         >
-          + Adicionar Produto
+          {editingProductId ? 'Atualizar Produto' : '+ Adicionar Produto'}
         </button>
       </div>
       
@@ -1196,17 +1336,20 @@ export default function AdicionarProdutos() {
                     {product.name}
                   </h3>
                   <div style={{ display: 'flex', gap: 12 }}>
-                    <button style={{
-                      padding: '8px 12px',
-                      borderRadius: 10,
-                      border: '1px solid #e5e7eb',
-                      background: '#fff',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      fontSize: 14
-                    }}>
+                    <button
+                      onClick={() => handleEditProduct(product)}
+                      style={{
+                        padding: '8px 12px',
+                        borderRadius: 10,
+                        border: '1px solid #e5e7eb',
+                        background: '#fff',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        fontSize: 14
+                      }}
+                    >
                       <FiEdit /> Editar
                     </button>
                     <button
@@ -1246,40 +1389,40 @@ export default function AdicionarProdutos() {
                 {/* Pricing Info */}
                 <div style={{ 
                   display: 'grid', 
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', 
-                  gap: 16, 
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 120px))', 
+                  gap: 8, 
                   marginBottom: 16
                 }}>
                   <div>
-                    <div style={{ fontSize: 14, color: '#6b7280', marginBottom: 4 }}>Preço à vista</div>
-                    <div style={{ fontSize: 18, fontWeight: 700, color: '#059669' }}>
+                    <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 4 }}>Preço à vista</div>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: '#059669' }}>
                       R$ {product.priceWithMargin.toFixed(2)}
                     </div>
                   </div>
                   <div>
-                    <div style={{ fontSize: 14, color: '#6b7280', marginBottom: 4 }}>Preço no cartão</div>
-                    <div style={{ fontSize: 18, fontWeight: 700, color: '#2563eb' }}>
+                    <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 4 }}>Preço no cartão</div>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: '#2563eb' }}>
                       R$ {product.salePrice.toFixed(2)}
                     </div>
                   </div>
                   <div>
-                    <div style={{ fontSize: 14, color: '#6b7280', marginBottom: 4 }}>Total de peças</div>
-                    <div style={{ fontSize: 18, fontWeight: 700 }}>
+                    <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 4 }}>Total de peças</div>
+                    <div style={{ fontSize: 12, fontWeight: 700 }}>
                       {product.totalPieces}
                     </div>
                   </div>
                   <div>
-                    <div style={{ fontSize: 14, color: '#6b7280', marginBottom: 4 }}>Margem</div>
-                    <div style={{ fontSize: 18, fontWeight: 700 }}>
-                      {product.grossMarginPercentage.toFixed(1)}%
+                    <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 4 }}>Margem</div>
+                    <div style={{ fontSize: 12, fontWeight: 700 }}>
+                      R$ {product.grossMargin.toFixed(2)}
                     </div>
                   </div>
                 </div>
                 
                 {/* Variations */}
                 <div style={{ marginBottom: 16 }}>
-                  <div style={{ fontSize: 14, color: '#6b7280', marginBottom: 8 }}>Variações:</div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 8 }}>Variações:</div>
+                  <div style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: 8 }}>
                     {product.variations.map((v, i) => (
                       <div key={i} style={{
                         background: '#fff',
