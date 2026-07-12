@@ -2,6 +2,7 @@ import { Route, Routes } from 'react-router-dom'
 import PublicoLayout from './pages/publico/PublicoLayout'
 import { publicoRoutes } from './pages/publico/PublicoRoutes'
 import Checkout from './pages/Checkout'
+import CheckoutReturn from './pages/CheckoutReturn'
 import Cliente from './pages/Cliente'
 import LogistaLayout from './pages/logista/LogistaLayout'
 import { logistaRoutes } from './pages/logista/LogistaRoutes'
@@ -17,6 +18,7 @@ export default function App() {
             <Route key={i} {...route} />
           ))}
         </Route>
+        <Route path="/checkout/retorno" element={<CheckoutReturn />} />
         <Route
           path="/checkout"
           element={
