@@ -33,6 +33,27 @@ interface Product {
   variations: ProductVariation[]
 }
 
+interface ProductFormDraft {
+  editingProductId: string | null
+  productName: string
+  productDescription: string
+  supplierName: string
+  categoryId: string
+  unitCost: number | ''
+  packaging: number | ''
+  gifts: number | ''
+  accessories: number | ''
+  sellerCommission: number | ''
+  taxes: number | ''
+  operational: number | ''
+  grossMargin: number | ''
+  cardFee: number | ''
+  variations: ProductVariation[]
+  newVariationSize: string
+  newVariationColor: string
+  newVariationQuantity: number | ''
+}
+
 export default function AdicionarProdutos() {
   const { purchaseId } = useParams<{ purchaseId: string }>()
   const { user } = useAuth()
@@ -67,6 +88,76 @@ export default function AdicionarProdutos() {
   const [categories, setCategories] = useState<any[]>([])
   const [sizes] = useState(['34', '36', '38', '40', '42', '44', '46', 'PP', 'P', 'M', 'G', 'GG', 'XG'])
   const [colors] = useState(['Branco', 'Preto', 'Vermelho', 'Azul', 'Verde', 'Amarelo', 'Rosa', 'Bege', 'Marrom', 'Cinza'])
+
+  const getDraftStorageKey = (id: string) => `adicionar-produtos-rascunho:${id}`
+  const getFormDraftStorageKey = (id: string) => `adicionar-produtos-formulario:${id}`
+
+  const readDraftProducts = (id: string) => {
+    if (typeof window === 'undefined') return null
+
+    try {
+      const rawDraft = window.localStorage.getItem(getDraftStorageKey(id))
+      if (!rawDraft) return null
+
+      const parsedDraft = JSON.parse(rawDraft)
+
+      if (Array.isArray(parsedDraft)) {
+        return parsedDraft as Product[]
+      }
+
+      if (Array.isArray(parsedDraft?.products)) {
+        return parsedDraft.products as Product[]
+      }
+
+      return null
+    } catch (error) {
+      console.error('Error reading local draft:', error)
+      window.localStorage.removeItem(getDraftStorageKey(id))
+      return null
+    }
+  }
+
+  const readFormDraft = (id: string) => {
+    if (typeof window === 'undefined') return null
+
+    try {
+      const rawDraft = window.localStorage.getItem(getFormDraftStorageKey(id))
+      if (!rawDraft) return null
+
+      const parsedDraft = JSON.parse(rawDraft)
+
+      if (parsedDraft && typeof parsedDraft === 'object') {
+        return parsedDraft as ProductFormDraft
+      }
+
+      return null
+    } catch (error) {
+      console.error('Error reading local form draft:', error)
+      window.localStorage.removeItem(getFormDraftStorageKey(id))
+      return null
+    }
+  }
+
+  const applyFormDraft = (draft: ProductFormDraft) => {
+    setEditingProductId(draft.editingProductId)
+    setProductName(draft.productName)
+    setProductDescription(draft.productDescription)
+    setSupplierName(draft.supplierName)
+    setCategoryId(draft.categoryId)
+    setUnitCost(draft.unitCost)
+    setPackaging(draft.packaging)
+    setGifts(draft.gifts)
+    setAccessories(draft.accessories)
+    setSellerCommission(draft.sellerCommission)
+    setTaxes(draft.taxes)
+    setOperational(draft.operational)
+    setGrossMargin(draft.grossMargin)
+    setCardFee(draft.cardFee)
+    setVariations(draft.variations)
+    setNewVariationSize(draft.newVariationSize)
+    setNewVariationColor(draft.newVariationColor)
+    setNewVariationQuantity(draft.newVariationQuantity)
+  }
   
   // Load purchase and categories
   useEffect(() => {
@@ -92,9 +183,9 @@ export default function AdicionarProdutos() {
         }
         
         // Load existing products in the purchase
+        const loadedProducts: Product[] = []
         const purchaseItemsSnap = await get(ref(rtdb, `purchaseItems/${purchaseId}`))
         if (purchaseItemsSnap.exists()) {
-          const loadedProducts: Product[] = []
           const purchaseItems = purchaseItemsSnap.val()
           
           for (const productId in purchaseItems) {
@@ -154,8 +245,18 @@ export default function AdicionarProdutos() {
               })
             }
           }
-          
+        }
+
+        const draftProducts = readDraftProducts(purchaseId)
+        if (draftProducts && draftProducts.length > 0) {
+          setProducts(draftProducts)
+        } else {
           setProducts(loadedProducts)
+        }
+
+        const formDraft = readFormDraft(purchaseId)
+        if (formDraft) {
+          applyFormDraft(formDraft)
         }
       } catch (e) {
         console.error('Error loading data:', e)
@@ -166,6 +267,99 @@ export default function AdicionarProdutos() {
     
     loadData()
   }, [purchaseId])
+
+  useEffect(() => {
+    if (!purchaseId || loading || typeof window === 'undefined') return
+
+    const draftKey = getDraftStorageKey(purchaseId)
+
+    if (products.length === 0) {
+      window.localStorage.removeItem(draftKey)
+      return
+    }
+
+    window.localStorage.setItem(
+      draftKey,
+      JSON.stringify({
+        products,
+        savedAt: Date.now(),
+      })
+    )
+  }, [loading, products, purchaseId])
+
+  useEffect(() => {
+    if (!purchaseId || loading || typeof window === 'undefined') return
+
+    const formDraftKey = getFormDraftStorageKey(purchaseId)
+    const formDraft: ProductFormDraft = {
+      editingProductId,
+      productName,
+      productDescription,
+      supplierName,
+      categoryId,
+      unitCost,
+      packaging,
+      gifts,
+      accessories,
+      sellerCommission,
+      taxes,
+      operational,
+      grossMargin,
+      cardFee,
+      variations,
+      newVariationSize,
+      newVariationColor,
+      newVariationQuantity,
+    }
+
+    const isFormEmpty =
+      !editingProductId &&
+      !productName.trim() &&
+      !productDescription.trim() &&
+      !supplierName.trim() &&
+      !categoryId &&
+      unitCost === '' &&
+      packaging === '' &&
+      gifts === '' &&
+      accessories === '' &&
+      sellerCommission === '' &&
+      taxes === '' &&
+      operational === '' &&
+      grossMargin === '' &&
+      cardFee === '' &&
+      variations.length === 0 &&
+      !newVariationSize &&
+      !newVariationColor &&
+      newVariationQuantity === ''
+
+    if (isFormEmpty) {
+      window.localStorage.removeItem(formDraftKey)
+      return
+    }
+
+    window.localStorage.setItem(formDraftKey, JSON.stringify(formDraft))
+  }, [
+    loading,
+    purchaseId,
+    editingProductId,
+    productName,
+    productDescription,
+    supplierName,
+    categoryId,
+    unitCost,
+    packaging,
+    gifts,
+    accessories,
+    sellerCommission,
+    taxes,
+    operational,
+    grossMargin,
+    cardFee,
+    variations,
+    newVariationSize,
+    newVariationColor,
+    newVariationQuantity,
+  ])
   
   // Calculate total cost per piece from purchase
   const custoPorPeca = purchase && purchase.totalPieces > 0 
@@ -462,6 +656,11 @@ export default function AdicionarProdutos() {
       
       // Update purchase status
       await set(ref(rtdb, `purchases/${purchaseId}/status`), 'completed')
+
+      if (typeof window !== 'undefined') {
+        window.localStorage.removeItem(getDraftStorageKey(purchaseId))
+        window.localStorage.removeItem(getFormDraftStorageKey(purchaseId))
+      }
       
       navigate('/logista')
     } catch (e: any) {

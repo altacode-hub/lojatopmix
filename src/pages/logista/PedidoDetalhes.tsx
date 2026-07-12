@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { rtdb } from '../../service/firebase'
 import { ref, get } from 'firebase/database'
+import { FiPackage, FiEdit, FiTrash2 } from 'react-icons/fi'
 
 interface ProductVariation {
   size: string
@@ -206,78 +207,165 @@ export default function PedidoDetalhes() {
       
       {/* Products List */}
       {products.length > 0 && (
-        <div>
-          <h2 style={{ margin: '0 0 16px 0', fontSize: 22 }}>Produtos ({products.length})</h2>
+        <div style={{ marginBottom: 24 }}>
+          <h2 style={{ 
+            margin: '0 0 16px 0', 
+            fontSize: 24, 
+            fontWeight: 700,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}>
+            <FiPackage /> Produtos Adicionados ao Pedido ({products.length})
+          </h2>
           
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {products.map((product) => {
               const variations = Object.values(product.variations || {})
               const totalQty = variations.reduce((sum, v) => sum + (v.quantity || 0), 0)
               
+              // Calculate additional fields
+              const tempUnitCost = product.pricing?.unitCost || 0
+              const tempPackaging = product.pricing?.packaging || 0
+              const tempGifts = product.pricing?.gifts || 0
+              const tempAccessories = product.pricing?.accessories || 0
+              const tempLogisticsCost = Number(custoPorPeca)
+              const tempGrossMargin = product.pricing?.grossMargin || 0
+              
+              const tempBaseCost = tempUnitCost + tempPackaging + tempGifts + tempAccessories + tempLogisticsCost
+              const tempPriceWithMargin = tempBaseCost + tempGrossMargin
+              
               return (
                 <div key={product.id} style={{
-                  background: '#fff',
-                  border: '1px solid #e5e7eb',
+                  background: '#faf5ff',
+                  border: '1px solid #e9d5ff',
                   borderRadius: 16,
-                  padding: 20
+                  padding: 24,
                 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
-                    <div>
-                      <div style={{ fontWeight: 600, fontSize: 18, marginBottom: 4 }}>{product.name}</div>
-                      {product.supplierName && (
-                        <div style={{ color: '#6b7280', fontSize: 14, marginBottom: 4 }}>Fornecedor: {product.supplierName}</div>
-                      )}
-                      {product.description && (
-                        <div style={{ color: '#6b7280', fontSize: 14 }}>{product.description}</div>
-                      )}
-                    </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: 14, color: '#6b7280', marginBottom: 4 }}>Preço de Venda</div>
-                      <div style={{ fontWeight: 700, fontSize: 22, color: '#8b5cf6' }}>
-                        R$ {(product.pricing?.salePrice || 0).toFixed(2)}
-                      </div>
+                  {/* Product Header */}
+                  <div style={{ 
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    alignItems: 'flex-start',
+                    marginBottom: 16
+                  }}>
+                    <h3 style={{ 
+                      margin: 0, 
+                      fontSize: 20, 
+                      fontWeight: 600 
+                    }}>
+                      {product.name}
+                    </h3>
+                    {/* We don't have edit/remove functions here, but let's keep the styling */}
+                    <div style={{ display: 'flex', gap: 12 }}>
+                      <button style={{
+                        padding: '8px 12px',
+                        borderRadius: 10,
+                        border: '1px solid #e5e7eb',
+                        background: '#fff',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        fontSize: 14
+                      }}>
+                        <FiEdit /> Editar
+                      </button>
+                      <button style={{
+                        padding: '8px 12px',
+                        borderRadius: 10,
+                        border: '1px solid #fee2e2',
+                        background: '#fff',
+                        color: '#dc2626',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        fontSize: 14
+                      }}>
+                        <FiTrash2 />
+                      </button>
                     </div>
                   </div>
                   
+                  {/* Supplier */}
+                  {product.supplierName && (
+                    <div style={{ 
+                      fontSize: 14, 
+                      color: '#6b7280', 
+                      marginBottom: 16,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}>
+                      Fornecedor: {product.supplierName}
+                    </div>
+                  )}
+                  
                   {/* Pricing Info */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 12, marginBottom: 12, paddingTop: 12, borderTop: '1px solid #e5e7eb' }}>
+                  <div style={{ 
+                    display: 'grid', 
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', 
+                    gap: 16, 
+                    marginBottom: 16
+                  }}>
                     <div>
-                      <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 2 }}>Custo Unitário</div>
-                      <div style={{ fontSize: 14, fontWeight: 600 }}>R$ {(product.pricing?.unitCost || 0).toFixed(2)}</div>
+                      <div style={{ fontSize: 14, color: '#6b7280', marginBottom: 4 }}>Preço à vista</div>
+                      <div style={{ fontSize: 18, fontWeight: 700, color: '#059669' }}>
+                        R$ {tempPriceWithMargin.toFixed(2)}
+                      </div>
                     </div>
                     <div>
-                      <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 2 }}>Embalagem</div>
-                      <div style={{ fontSize: 14, fontWeight: 600 }}>R$ {(product.pricing?.packaging || 0).toFixed(2)}</div>
+                      <div style={{ fontSize: 14, color: '#6b7280', marginBottom: 4 }}>Preço no cartão</div>
+                      <div style={{ fontSize: 18, fontWeight: 700, color: '#2563eb' }}>
+                        R$ {(product.pricing?.salePrice || 0).toFixed(2)}
+                      </div>
                     </div>
                     <div>
-                      <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 2 }}>Margem</div>
-                      <div style={{ fontSize: 14, fontWeight: 600 }}>R$ {(product.pricing?.grossMargin || 0).toFixed(2)}</div>
+                      <div style={{ fontSize: 14, color: '#6b7280', marginBottom: 4 }}>Total de peças</div>
+                      <div style={{ fontSize: 18, fontWeight: 700 }}>
+                        {totalQty}
+                      </div>
                     </div>
                     <div>
-                      <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 2 }}>Total Peças</div>
-                      <div style={{ fontSize: 14, fontWeight: 600 }}>{totalQty} un</div>
+                      <div style={{ fontSize: 14, color: '#6b7280', marginBottom: 4 }}>Margem</div>
+                      <div style={{ fontSize: 18, fontWeight: 700 }}>
+                        R$ {tempGrossMargin.toFixed(2)}
+                      </div>
                     </div>
                   </div>
                   
                   {/* Variations */}
-                  {variations.length > 0 && (
-                    <div style={{ paddingTop: 12, borderTop: '1px solid #e5e7eb' }}>
-                      <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 8 }}>Variações:</div>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                        {variations.map((v, idx) => (
-                          <div key={idx} style={{
-                            padding: '6px 10px',
-                            background: '#f3e8ff',
-                            borderRadius: 8,
-                            fontSize: 13,
-                            color: '#7c3aed'
-                          }}>
-                            {v.size} {v.color && `(${v.color})`} - {v.quantity || 0} un
-                          </div>
-                        ))}
-                      </div>
+                  <div style={{ marginBottom: 16 }}>
+                    <div style={{ fontSize: 14, color: '#6b7280', marginBottom: 8 }}>Variações:</div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center' }}>
+                      {variations.map((v, idx) => (
+                        <div key={idx} style={{
+                          background: '#fff',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: 8,
+                          padding: '6px 12px',
+                          fontSize: 14
+                        }}>
+                          {v.size}{v.color ? ` • ${v.color}` : ''} • {v.quantity || 0}x
+                        </div>
+                      ))}
                     </div>
-                  )}
+                  </div>
+                  
+                  {/* Total Revenue */}
+                  <div style={{
+                    background: '#ecfdf5',
+                    border: '1px solid #10b981',
+                    borderRadius: 12,
+                    padding: 16,
+                    textAlign: 'center'
+                  }}>
+                    <div style={{ fontSize: 14, color: '#059669', marginBottom: 4 }}>Receita Total</div>
+                    <div style={{ fontSize: 20, fontWeight: 700, color: '#059669' }}>
+                      R$ {(tempPriceWithMargin * totalQty).toFixed(2)}
+                    </div>
+                  </div>
                 </div>
               )
             })}
