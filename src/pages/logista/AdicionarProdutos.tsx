@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { rtdb } from '../../service/firebase'
-import { ref, get, set } from 'firebase/database'
+import { get, push, ref, update } from 'firebase/database'
 import { FiPackage, FiCreditCard, FiTrendingUp, FiBox, FiDollarSign, FiBarChart2, FiCheckCircle, FiTarget, FiTrendingDown, FiPercent, FiEdit, FiTrash2 } from 'react-icons/fi'
+import { buildVariationKey } from '../../utils/catalog'
 
 interface ProductVariation {
   size: string
@@ -593,24 +594,42 @@ export default function AdicionarProdutos() {
     setSaving(true)
     
     try {
-      // Save purchase items
+      const updates: Record<string, unknown> = {}
+      const now = Date.now()
+
       for (const product of products) {
         const totalQuantity = product.variations.reduce((sum, v) => sum + v.quantity, 0)
-        await set(ref(rtdb, `purchaseItems/${purchaseId}/${product.id}`), {
+        const allocatedCosts = Number(custoPorPeca)
+        const finalUnitCost = product.unitCost + allocatedCosts
+        const variationMap = product.variations.reduce((acc, v) => {
+          const key = buildVariationKey(v.size, v.color)
+          acc[key] = {
+            size: v.size,
+            color: v.color,
+            stock: v.quantity,
+          }
+          return acc
+        }, {} as Record<string, { size: string; color: string; stock: number }>)
+        const totalStock = totalQuantity
+
+        updates[`purchaseItems/${purchaseId}/${product.id}`] = {
           quantity: totalQuantity,
           cost: product.unitCost,
-        })
-        
-        // Save product
-        await set(ref(rtdb, `products/${product.id}`), {
+        }
+
+        updates[`products/${product.id}`] = {
           name: product.name,
           description: product.description,
           supplierName: product.supplierName,
           categoryId: product.categoryId,
           active: true,
-          createdAt: Date.now(),
+          createdAt: now,
+          updatedAt: now,
+          image: '',
           pricing: {
             unitCost: product.unitCost,
+            allocatedCosts,
+            finalUnitCost,
             packaging: product.packaging,
             gifts: product.gifts,
             accessories: product.accessories,
@@ -621,48 +640,55 @@ export default function AdicionarProdutos() {
             cardFee: product.cardFee,
             salePrice: product.salePrice,
           },
-          variations: product.variations.reduce((acc, v) => {
-            const key = `${v.size}_${v.color}`
-            acc[key] = { ...v, stock: v.quantity }
-            return acc
-          }, {} as any),
-        })
-        
-        // Save inventory
-        const totalStock = product.variations.reduce((sum, v) => sum + v.quantity, 0)
-        await set(ref(rtdb, `inventory/${product.id}`), {
+          variations: variationMap,
+        }
+
+        updates[`inventory/${product.id}`] = {
           total: totalStock,
           reserved: 0,
           available: totalStock,
-        })
-        
-        // Save showcase
-        await set(ref(rtdb, `showcase/${product.id}`), {
+        }
+
+        updates[`showcase/${product.id}`] = {
+          purchaseId,
           name: product.name,
+          image: '',
           price: product.salePrice,
           categoryId: product.categoryId,
           shortDescription: product.description.substring(0, 100),
           available: true,
           stock: totalStock > 0,
-          variations: product.variations.reduce((acc, v) => {
-            const key = `${v.size}_${v.color}`
-            acc[key] = { size: v.size, color: v.color, stock: v.quantity }
-            return acc
-          }, {} as any),
+          variations: variationMap,
           featured: false,
           promotion: false,
-        })
+          updatedAt: now,
+        }
+
+        for (const variation of product.variations) {
+          const movementKey = push(ref(rtdb, 'stockMovements')).key
+          if (!movementKey) continue
+
+          updates[`stockMovements/${movementKey}`] = {
+            productId: product.id,
+            variation: buildVariationKey(variation.size, variation.color),
+            quantity: variation.quantity,
+            type: 'entry',
+            purchaseId,
+            createdAt: now,
+          }
+        }
       }
       
-      // Update purchase status
-      await set(ref(rtdb, `purchases/${purchaseId}/status`), 'completed')
+      updates[`purchases/${purchaseId}/status`] = 'completed'
+      updates[`purchases/${purchaseId}/updatedAt`] = now
+      await update(ref(rtdb), updates)
 
       if (typeof window !== 'undefined') {
         window.localStorage.removeItem(getDraftStorageKey(purchaseId))
         window.localStorage.removeItem(getFormDraftStorageKey(purchaseId))
       }
       
-      navigate('/logista')
+      navigate(`/logista/pedido/${purchaseId}/vitrine`)
     } catch (e: any) {
       console.error('Error finalizing purchase:', e)
     } finally {

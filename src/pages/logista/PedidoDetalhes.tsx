@@ -143,6 +143,22 @@ export default function PedidoDetalhes() {
               {purchase.status === 'completed' ? 'Concluído' : 'Rascunho'}
             </div>
           </div>
+          {purchase.status === 'completed' && (
+            <button
+              onClick={() => navigate(`/logista/pedido/${purchaseId}/vitrine`)}
+              style={{
+                padding: '10px 20px',
+                borderRadius: 12,
+                border: '1px solid #e5e7eb',
+                background: '#fff',
+                color: '#111827',
+                fontWeight: 600,
+                cursor: 'pointer'
+              }}
+            >
+              Publicar na vitrine
+            </button>
+          )}
           <button
             onClick={() => navigate(`/logista/novo-pedido/${purchaseId}/produtos`)}
             style={{

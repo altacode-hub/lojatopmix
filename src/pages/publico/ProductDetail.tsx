@@ -1,18 +1,62 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { products } from '../../data/products'
+import { get, ref } from 'firebase/database'
 import { useCart } from '../../context/CartContext'
+import { rtdb } from '../../service/firebase'
+import type { ShowcaseRecord } from '../../types/catalog'
+import { getVariationOptions, variationLabel } from '../../utils/catalog'
 
 export default function ProductDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { add } = useCart()
-  const product = useMemo(() => products.find((p) => p.id === id), [id])
+  const [product, setProduct] = useState<(({ id: string } & ShowcaseRecord) | null)>(null)
+  const [relatedProducts, setRelatedProducts] = useState<Array<{ id: string } & ShowcaseRecord>>([])
+  const [loading, setLoading] = useState(true)
 
-  const [mainIndex, setMainIndex] = useState(0)
   const [qty, setQty] = useState<number>(1)
-  const [color, setColor] = useState<string>('')
+  const [variationKey, setVariationKey] = useState<string>('')
   const [note, setNote] = useState('')
+
+  useEffect(() => {
+    const loadProduct = async () => {
+      if (!id) return
+
+      try {
+        const [productSnap, showcaseSnap] = await Promise.all([
+          get(ref(rtdb, `showcase/${id}`)),
+          get(ref(rtdb, 'showcase')),
+        ])
+
+        const productData = productSnap.exists() ? ({ id, ...productSnap.val() } as { id: string } & ShowcaseRecord) : null
+        setProduct(productData)
+
+        if (showcaseSnap.exists()) {
+          const allProducts = Object.entries(showcaseSnap.val() as Record<string, ShowcaseRecord>)
+            .map(([productId, item]) => ({ id: productId, ...item }))
+            .filter((item) => item.id !== id && item.available && item.stock)
+            .slice(0, 3)
+          setRelatedProducts(allProducts)
+        }
+      } catch (error) {
+        console.error('Erro ao carregar produto da vitrine:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadProduct()
+  }, [id])
+
+  const variations = useMemo(() => getVariationOptions(product?.variations), [product?.variations])
+  const selectedVariation = useMemo(
+    () => variations.find((variation) => variation.key === variationKey) || null,
+    [variationKey, variations]
+  )
+
+  if (loading) {
+    return <div>Carregando produto...</div>
+  }
 
   if (!product) {
     return (
@@ -23,11 +67,13 @@ export default function ProductDetail() {
     )
   }
 
-  const canAdd = color && qty > 0
+  const canAdd = variationKey && qty > 0 && Boolean(selectedVariation)
 
   const handleAdd = () => {
-    const idVariant = `${product.id}:${color}`
-    const nameVariant = `${product.name} ${product.code} - ${color}${note ? ' (Obs: ' + note + ')' : ''}`
+    if (!selectedVariation) return
+
+    const idVariant = `${product.id}:${variationKey}`
+    const nameVariant = `${product.name} - ${variationLabel(selectedVariation)}${note ? ' (Obs: ' + note + ')' : ''}`
     add({ id: idVariant, name: nameVariant, price: product.price, qty })
     navigate('/cart')
   }
@@ -47,56 +93,48 @@ export default function ProductDetail() {
             justifyContent: 'center',
           }}
         >
-          <img
-            src={product.images[mainIndex]}
-            alt={product.name}
-            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-          />
-        </div>
-        <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 320, overflowY: 'auto' }}>
-          {product.images.map((src, i) => (
-            <button
-              key={src + i}
-              onClick={() => setMainIndex(i)}
-              style={{
-                border: i === mainIndex ? '2px solid #b58516' : '1px solid #e5e7eb',
-                borderRadius: 10,
-                overflow: 'hidden',
-                background: '#fff',
-                padding: 0,
-                height: 80,
-                cursor: 'pointer',
-              }}
-            >
-              <img src={src} alt={`thumb-${i}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            </button>
-          ))}
+          {product.image ? (
+            <img
+              src={product.image}
+              alt={product.name}
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            />
+          ) : (
+            <div style={{ color: '#6b7280', textAlign: 'center', padding: 16 }}>
+              Foto em breve
+            </div>
+          )}
         </div>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div style={{ fontSize: 22, fontWeight: 800, color: '#0f172a' }}>
-          {product.name} {product.code}
+          {product.name}
         </div>
         <div style={{ fontSize: 22, fontWeight: 800, color: '#0f172a' }}>R$ {product.price.toFixed(2)}</div>
+        <div style={{ color: '#475569', textAlign: 'left' }}>{product.shortDescription || 'Produto disponivel na vitrine.'}</div>
 
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <label style={{ color: '#334155' }}>Qtd:</label>
           <input
             type="number"
             min={1}
+            max={selectedVariation?.stock || undefined}
             value={qty}
-            onChange={(e) => setQty(Math.max(1, Number(e.target.value)))}
+            onChange={(e) => {
+              const nextQty = Math.max(1, Number(e.target.value))
+              setQty(selectedVariation ? Math.min(nextQty, selectedVariation.stock) : nextQty)
+            }}
             style={{ width: 72, padding: '10px 12px', borderRadius: 8, border: '1px solid #e5e7eb' }}
           />
         </div>
 
         <div>
-          <div style={{ marginBottom: 6, color: '#334155' }}>Cor:</div>
+          <div style={{ marginBottom: 6, color: '#334155' }}>Tamanho e cor:</div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-            {product.colors.map((c) => (
+            {variations.map((variation) => (
               <label
-                key={c}
+                key={variation.key}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -105,18 +143,21 @@ export default function ProductDetail() {
                   borderRadius: 10,
                   padding: '10px 12px',
                   cursor: 'pointer',
-                  background: color === c ? '#f1f5f9' : '#fff',
+                  background: variationKey === variation.key ? '#f1f5f9' : '#fff',
                 }}
               >
                 <input
                   type="radio"
-                  name="color"
-                  value={c}
-                  checked={color === c}
-                  onChange={() => setColor(c)}
+                  name="variation"
+                  value={variation.key}
+                  checked={variationKey === variation.key}
+                  onChange={() => {
+                    setVariationKey(variation.key)
+                    setQty((currentQty) => Math.min(currentQty, variation.stock))
+                  }}
                   style={{ accentColor: '#b58516' as any }}
                 />
-                <span>{c}</span>
+                <span>{variationLabel(variation)} • {variation.stock} un</span>
               </label>
             ))}
           </div>
@@ -161,7 +202,7 @@ export default function ProductDetail() {
               fontWeight: 600,
             }}
           >
-            Selecione cor e quantidade
+            Selecione uma variacao e quantidade
           </div>
         )}
 
@@ -184,10 +225,7 @@ export default function ProductDetail() {
 
       <aside style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div style={{ fontWeight: 700, color: '#0f172a' }}>Mais</div>
-        {products
-          .filter((p) => p.id !== product.id)
-          .slice(0, 3)
-          .map((p) => (
+        {relatedProducts.map((p) => (
             <Link
               key={p.id}
               to={`/produto/${p.id}`}
@@ -203,9 +241,15 @@ export default function ProductDetail() {
                 background: '#fff',
               }}
             >
-              <img src={p.images[0]} alt={p.name} style={{ width: '100%', height: 96, objectFit: 'cover' }} />
+              {p.image ? (
+                <img src={p.image} alt={p.name} style={{ width: '100%', height: 96, objectFit: 'cover' }} />
+              ) : (
+                <div style={{ width: '100%', height: 96, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280', background: '#f8fafc' }}>
+                  Sem foto
+                </div>
+              )}
               <div style={{ padding: 10 }}>
-                <div style={{ fontWeight: 600 }}>{p.name} {p.code}</div>
+                <div style={{ fontWeight: 600 }}>{p.name}</div>
                 <div style={{ marginTop: 6 }}>R$ {p.price.toFixed(2)}</div>
               </div>
             </Link>

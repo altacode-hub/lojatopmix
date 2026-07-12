@@ -3,6 +3,7 @@ import { getAuth, RecaptchaVerifier } from 'firebase/auth'
 import { getFirestore } from 'firebase/firestore'
 import { getAnalytics } from 'firebase/analytics'
 import { getDatabase } from 'firebase/database'
+import { getStorage } from 'firebase/storage'
 
 const firebaseConfig = {
   apiKey: 'AIzaSyDtchFVqj5__h5bYpciU2uAdcgDAWwei0E',
@@ -20,5 +21,6 @@ export const auth = getAuth(app)
 export const db = getFirestore(app)
 export const analytics = getAnalytics(app)
 export const rtdb = getDatabase(app)
+export const storage = getStorage(app)
 export const setupRecaptcha = (elementId: string, size: 'invisible' | 'normal' | 'compact' = 'invisible') =>
   new RecaptchaVerifier(auth, elementId, { size })
