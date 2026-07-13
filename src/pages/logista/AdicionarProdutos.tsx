@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { rtdb } from '../../service/firebase'
@@ -55,12 +55,37 @@ interface ProductFormDraft {
   newVariationQuantity: number | ''
 }
 
+interface PurchaseRecord {
+  name?: string
+  totalPieces: number
+  costs?: {
+    freight?: number
+    travel?: number
+    consultancy?: number
+    other?: number
+  }
+}
+
+interface CategoryRecord {
+  id: string
+  name?: string
+  order?: number
+}
+
+const getErrorMessage = (error: unknown, fallback: string) => {
+  if (error instanceof Error && error.message) {
+    return error.message
+  }
+
+  return fallback
+}
+
 export default function AdicionarProdutos() {
   const { purchaseId } = useParams<{ purchaseId: string }>()
   const { user } = useAuth()
   const navigate = useNavigate()
   
-  const [purchase, setPurchase] = useState<any>(null)
+  const [purchase, setPurchase] = useState<PurchaseRecord | null>(null)
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -86,14 +111,14 @@ export default function AdicionarProdutos() {
   const [newVariationQuantity, setNewVariationQuantity] = useState<number | ''>('')
   
   // Categories
-  const [categories, setCategories] = useState<any[]>([])
+  const [categories, setCategories] = useState<CategoryRecord[]>([])
   const [sizes] = useState(['34', '36', '38', '40', '42', '44', '46', 'PP', 'P', 'M', 'G', 'GG', 'XG'])
   const [colors] = useState(['Branco', 'Preto', 'Vermelho', 'Azul', 'Verde', 'Amarelo', 'Rosa', 'Bege', 'Marrom', 'Cinza'])
 
   const getDraftStorageKey = (id: string) => `adicionar-produtos-rascunho:${id}`
   const getFormDraftStorageKey = (id: string) => `adicionar-produtos-formulario:${id}`
 
-  const readDraftProducts = (id: string) => {
+  const readDraftProducts = useCallback((id: string) => {
     if (typeof window === 'undefined') return null
 
     try {
@@ -116,9 +141,9 @@ export default function AdicionarProdutos() {
       window.localStorage.removeItem(getDraftStorageKey(id))
       return null
     }
-  }
+  }, [])
 
-  const readFormDraft = (id: string) => {
+  const readFormDraft = useCallback((id: string) => {
     if (typeof window === 'undefined') return null
 
     try {
@@ -137,9 +162,9 @@ export default function AdicionarProdutos() {
       window.localStorage.removeItem(getFormDraftStorageKey(id))
       return null
     }
-  }
+  }, [])
 
-  const applyFormDraft = (draft: ProductFormDraft) => {
+  const applyFormDraft = useCallback((draft: ProductFormDraft) => {
     setEditingProductId(draft.editingProductId)
     setProductName(draft.productName)
     setProductDescription(draft.productDescription)
@@ -158,7 +183,7 @@ export default function AdicionarProdutos() {
     setNewVariationSize(draft.newVariationSize)
     setNewVariationColor(draft.newVariationColor)
     setNewVariationQuantity(draft.newVariationQuantity)
-  }
+  }, [])
   
   // Load purchase and categories
   useEffect(() => {
@@ -168,7 +193,7 @@ export default function AdicionarProdutos() {
       try {
         // Load purchase
         const purchaseSnap = await get(ref(rtdb, `purchases/${purchaseId}`))
-        const purchaseData = purchaseSnap.exists() ? purchaseSnap.val() : null
+        const purchaseData = purchaseSnap.exists() ? (purchaseSnap.val() as PurchaseRecord) : null
         if (purchaseData) {
           setPurchase(purchaseData)
         }
@@ -176,11 +201,11 @@ export default function AdicionarProdutos() {
         // Load categories
         const categoriesSnap = await get(ref(rtdb, 'categories'))
         if (categoriesSnap.exists()) {
-          const cats: any[] = []
+          const cats: CategoryRecord[] = []
           categoriesSnap.forEach((child) => {
-            cats.push({ id: child.key, ...child.val() })
+            cats.push({ id: child.key || '', ...(child.val() as Omit<CategoryRecord, 'id'>) })
           })
-          setCategories(cats.sort((a, b) => a.order - b.order))
+          setCategories(cats.sort((a, b) => Number(a.order || 0) - Number(b.order || 0)))
         }
         
         // Load existing products in the purchase
@@ -267,7 +292,7 @@ export default function AdicionarProdutos() {
     }
     
     loadData()
-  }, [purchaseId])
+  }, [applyFormDraft, purchaseId, readDraftProducts, readFormDraft])
 
   useEffect(() => {
     if (!purchaseId || loading || typeof window === 'undefined') return
@@ -689,8 +714,9 @@ export default function AdicionarProdutos() {
       }
       
       navigate(`/logista/pedido/${purchaseId}/vitrine`)
-    } catch (e: any) {
-      console.error('Error finalizing purchase:', e)
+    } catch (error) {
+      console.error('Error finalizing purchase:', error)
+      alert(getErrorMessage(error, 'Nao foi possivel finalizar o pedido.'))
     } finally {
       setSaving(false)
     }

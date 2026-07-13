@@ -1,6 +1,14 @@
 import { createContext, useContext, useMemo, useState } from 'react'
 
-export type CartItem = { id: string; name: string; price: number; qty: number }
+export type CartItem = {
+  id: string
+  productId: string
+  variationKey: string
+  name: string
+  price: number
+  qty: number
+  note?: string
+}
 
 type CartContextType = {
   items: CartItem[]
@@ -38,4 +46,5 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useCart = () => useContext(CartContext)

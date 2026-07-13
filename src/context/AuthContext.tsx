@@ -29,9 +29,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<AuthContextType['user']>(null)
   const [loading, setLoading] = useState(true)
   const recaptchaRef = useRef<ReturnType<typeof setupRecaptcha> | null>(null)
-  auth.languageCode = "pt"
 
   useEffect(() => {
+    auth.languageCode = 'pt'
+
     const unsub = onAuthStateChanged(auth, (u) => {
       setUser(u ? { uid: u.uid, phoneNumber: u.phoneNumber } : null)
       setLoading(false)
@@ -43,7 +44,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     if (recaptchaRef.current) {
       try {
         recaptchaRef.current.clear()
-      } catch {}
+      } catch {
+        // O verifier anterior pode já ter sido descartado pelo Firebase.
+      }
     }
     const verifier = (recaptchaRef.current = setupRecaptcha(recaptchaContainerId, 'normal'))
     await verifier.render()
@@ -62,4 +65,5 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => useContext(AuthContext)

@@ -1,6 +1,6 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
-import { FiHome, FiPlusSquare, FiClock, FiTag, FiHelpCircle, FiLogOut } from 'react-icons/fi'
+import { FiHome, FiPlusSquare, FiClock, FiTag, FiHelpCircle, FiLogOut, FiShoppingCart, FiPackage } from 'react-icons/fi'
 import { useMediaQuery } from '../../hooks/useMediaQuery'
 
 interface SidebarLogistaProps {
@@ -89,6 +89,25 @@ export default function SidebarLogista({ isOpen, onClose }: SidebarLogistaProps)
           {(!isMobile || isOpen) && <span>Dashboard</span>}
         </Link>
         <Link
+          to="/logista/vendas"
+          onClick={handleLinkClick}
+          style={{
+            padding: '10px 12px',
+            borderRadius: 10,
+            textDecoration: 'none',
+            color: '#111827',
+            background: isActive('/logista/vendas') ? '#fae8ff' : 'transparent',
+            border: isActive('/logista/vendas') ? '1px solid #e9d5ff' : '1px solid transparent',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            textAlign: 'left',
+          }}
+        >
+          <FiShoppingCart size={18} />
+          {(!isMobile || isOpen) && <span>Vendas</span>}
+        </Link>
+        <Link
           to="/logista/novo-pedido"
           onClick={handleLinkClick}
           style={{
@@ -106,6 +125,25 @@ export default function SidebarLogista({ isOpen, onClose }: SidebarLogistaProps)
         >
           <FiPlusSquare size={18} />
           {(!isMobile || isOpen) && <span>Novo Pedido</span>}
+        </Link>
+        <Link
+          to="/logista/estoque"
+          onClick={handleLinkClick}
+          style={{
+            padding: '10px 12px',
+            borderRadius: 10,
+            textDecoration: 'none',
+            color: '#111827',
+            background: location.pathname.startsWith('/logista/estoque') ? '#fae8ff' : 'transparent',
+            border: location.pathname.startsWith('/logista/estoque') ? '1px solid #e9d5ff' : '1px solid transparent',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            textAlign: 'left',
+          }}
+        >
+          <FiPackage size={18} />
+          {(!isMobile || isOpen) && <span>Estoque</span>}
         </Link>
         <div
           style={{

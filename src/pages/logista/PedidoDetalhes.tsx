@@ -35,12 +35,25 @@ interface Product {
   createdAt: number
 }
 
+interface PurchaseRecord {
+  name: string
+  date: number
+  status: string
+  totalPieces: number
+  costs?: {
+    freight?: number
+    travel?: number
+    consultancy?: number
+    other?: number
+  }
+}
+
 export default function PedidoDetalhes() {
   const { purchaseId } = useParams<{ purchaseId: string }>()
   useAuth() // We just need to call useAuth for context, even if we don't use the return value
   const navigate = useNavigate()
   
-  const [purchase, setPurchase] = useState<any>(null)
+  const [purchase, setPurchase] = useState<PurchaseRecord | null>(null)
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   

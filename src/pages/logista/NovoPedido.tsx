@@ -4,6 +4,14 @@ import { useAuth } from '../../context/AuthContext'
 import { rtdb } from '../../service/firebase'
 import { ref, set, serverTimestamp } from 'firebase/database'
 
+const getErrorMessage = (error: unknown, fallback: string) => {
+  if (error instanceof Error && error.message) {
+    return error.message
+  }
+
+  return fallback
+}
+
 export default function NovoPedido() {
   const { user } = useAuth()
   const navigate = useNavigate()
@@ -57,8 +65,8 @@ export default function NovoPedido() {
       }
       await set(purchaseRef, data)
       navigate(`/logista/novo-pedido/${purchaseId}/produtos`, { replace: true })
-    } catch (e: any) {
-      setErro(e?.message || 'Erro ao salvar pedido')
+    } catch (error) {
+      setErro(getErrorMessage(error, 'Erro ao salvar pedido'))
     } finally {
       setSalvando(false)
     }

@@ -2,6 +2,9 @@ export type InfinitePayCheckoutItem = {
   quantity: number
   price: number
   description: string
+  productId?: string
+  variationKey?: string
+  note?: string
 }
 
 export type InfinitePayCustomer = {

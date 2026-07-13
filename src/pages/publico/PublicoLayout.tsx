@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useCart } from '../../context/CartContext'
 import { useAuth } from '../../context/AuthContext'
 import { rtdb } from '../../service/firebase'
-import { ref, onValue, off } from 'firebase/database'
+import { ref, onValue, off, type DataSnapshot } from 'firebase/database'
 // icons
 import { FiSearch, FiUser } from "react-icons/fi";
 import logo from '../../assets/logo.png'
@@ -31,12 +31,11 @@ export default function PublicoLayout() {
 
   useEffect(() => {
     if (!user) {
-      setIsLogista(false)
       return
     }
     const logistaRef = ref(rtdb, `loja/arealogista/${user.uid}`)
-    const handleValue = (snapshot: any) => {
-      setIsLogista(!!snapshot.val())
+    const handleValue = (snapshot: DataSnapshot) => {
+      setIsLogista(Boolean(snapshot.val()))
     }
     onValue(logistaRef, handleValue)
     return () => {

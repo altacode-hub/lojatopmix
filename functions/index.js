@@ -80,6 +80,9 @@ const normalizeItems = (items) => {
       quantity,
       price,
       description,
+      productId: sanitizeString(item?.productId) || undefined,
+      variationKey: sanitizeString(item?.variationKey) || undefined,
+      note: sanitizeString(item?.note) || undefined,
     };
   });
 };
@@ -138,6 +141,203 @@ const buildOrderRecord = ({ orderNsu, items, customer, address }) => ({
   updatedAt: admin.database.ServerValue.TIMESTAMP,
 });
 
+const toNumber = (value) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const sanitizeObjectString = (value) => {
+  const parsed = sanitizeString(value);
+  return parsed || undefined;
+};
+
+const buildSaleItemRecord = ({ rawItem, product, showcase, variation }) => {
+  const quantity = toNumber(rawItem?.quantity);
+  const unitPrice = toNumber(rawItem?.price) / 100;
+  const description = sanitizeString(rawItem?.description) || sanitizeString(showcase?.name) || sanitizeString(product?.name) || 'Item';
+
+  return {
+    productId: sanitizeObjectString(rawItem?.productId) || null,
+    variationKey: sanitizeObjectString(rawItem?.variationKey) || null,
+    productName: sanitizeString(showcase?.name) || sanitizeString(product?.name) || description,
+    description,
+    note: sanitizeObjectString(rawItem?.note) || null,
+    quantity,
+    unitPrice,
+    lineTotal: unitPrice * quantity,
+    size: sanitizeObjectString(variation?.size) || null,
+    color: sanitizeObjectString(variation?.color) || null,
+  };
+};
+
+const hasAvailableVariationStock = (variations) => {
+  if (!variations || typeof variations !== 'object') {
+    return false;
+  }
+
+  return Object.values(variations).some((variation) => toNumber(variation?.stock) > 0);
+};
+
+const ensureOnlineSale = async (orderNsu, order) => {
+  if (!order || order.onlineSaleId) {
+    return;
+  }
+
+  const rawItems = Array.isArray(order.items) ? order.items : [];
+
+  if (rawItems.length === 0) {
+    return;
+  }
+
+  const saleId = orderNsu;
+  const now = Date.now();
+  const alerts = [];
+  const saleItems = [];
+  const stockOperations = [];
+
+  for (const rawItem of rawItems) {
+    const productId = sanitizeString(rawItem?.productId);
+    const variationKey = sanitizeString(rawItem?.variationKey);
+    const quantity = toNumber(rawItem?.quantity);
+
+    const [productSnapshot, showcaseSnapshot, inventorySnapshot] = await Promise.all([
+      productId ? database.ref(`products/${productId}`).get() : Promise.resolve(null),
+      productId ? database.ref(`showcase/${productId}`).get() : Promise.resolve(null),
+      productId ? database.ref(`inventory/${productId}`).get() : Promise.resolve(null),
+    ]);
+
+    const product = productSnapshot && productSnapshot.exists() ? productSnapshot.val() : null;
+    const showcase = showcaseSnapshot && showcaseSnapshot.exists() ? showcaseSnapshot.val() : null;
+    const inventory = inventorySnapshot && inventorySnapshot.exists() ? inventorySnapshot.val() : null;
+    const variation = showcase?.variations?.[variationKey] || product?.variations?.[variationKey] || null;
+
+    saleItems.push(
+      buildSaleItemRecord({
+        rawItem,
+        product,
+        showcase,
+        variation,
+      })
+    );
+
+    if (!productId || !variationKey) {
+      alerts.push(`Item "${sanitizeString(rawItem?.description) || 'sem descricao'}" sem identificacao completa de produto/variacao.`);
+      continue;
+    }
+
+    if (!product || !showcase || !inventory || !variation) {
+      alerts.push(`Produto ${productId} nao encontrado no estoque publicado para reserva online.`);
+      continue;
+    }
+
+    if (!Number.isInteger(quantity) || quantity <= 0) {
+      alerts.push(`Quantidade invalida para o produto ${productId}.`);
+      continue;
+    }
+
+    const currentVariationStock = toNumber(variation.stock);
+    const currentAvailable = toNumber(inventory.available);
+
+    if (currentVariationStock < quantity || currentAvailable < quantity) {
+      alerts.push(`Estoque insuficiente para ${sanitizeString(showcase.name) || productId}.`);
+      continue;
+    }
+
+    stockOperations.push({
+      productId,
+      variationKey,
+      quantity,
+      inventory,
+      showcase,
+      product,
+    });
+  }
+
+  const totalAmount = saleItems.reduce((sum, item) => sum + toNumber(item.lineTotal), 0);
+  const totalItems = saleItems.reduce((sum, item) => sum + toNumber(item.quantity), 0);
+  const needsReview = alerts.length > 0;
+  const updates = {
+    [`sales/${saleId}`]: {
+      saleId,
+      orderNsu,
+      channel: 'online',
+      source: 'site',
+      paymentStatus: 'paid',
+      fulfillmentStatus: needsReview ? 'pending_review' : 'pending_delivery',
+      stockStatus: needsReview ? 'attention' : 'reserved',
+      customer: order.customer || null,
+      address: order.address || null,
+      items: saleItems,
+      totalAmount,
+      totalItems,
+      alerts: needsReview ? alerts : null,
+      createdAt: toNumber(order.createdAt) || now,
+      paidAt: now,
+      updatedAt: now,
+    },
+    [`checkoutOrders/${orderNsu}/onlineSaleId`]: saleId,
+    [`checkoutOrders/${orderNsu}/deliveryStatus`]: needsReview ? 'pending_review' : 'pending_delivery',
+    [`checkoutOrders/${orderNsu}/stockStatus`]: needsReview ? 'attention' : 'reserved',
+    [`checkoutOrders/${orderNsu}/updatedAt`]: admin.database.ServerValue.TIMESTAMP,
+  };
+
+  if (!needsReview) {
+    for (const operation of stockOperations) {
+      const variationKey = operation.variationKey;
+      const showcaseVariations = {
+        ...(operation.showcase?.variations || {}),
+      };
+      const productVariations = {
+        ...(operation.product?.variations || {}),
+      };
+      const showcaseVariation = showcaseVariations[variationKey] || {};
+      const productVariation = productVariations[variationKey] || {};
+      const nextVariationStock = toNumber(showcaseVariation.stock || productVariation.stock) - operation.quantity;
+
+      showcaseVariations[variationKey] = {
+        ...showcaseVariation,
+        stock: nextVariationStock,
+      };
+
+      productVariations[variationKey] = {
+        ...productVariation,
+        stock: nextVariationStock,
+      };
+
+      const nextAvailable = toNumber(operation.inventory.available) - operation.quantity;
+      const nextReserved = toNumber(operation.inventory.reserved) + operation.quantity;
+      const movementRef = database.ref('stockMovements').push();
+
+      if (movementRef.key) {
+        updates[`stockMovements/${movementRef.key}`] = {
+          productId: operation.productId,
+          variation: variationKey,
+          quantity: operation.quantity,
+          type: 'reserve_online_sale',
+          saleId,
+          orderNsu,
+          createdAt: now,
+        };
+      }
+
+      updates[`inventory/${operation.productId}`] = {
+        total: toNumber(operation.inventory.total),
+        reserved: nextReserved,
+        available: nextAvailable,
+      };
+      updates[`showcase/${operation.productId}/variations`] = showcaseVariations;
+      updates[`showcase/${operation.productId}/stock`] = hasAvailableVariationStock(showcaseVariations);
+      updates[`showcase/${operation.productId}/updatedAt`] = now;
+      updates[`products/${operation.productId}/variations`] = productVariations;
+      updates[`products/${operation.productId}/updatedAt`] = now;
+    }
+  } else {
+    updates[`checkoutOrders/${orderNsu}/alerts`] = alerts;
+  }
+
+  await database.ref().update(updates);
+};
+
 const buildStatusPayloadFromOrder = (order) => ({
   success: true,
   paid: Boolean(order?.payment?.paid),
@@ -153,7 +353,9 @@ const buildStatusPayloadFromOrder = (order) => ({
 });
 
 const updateOrderPayment = async (orderNsu, paymentData) => {
-  await database.ref(`checkoutOrders/${orderNsu}`).update({
+  const orderRef = database.ref(`checkoutOrders/${orderNsu}`);
+
+  await orderRef.update({
     status: paymentData.paid ? 'paid' : 'awaiting_payment',
     payment: {
       amount: paymentData.amount,
@@ -169,6 +371,11 @@ const updateOrderPayment = async (orderNsu, paymentData) => {
     },
     updatedAt: admin.database.ServerValue.TIMESTAMP,
   });
+
+  if (paymentData.paid) {
+    const snapshot = await orderRef.get();
+    await ensureOnlineSale(orderNsu, snapshot.val());
+  }
 };
 
 exports.createCheckout = onRequest({ region: 'us-central1', cors: true }, async (req, res) => {
@@ -260,6 +467,7 @@ exports.paymentStatus = onRequest({ region: 'us-central1', cors: true }, async (
     const order = orderSnapshot.val();
 
     if (order?.payment?.paid && sanitizeString(order?.payment?.transactionNsu) === transactionNsu) {
+      await ensureOnlineSale(orderNsu, order);
       res.status(200).json(buildStatusPayloadFromOrder(order));
       return;
     }

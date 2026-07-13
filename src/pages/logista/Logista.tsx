@@ -56,19 +56,32 @@ export default function Logista() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <div>
           <h1 style={{ margin: 0, fontSize: 32 }}>Área do Logista</h1>
-          <div style={{ color: '#6b7280', marginTop: 4 }}>Gestão de estoque, preços e pedidos</div>
+          <div style={{ color: '#6b7280', marginTop: 4 }}>Gestão de estoque, preços, pedidos e vendas</div>
         </div>
-        <Link to="/logista/novo-pedido" style={{
-          padding: '12px 20px',
-          borderRadius: 12,
-          border: 'none',
-          background: 'linear-gradient(135deg, #c084fc 0%, #8b5cf6 100%)',
-          color: '#fff',
-          fontWeight: 600,
-          textDecoration: 'none'
-        }}>
-          + Novo Pedido
-        </Link>
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+          <Link to="/logista/vendas" style={{
+            padding: '12px 20px',
+            borderRadius: 12,
+            border: '1px solid #e9d5ff',
+            background: '#fff',
+            color: '#7c3aed',
+            fontWeight: 700,
+            textDecoration: 'none'
+          }}>
+            Ver Vendas
+          </Link>
+          <Link to="/logista/novo-pedido" style={{
+            padding: '12px 20px',
+            borderRadius: 12,
+            border: 'none',
+            background: 'linear-gradient(135deg, #c084fc 0%, #8b5cf6 100%)',
+            color: '#fff',
+            fontWeight: 600,
+            textDecoration: 'none'
+          }}>
+            + Novo Pedido
+          </Link>
+        </div>
       </div>
 
       {/* Pedidos Recentes */}

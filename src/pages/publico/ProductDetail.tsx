@@ -74,7 +74,15 @@ export default function ProductDetail() {
 
     const idVariant = `${product.id}:${variationKey}`
     const nameVariant = `${product.name} - ${variationLabel(selectedVariation)}${note ? ' (Obs: ' + note + ')' : ''}`
-    add({ id: idVariant, name: nameVariant, price: product.price, qty })
+    add({
+      id: idVariant,
+      productId: product.id,
+      variationKey,
+      name: nameVariant,
+      price: product.price,
+      qty,
+      note: note.trim() || undefined,
+    })
     navigate('/cart')
   }
 
@@ -155,7 +163,7 @@ export default function ProductDetail() {
                     setVariationKey(variation.key)
                     setQty((currentQty) => Math.min(currentQty, variation.stock))
                   }}
-                  style={{ accentColor: '#b58516' as any }}
+                  style={{ accentColor: '#b58516' }}
                 />
                 <span>{variationLabel(variation)} • {variation.stock} un</span>
               </label>

@@ -3,6 +3,14 @@ import { useAuth } from '../context/AuthContext'
 import type { ConfirmationResult } from 'firebase/auth'
 import { useNavigate } from 'react-router-dom'
 
+const getErrorMessage = (error: unknown, fallback: string) => {
+  if (error instanceof Error && error.message) {
+    return error.message
+  }
+
+  return fallback
+}
+
 export default function Login() {
   const { sendCode, signInAnonymously } = useAuth()
   const [phone, setPhone] = useState('')
@@ -20,8 +28,8 @@ export default function Login() {
       const phoneE164 = phone.startsWith('+') ? phone : digits ? `+${digits}` : ''
       const conf = await sendCode(phoneE164, 'recaptcha-container')
       setConfirmation(conf)
-    } catch (e: any) {
-      setError(e?.message || 'Erro ao enviar código')
+    } catch (error) {
+      setError(getErrorMessage(error, 'Erro ao enviar código'))
     } finally {
       setLoading(false)
     }
@@ -34,8 +42,8 @@ export default function Login() {
     try {
       await confirmation.confirm(code)
       navigate('/checkout', { replace: true })
-    } catch (e: any) {
-      setError(e?.message || 'Código inválido')
+    } catch (error) {
+      setError(getErrorMessage(error, 'Código inválido'))
     } finally {
       setLoading(false)
     }
@@ -47,8 +55,8 @@ export default function Login() {
     try {
       await signInAnonymously()
       navigate('/checkout', { replace: true })
-    } catch (e: any) {
-      setError(e?.message || 'Erro ao entrar como convidado')
+    } catch (error) {
+      setError(getErrorMessage(error, 'Erro ao entrar como convidado'))
     } finally {
       setLoading(false)
     }

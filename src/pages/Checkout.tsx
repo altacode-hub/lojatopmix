@@ -40,6 +40,9 @@ export default function Checkout() {
         quantity: item.qty,
         price: Math.round(item.price * 100),
         description: item.name,
+        productId: item.productId,
+        variationKey: item.variationKey,
+        note: item.note,
       })),
     [items],
   )
