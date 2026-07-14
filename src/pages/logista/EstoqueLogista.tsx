@@ -1,38 +1,18 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { get, ref } from 'firebase/database'
 import { useNavigate } from 'react-router-dom'
-import { FiBox, FiChevronRight, FiEye, FiPackage, FiSearch, FiStar } from 'react-icons/fi'
+import { FiAlertCircle, FiBox, FiChevronRight, FiDatabase, FiEye, FiPackage, FiRefreshCw, FiSearch, FiStar } from 'react-icons/fi'
 import { rtdb } from '../../service/firebase'
-import type { CatalogVariation, InternalProductRecord, ShowcaseRecord } from '../../types/catalog'
-
-interface InventoryRecord {
-  total?: number
-  reserved?: number
-  available?: number
-}
-
-interface CategoryRecord {
-  name?: string
-}
-
-interface InventoryProductRow {
-  id: string
-  name: string
-  description: string
-  supplierName: string
-  categoryName: string
-  image: string
-  salePrice: number
-  finalUnitCost: number
-  totalStock: number
-  availableStock: number
-  reservedStock: number
-  totalVariations: number
-  active: boolean
-  available: boolean
-  featured: boolean
-  searchText: string
-}
+import type { InternalProductRecord, ShowcaseRecord } from '../../types/catalog'
+import {
+  buildInventoryRows,
+  CATALOG_SYNC_PATH,
+  type InventoryProductRow,
+  type InventoryRecord,
+  normalizeText,
+  readStockCache,
+  writeStockCache,
+} from './stockCache'
 
 const cardStyle: React.CSSProperties = {
   background: '#fff',
@@ -47,109 +27,131 @@ const currencyFormatter = new Intl.NumberFormat('pt-BR', {
   currency: 'BRL',
 })
 
-const normalizeText = (value: string) =>
-  value
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
+type CacheSource = 'local' | 'online'
+
+const formatDateTime = (value: number | null) => {
+  if (!value) return 'Nao sincronizado'
+  return new Date(value).toLocaleString('pt-BR')
+}
 
 export default function EstoqueLogista() {
   const navigate = useNavigate()
   const [products, setProducts] = useState<InventoryProductRow[]>([])
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
+  const [syncing, setSyncing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [cacheSource, setCacheSource] = useState<CacheSource | null>(null)
+  const [lastSyncedAt, setLastSyncedAt] = useState<number | null>(null)
+  const [remoteUpdatedAt, setRemoteUpdatedAt] = useState<number | null>(null)
+  const [localUpdatedAt, setLocalUpdatedAt] = useState<number | null>(null)
+  const [isOutdated, setIsOutdated] = useState(false)
 
-  useEffect(() => {
-    const loadProducts = async () => {
-      try {
-        setLoading(true)
-        setError(null)
+  const applyCacheToState = useCallback((cache: ReturnType<typeof readStockCache>) => {
+    if (!cache) return
+    setProducts(cache.rows)
+    setCacheSource('local')
+    setLastSyncedAt(cache.syncedAt || null)
+    setLocalUpdatedAt(cache.remoteUpdatedAt || null)
+  }, [])
 
-        const [productsSnapshot, showcaseSnapshot, inventorySnapshot, categoriesSnapshot] = await Promise.all([
-          get(ref(rtdb, 'products')),
-          get(ref(rtdb, 'showcase')),
-          get(ref(rtdb, 'inventory')),
-          get(ref(rtdb, 'categories')),
-        ])
+  const fetchRemoteUpdatedAt = useCallback(async () => {
+    const snapshot = await get(ref(rtdb, `${CATALOG_SYNC_PATH}/updatedAt`))
+    return Number(snapshot.val() || 0)
+  }, [])
 
-        const productsData = (productsSnapshot.exists() ? productsSnapshot.val() : {}) as Record<
-          string,
-          InternalProductRecord
-        >
-        const showcaseData = (showcaseSnapshot.exists() ? showcaseSnapshot.val() : {}) as Record<
-          string,
-          ShowcaseRecord
-        >
-        const inventoryData = (inventorySnapshot.exists() ? inventorySnapshot.val() : {}) as Record<
-          string,
-          InventoryRecord
-        >
-        const categoriesData = (categoriesSnapshot.exists() ? categoriesSnapshot.val() : {}) as Record<
-          string,
-          CategoryRecord
-        >
+  const syncWithOnlineDatabase = useCallback(async () => {
+    try {
+      setSyncing(true)
+      setLoading((current) => current && products.length === 0)
+      setError(null)
 
-        const nextRows = Object.entries(productsData)
-          .map(([productId, product]) => {
-            const showcase = showcaseData[productId]
-            const inventory = inventoryData[productId]
-            const variations = (showcase?.variations || product.variations || {}) as Record<string, CatalogVariation>
+      const [productsSnapshot, showcaseSnapshot, inventorySnapshot, categoriesSnapshot, remoteTimestamp] = await Promise.all([
+        get(ref(rtdb, 'products')),
+        get(ref(rtdb, 'showcase')),
+        get(ref(rtdb, 'inventory')),
+        get(ref(rtdb, 'categories')),
+        fetchRemoteUpdatedAt(),
+      ])
 
-            const categoryId = showcase?.categoryId || product.categoryId || ''
-            const categoryName = categoriesData[categoryId]?.name || 'Sem categoria'
-            const name = showcase?.name || product.name || 'Produto sem nome'
-            const description = product.description || showcase?.shortDescription || ''
-            const supplierName = product.supplierName || 'Fornecedor nao informado'
-            const salePrice = Number(showcase?.price ?? product.pricing?.salePrice ?? 0)
-            const finalUnitCost = Number(product.pricing?.finalUnitCost ?? 0)
-            const availableStock = Number(inventory?.available ?? 0)
-            const totalStock = Number(inventory?.total ?? availableStock)
-            const reservedStock = Number(inventory?.reserved ?? 0)
+      const productsData = (productsSnapshot.exists() ? productsSnapshot.val() : {}) as Record<
+        string,
+        InternalProductRecord
+      >
+      const showcaseData = (showcaseSnapshot.exists() ? showcaseSnapshot.val() : {}) as Record<string, ShowcaseRecord>
+      const inventoryData = (inventorySnapshot.exists() ? inventorySnapshot.val() : {}) as Record<string, InventoryRecord>
+      const categoriesRaw = (categoriesSnapshot.exists() ? categoriesSnapshot.val() : {}) as Record<string, { name?: string }>
+      const categoriesMap = Object.entries(categoriesRaw).reduce(
+        (acc, [categoryId, category]) => {
+          acc[categoryId] = category?.name || 'Sem categoria'
+          return acc
+        },
+        {} as Record<string, string>,
+      )
 
-            return {
-              id: productId,
-              name,
-              description,
-              supplierName,
-              categoryName,
-              image: showcase?.image || product.image || '',
-              salePrice,
-              finalUnitCost,
-              totalStock,
-              availableStock,
-              reservedStock,
-              totalVariations: Object.keys(variations).length,
-              active: Boolean(product.active ?? true),
-              available: Boolean(showcase?.available ?? true),
-              featured: Boolean(showcase?.featured),
-              searchText: normalizeText(
-                [
-                  productId,
-                  name,
-                  description,
-                  supplierName,
-                  categoryName,
-                  ...Object.values(variations).flatMap((variation) => [variation.size, variation.color]),
-                ]
-                  .filter(Boolean)
-                  .join(' '),
-              ),
-            } satisfies InventoryProductRow
-          })
-          .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
+      const nextRows = buildInventoryRows(productsData, showcaseData, inventoryData, categoriesMap)
+      const nextRemoteUpdatedAt =
+        remoteTimestamp || nextRows.reduce((maxTimestamp, row) => Math.max(maxTimestamp, Number(row.updatedAt || 0)), 0)
+      const syncedAt = Date.now()
 
-        setProducts(nextRows)
-      } catch (loadError) {
-        console.error('Erro ao carregar estoque do logista:', loadError)
-        setError('Nao foi possivel carregar o estoque da loja.')
-      } finally {
+      writeStockCache({
+        syncedAt,
+        remoteUpdatedAt: nextRemoteUpdatedAt,
+        rows: nextRows,
+      })
+
+      setProducts(nextRows)
+      setCacheSource('online')
+      setLastSyncedAt(syncedAt)
+      setLocalUpdatedAt(nextRemoteUpdatedAt || null)
+      setRemoteUpdatedAt(nextRemoteUpdatedAt || null)
+      setIsOutdated(false)
+    } catch (loadError) {
+      console.error('Erro ao sincronizar estoque do logista:', loadError)
+      setError('Nao foi possivel sincronizar o estoque com o Firebase.')
+    } finally {
+      setLoading(false)
+      setSyncing(false)
+    }
+  }, [fetchRemoteUpdatedAt, products.length])
+
+  const checkLocalCacheStatus = useCallback(async () => {
+    try {
+      const cache = readStockCache()
+
+      if (cache) {
+        applyCacheToState(cache)
+        setLoading(false)
+      }
+
+      const nextRemoteUpdatedAt = await fetchRemoteUpdatedAt()
+      setRemoteUpdatedAt(nextRemoteUpdatedAt || null)
+
+      if (!cache) {
+        await syncWithOnlineDatabase()
+        return
+      }
+
+      const stale = nextRemoteUpdatedAt > Number(cache.remoteUpdatedAt || 0)
+      setIsOutdated(stale)
+      setCacheSource('local')
+    } catch (statusError) {
+      console.error('Erro ao verificar status do cache local:', statusError)
+
+      const cache = readStockCache()
+      if (cache) {
+        applyCacheToState(cache)
+        setLoading(false)
+      } else {
+        setError('Nao foi possivel carregar o banco local nem verificar o Firebase.')
         setLoading(false)
       }
     }
+  }, [applyCacheToState, fetchRemoteUpdatedAt, syncWithOnlineDatabase])
 
-    void loadProducts()
-  }, [])
+  useEffect(() => {
+    void checkLocalCacheStatus()
+  }, [checkLocalCacheStatus])
 
   const filteredProducts = useMemo(() => {
     const normalizedSearch = normalizeText(search.trim())
@@ -177,9 +179,83 @@ export default function EstoqueLogista() {
         <div>
           <h1 style={{ margin: 0, fontSize: 30 }}>Estoque da loja</h1>
           <p style={{ margin: '8px 0 0', color: '#6b7280', maxWidth: 720 }}>
-            Visualize todos os produtos cadastrados, pesquise rapidamente e entre na tela de produto para editar
-            foto, precificacao e publicacao na vitrine.
+            Consulte primeiro o banco local para economizar leituras do Firebase, sincronize quando desejar e acompanhe
+            se o cache esta atualizado em relacao ao banco online.
           </p>
+        </div>
+      </div>
+
+      <div
+        style={{
+          ...cardStyle,
+          marginBottom: 20,
+          borderColor: isOutdated ? '#facc15' : '#d1fae5',
+          background: isOutdated ? '#fffbeb' : '#f0fdf4',
+        }}
+      >
+        <div style={{ display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+            gap: 12, justifyContent: 'space-between' }}>
+            <div>
+              <div style={{display: 'flex', justifyContent: 'center', alignItems: 'center', fontWeight: 700, color: isOutdated ? '#854d0e' : '#166534' }}>
+                {isOutdated ? <FiAlertCircle size={20} color="#a16207" /> : <FiDatabase size={20} color="#166534" />}
+            
+                <span style={{ marginLeft: 8 }}>{`${isOutdated ? 'Banco local desatualizado' : 'Banco local sincronizado'}`}</span>
+              </div>
+              <div style={{ color: isOutdated ? '#854d0e' : '#166534', marginTop: 4 }}>
+                Fonte atual: {cacheSource === 'online' ? 'sincronizacao online mais recente' : 'cache local'}.
+              </div>
+            </div>
+            <div style={{ display: 'grid', justifyContent: 'center', justifyItems: 'center' }}>
+              <div style={{ color: '#4b5563', fontSize: 14  }}>
+                Ultima sincronizacao local: {formatDateTime(lastSyncedAt)}
+              </div>
+              <button
+                type="button"
+                onClick={() => void syncWithOnlineDatabase()}
+                disabled={syncing}
+                style={{
+                  padding: '12px 16px',
+                  borderRadius: 12,
+                  border: 'none',
+                  background: 'linear-gradient(135deg, #c084fc 0%, #8b5cf6 100%)',
+                  color: '#fff',
+                  cursor: syncing ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  fontWeight: 700,
+                  opacity: syncing ? 0.7 : 1,
+                }}
+              >
+                <FiRefreshCw size={16} />
+                {syncing ? 'Sincronizando...' : 'Sincronizar com banco online'}
+              </button>
+            </div>
+        </div>
+
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+            gap: 12,
+            marginTop: 16,
+          }}
+        >
+          <div>
+            <div style={{ color: '#6b7280', fontSize: 12 }}>Versao local conhecida</div>
+            <div style={{ fontWeight: 700 }}>{formatDateTime(localUpdatedAt)}</div>
+          </div>
+          <div>
+            <div style={{ color: '#6b7280', fontSize: 12 }}>Versao online conhecida</div>
+            <div style={{ fontWeight: 700 }}>{formatDateTime(remoteUpdatedAt)}</div>
+          </div>
+          <div>
+            <div style={{ color: '#6b7280', fontSize: 12 }}>Status</div>
+            <div style={{ fontWeight: 700 }}>
+              {isOutdated ? 'Ha atualizacoes no Firebase aguardando sincronizacao' : 'Cache pronto para consulta local'}
+            </div>
+          </div>
         </div>
       </div>
 

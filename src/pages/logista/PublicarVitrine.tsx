@@ -6,6 +6,7 @@ import { FiCheckCircle, FiExternalLink, FiImage, FiLayers, FiUploadCloud } from 
 import { rtdb, storage } from '../../service/firebase'
 import type { CatalogVariation, InternalProductRecord, ShowcaseRecord } from '../../types/catalog'
 import { variationLabel } from '../../utils/catalog'
+import { CATALOG_SYNC_PATH, patchCachedStockProduct } from './stockCache'
 
 interface ShowcaseEditorProduct {
   id: string
@@ -132,6 +133,7 @@ export default function PublicarVitrine() {
     if (!product) return
 
     const nextProduct = { ...product, ...changes }
+    const now = Date.now()
     setSavingId(productId)
 
     try {
@@ -145,12 +147,27 @@ export default function PublicarVitrine() {
         [`showcase/${productId}/stock`]: nextProduct.stock,
         [`showcase/${productId}/featured`]: nextProduct.featured,
         [`showcase/${productId}/promotion`]: nextProduct.promotion,
-        [`showcase/${productId}/updatedAt`]: Date.now(),
+        [`showcase/${productId}/updatedAt`]: now,
         [`products/${productId}/image`]: nextProduct.image || '',
-        [`products/${productId}/updatedAt`]: Date.now(),
+        [`products/${productId}/updatedAt`]: now,
+        [`${CATALOG_SYNC_PATH}/updatedAt`]: now,
+        [`${CATALOG_SYNC_PATH}/source`]: 'publicar_vitrine',
       })
 
       updateLocalProduct(productId, changes)
+      patchCachedStockProduct(
+        productId,
+        {
+          name: nextProduct.name,
+          image: nextProduct.image || '',
+          salePrice: nextProduct.price,
+          categoryName: categories[nextProduct.categoryId] || 'Sem categoria',
+          available: nextProduct.available,
+          featured: nextProduct.featured,
+          updatedAt: now,
+        },
+        now,
+      )
     } catch (error) {
       console.error('Erro ao salvar produto da vitrine:', error)
     } finally {

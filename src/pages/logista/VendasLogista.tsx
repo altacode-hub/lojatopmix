@@ -10,6 +10,7 @@ import SalesHeader from './vendas/SalesHeader'
 import SalesHistorySection from './vendas/SalesHistorySection'
 import { getDateInputValue, getDateRange, hasVariationStock } from './vendas/helpers'
 import type { CounterSaleItem, SaleItemRecord, SaleRecord, SaleableVariationRow } from './vendas/types'
+import { CATALOG_SYNC_PATH, patchCachedStockProduct } from './stockCache'
 
 export default function VendasLogista() {
   const { user } = useAuth()
@@ -298,7 +299,25 @@ export default function VendasLogista() {
         sellerUid: user.uid,
       }
 
+      updates[`${CATALOG_SYNC_PATH}/updatedAt`] = now
+      updates[`${CATALOG_SYNC_PATH}/source`] = 'vendas_balcao'
+
       await update(ref(rtdb), updates)
+      selectedItems.forEach((item) => {
+        const inventoryUpdate = updates[`inventory/${item.productId}`] as { total?: number; reserved?: number; available?: number } | undefined
+        if (!inventoryUpdate) return
+
+        patchCachedStockProduct(
+          item.productId,
+          {
+            totalStock: Number(inventoryUpdate.total || 0),
+            reservedStock: Number(inventoryUpdate.reserved || 0),
+            availableStock: Number(inventoryUpdate.available || 0),
+            updatedAt: now,
+          },
+          now,
+        )
+      })
       setSelectedItems([])
       setSearch('')
       setSuccessMessage('Venda no balcao registrada com sucesso.')
@@ -373,7 +392,25 @@ export default function VendasLogista() {
         updates[`checkoutOrders/${sale.orderNsu}/updatedAt`] = now
       }
 
+      updates[`${CATALOG_SYNC_PATH}/updatedAt`] = now
+      updates[`${CATALOG_SYNC_PATH}/source`] = 'entrega_online'
+
       await update(ref(rtdb), updates)
+      ;(sale.items || []).forEach((item) => {
+        const inventoryUpdate = updates[`inventory/${item.productId}`] as { total?: number; reserved?: number; available?: number } | undefined
+        if (!inventoryUpdate || !item.productId) return
+
+        patchCachedStockProduct(
+          item.productId,
+          {
+            totalStock: Number(inventoryUpdate.total || 0),
+            reservedStock: Number(inventoryUpdate.reserved || 0),
+            availableStock: Number(inventoryUpdate.available || 0),
+            updatedAt: now,
+          },
+          now,
+        )
+      })
       setSuccessMessage('Entrega confirmada e estoque baixado no sistema.')
       await loadData()
     } catch (deliveryError) {

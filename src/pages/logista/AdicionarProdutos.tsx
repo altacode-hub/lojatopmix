@@ -5,6 +5,8 @@ import { rtdb } from '../../service/firebase'
 import { get, push, ref, update } from 'firebase/database'
 import { FiPackage, FiCreditCard, FiTrendingUp, FiBox, FiDollarSign, FiBarChart2, FiCheckCircle, FiTarget, FiTrendingDown, FiPercent, FiEdit, FiTrash2 } from 'react-icons/fi'
 import { buildVariationKey } from '../../utils/catalog'
+import type { InternalProductRecord, ShowcaseRecord } from '../../types/catalog'
+import { buildInventoryProductRow, CATALOG_SYNC_PATH, upsertCachedStockProduct } from './stockCache'
 
 interface ProductVariation {
   size: string
@@ -621,6 +623,14 @@ export default function AdicionarProdutos() {
     try {
       const updates: Record<string, unknown> = {}
       const now = Date.now()
+      const cachedRows: Array<{ row: ReturnType<typeof buildInventoryProductRow>; updatedAt: number }> = []
+      const categoryMap = categories.reduce(
+        (acc, category) => {
+          acc[category.id] = category.name || 'Sem categoria'
+          return acc
+        },
+        {} as Record<string, string>,
+      )
 
       for (const product of products) {
         const totalQuantity = product.variations.reduce((sum, v) => sum + v.quantity, 0)
@@ -642,7 +652,7 @@ export default function AdicionarProdutos() {
           cost: product.unitCost,
         }
 
-        updates[`products/${product.id}`] = {
+        const nextProductRecord: InternalProductRecord = {
           name: product.name,
           description: product.description,
           supplierName: product.supplierName,
@@ -667,14 +677,16 @@ export default function AdicionarProdutos() {
           },
           variations: variationMap,
         }
+        updates[`products/${product.id}`] = nextProductRecord
 
-        updates[`inventory/${product.id}`] = {
+        const nextInventoryRecord = {
           total: totalStock,
           reserved: 0,
           available: totalStock,
         }
+        updates[`inventory/${product.id}`] = nextInventoryRecord
 
-        updates[`showcase/${product.id}`] = {
+        const nextShowcaseRecord: ShowcaseRecord = {
           purchaseId,
           name: product.name,
           image: '',
@@ -688,6 +700,11 @@ export default function AdicionarProdutos() {
           promotion: false,
           updatedAt: now,
         }
+        updates[`showcase/${product.id}`] = nextShowcaseRecord
+        cachedRows.push({
+          row: buildInventoryProductRow(product.id, nextProductRecord, nextShowcaseRecord, nextInventoryRecord, categoryMap),
+          updatedAt: now,
+        })
 
         for (const variation of product.variations) {
           const movementKey = push(ref(rtdb, 'stockMovements')).key
@@ -706,7 +723,13 @@ export default function AdicionarProdutos() {
       
       updates[`purchases/${purchaseId}/status`] = 'completed'
       updates[`purchases/${purchaseId}/updatedAt`] = now
+      updates[`${CATALOG_SYNC_PATH}/updatedAt`] = now
+      updates[`${CATALOG_SYNC_PATH}/source`] = 'adicionar_produtos'
       await update(ref(rtdb), updates)
+
+      cachedRows.forEach(({ row, updatedAt }) => {
+        upsertCachedStockProduct(row, updatedAt)
+      })
 
       if (typeof window !== 'undefined') {
         window.localStorage.removeItem(getDraftStorageKey(purchaseId))

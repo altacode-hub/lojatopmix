@@ -6,6 +6,7 @@ import { FiArrowLeft, FiCheckCircle, FiExternalLink, FiImage, FiPackage, FiSave,
 import { rtdb, storage } from '../../service/firebase'
 import type { CatalogVariation, InternalProductRecord, ProductPricing, ShowcaseRecord } from '../../types/catalog'
 import { variationLabel } from '../../utils/catalog'
+import { buildInventoryProductRow, CATALOG_SYNC_PATH, upsertCachedStockProduct } from './stockCache'
 
 interface CategoryOption {
   id: string
@@ -19,6 +20,8 @@ interface InventoryRecord {
 }
 
 interface ProductEditorState {
+  createdAt: number
+  purchaseId?: string
   name: string
   description: string
   shortDescription: string
@@ -129,6 +132,8 @@ export default function ProdutoEstoque() {
         const salePrice = Number(showcaseData?.price ?? pricing.salePrice ?? 0)
 
         setProduct({
+          createdAt: Number(productData.createdAt || Date.now()),
+          purchaseId: showcaseData?.purchaseId,
           name: showcaseData?.name || productData.name || '',
           description: productData.description || '',
           shortDescription: showcaseData?.shortDescription || productData.description || '',
@@ -238,6 +243,42 @@ export default function ProdutoEstoque() {
     const nextFinalUnitCost = Number((product.pricing.unitCost + product.pricing.allocatedCosts).toFixed(2))
     const hasStock = product.inventory.available > 0 && variationEntries.some(([, variation]) => Number(variation.stock || 0) > 0)
     const now = Date.now()
+    const categoryMap = categories.reduce(
+      (acc, category) => {
+        acc[category.id] = category.name
+        return acc
+      },
+      {} as Record<string, string>,
+    )
+    const nextProductRecord: InternalProductRecord = {
+      name: trimmedName,
+      description: trimmedDescription,
+      supplierName: product.supplierName.trim(),
+      categoryId: product.categoryId,
+      active: product.active,
+      createdAt: product.createdAt,
+      updatedAt: now,
+      image: product.image || '',
+      pricing: {
+        ...product.pricing,
+        finalUnitCost: nextFinalUnitCost,
+      },
+      variations: product.variations,
+    }
+    const nextShowcaseRecord: ShowcaseRecord = {
+      purchaseId: product.purchaseId,
+      name: trimmedName,
+      image: product.image || '',
+      price: product.pricing.salePrice,
+      categoryId: product.categoryId,
+      shortDescription: trimmedShortDescription,
+      available: product.available,
+      stock: hasStock,
+      variations: product.variations,
+      featured: product.featured,
+      promotion: product.promotion,
+      updatedAt: now,
+    }
 
     setSaving(true)
     setError(null)
@@ -245,30 +286,14 @@ export default function ProdutoEstoque() {
 
     try {
       await update(ref(rtdb), {
-        [`products/${productId}/name`]: trimmedName,
-        [`products/${productId}/description`]: trimmedDescription,
-        [`products/${productId}/supplierName`]: product.supplierName.trim(),
-        [`products/${productId}/categoryId`]: product.categoryId,
-        [`products/${productId}/active`]: product.active,
-        [`products/${productId}/image`]: product.image || '',
-        [`products/${productId}/pricing`]: {
-          ...product.pricing,
-          finalUnitCost: nextFinalUnitCost,
-        },
-        [`products/${productId}/variations`]: product.variations,
-        [`products/${productId}/updatedAt`]: now,
-        [`showcase/${productId}/name`]: trimmedName,
-        [`showcase/${productId}/image`]: product.image || '',
-        [`showcase/${productId}/price`]: product.pricing.salePrice,
-        [`showcase/${productId}/categoryId`]: product.categoryId,
-        [`showcase/${productId}/shortDescription`]: trimmedShortDescription,
-        [`showcase/${productId}/available`]: product.available,
-        [`showcase/${productId}/stock`]: hasStock,
-        [`showcase/${productId}/featured`]: product.featured,
-        [`showcase/${productId}/promotion`]: product.promotion,
-        [`showcase/${productId}/variations`]: product.variations,
-        [`showcase/${productId}/updatedAt`]: now,
+        [`products/${productId}`]: nextProductRecord,
+        [`showcase/${productId}`]: nextShowcaseRecord,
+        [`${CATALOG_SYNC_PATH}/updatedAt`]: now,
+        [`${CATALOG_SYNC_PATH}/source`]: 'produto_estoque',
       })
+
+      const cachedRow = buildInventoryProductRow(productId, nextProductRecord, nextShowcaseRecord, product.inventory, categoryMap)
+      upsertCachedStockProduct(cachedRow, now)
 
       setProduct((current) =>
         current
