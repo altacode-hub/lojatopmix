@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react'
 import type { CatalogVariation } from '../../../types/catalog'
-import type { SaleRecord } from './types'
+import type { ReservedSaleViewRecord, SaleRecord } from './types'
 
 export const cardStyle: CSSProperties = {
   background: '#fff',
@@ -52,9 +52,17 @@ export const getDateRange = (date: string, endOfDay = false) => {
 export const hasVariationStock = (variations: Record<string, CatalogVariation> | undefined) =>
   Object.values(variations || {}).some((variation) => Number(variation?.stock || 0) > 0)
 
-export const getStatusMeta = (sale: SaleRecord) => {
+export const getStatusMeta = (sale: SaleRecord | ReservedSaleViewRecord) => {
+  if (sale.paymentStatus === 'cancelled' || sale.fulfillmentStatus === 'cancelled' || sale.stockStatus === 'released') {
+    return { label: 'Cancelada', color: '#b91c1c', background: '#fef2f2' }
+  }
+
   if (sale.fulfillmentStatus === 'delivered') {
     return { label: 'Entregue', color: '#059669', background: '#ecfdf5' }
+  }
+
+  if (sale.fulfillmentStatus === 'reserved' || sale.stockStatus === 'reserved') {
+    return { label: 'Reservada', color: '#b45309', background: '#fffbeb' }
   }
 
   if (sale.fulfillmentStatus === 'pending_review' || sale.stockStatus === 'attention') {

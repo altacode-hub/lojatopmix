@@ -18,6 +18,7 @@ export type CounterSaleItem = SaleableVariationRow & {
 export type SaleItemRecord = {
   productId?: string | null
   variationKey?: string | null
+  reservationItemId?: string | null
   productName: string
   description: string
   quantity: number
@@ -32,8 +33,9 @@ export type SaleRecord = {
   orderNsu?: string
   channel: 'balcao' | 'online' | string
   paymentStatus?: string
-  fulfillmentStatus?: 'delivered' | 'pending_delivery' | 'pending_review' | string
-  stockStatus?: 'deducted' | 'reserved' | 'attention' | string
+  paymentMethod?: string | null
+  fulfillmentStatus?: 'delivered' | 'pending_delivery' | 'pending_review' | 'reserved' | 'cancelled' | string
+  stockStatus?: 'deducted' | 'reserved' | 'attention' | 'released' | string
   totalAmount: number
   totalItems: number
   items: SaleItemRecord[]
@@ -51,6 +53,14 @@ export type SaleRecord = {
   alerts?: string[] | null
   createdAt: number
   paidAt?: number
+  reservedAt?: number
   deliveredAt?: number
+  cancelledAt?: number
   updatedAt?: number
+  sellerUid?: string
+}
+
+export type ReservedSaleViewRecord = SaleRecord & {
+  sourceType?: 'sale' | 'cart'
+  cartId?: string
 }

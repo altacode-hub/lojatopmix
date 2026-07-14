@@ -19,12 +19,18 @@ export const variationLabel = (variation: Pick<CatalogVariation, 'size' | 'color
   return variation.color ? `${variation.size} • ${variation.color}` : variation.size
 }
 
+export const getEffectiveVariationStock = (variation: CatalogVariation | undefined | null) =>
+  Math.max(Number(variation?.stock || 0) - Number(variation?.cartReserved || 0), 0)
+
+export const hasEffectiveVariationStock = (variations: Record<string, CatalogVariation> | undefined) =>
+  Object.values(variations || {}).some((variation) => getEffectiveVariationStock(variation) > 0)
+
 export const showcaseToArray = (showcase: Record<string, ShowcaseRecord> | null | undefined) => {
   if (!showcase) return []
 
   return Object.entries(showcase)
     .map(([id, item]) => ({ id, ...item }))
-    .filter((item) => item.available && item.stock)
+    .filter((item) => item.available && hasEffectiveVariationStock(item.variations))
     .sort((a, b) => Number(b.updatedAt || 0) - Number(a.updatedAt || 0))
 }
 
@@ -35,7 +41,7 @@ export const getVariationOptions = (variations: Record<string, CatalogVariation>
     .map(([key, variation]) => ({
       key,
       ...variation,
-      stock: Number(variation.stock || 0),
+      stock: getEffectiveVariationStock(variation),
     }))
     .filter((variation) => variation.stock > 0)
 }

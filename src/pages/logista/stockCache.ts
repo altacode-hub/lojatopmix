@@ -4,6 +4,7 @@ export interface InventoryRecord {
   total?: number
   reserved?: number
   available?: number
+  cartReserved?: number
 }
 
 export interface InventoryProductRow {
@@ -74,9 +75,10 @@ export const buildInventoryProductRow = (
   const variations = (showcase?.variations || product.variations || {}) as Record<string, CatalogVariation>
   const variationKeywords = Object.values(variations).flatMap((variation) => [variation.size, variation.color].filter(Boolean))
   const categoryId = showcase?.categoryId || product.categoryId || ''
-  const availableStock = Number(inventory?.available ?? 0)
-  const totalStock = Number(inventory?.total ?? availableStock)
-  const reservedStock = Number(inventory?.reserved ?? 0)
+  const cartReservedStock = Number(inventory?.cartReserved ?? 0)
+  const totalStock = Number(inventory?.total ?? inventory?.available ?? 0)
+  const reservedStock = Number(inventory?.reserved ?? 0) + cartReservedStock
+  const availableStock = Math.max(Number(inventory?.available ?? totalStock) - cartReservedStock, 0)
 
   const baseRow = {
     id: productId,

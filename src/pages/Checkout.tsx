@@ -21,7 +21,7 @@ const formatCurrency = (value: number) =>
   }).format(value)
 
 export default function Checkout() {
-  const { items, total } = useCart()
+  const { items, total, cartId } = useCart()
   const { user } = useAuth()
   const [form, setForm] = useState<CheckoutFormState>({
     customerName: '',
@@ -37,6 +37,7 @@ export default function Checkout() {
   const checkoutItems = useMemo(
     () =>
       items.map((item) => ({
+        itemId: item.id,
         quantity: item.qty,
         price: Math.round(item.price * 100),
         description: item.name,
@@ -94,6 +95,7 @@ export default function Checkout() {
           : undefined
 
       const { url, orderNsu } = await createPayment({
+        cartId,
         items: checkoutItems,
         customer,
         address,

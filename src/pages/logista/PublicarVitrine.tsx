@@ -5,7 +5,7 @@ import { get, ref, update } from 'firebase/database'
 import { FiCheckCircle, FiExternalLink, FiImage, FiLayers, FiUploadCloud } from 'react-icons/fi'
 import { rtdb, storage } from '../../service/firebase'
 import type { CatalogVariation, InternalProductRecord, ShowcaseRecord } from '../../types/catalog'
-import { variationLabel } from '../../utils/catalog'
+import { getEffectiveVariationStock, hasEffectiveVariationStock, variationLabel } from '../../utils/catalog'
 import { CATALOG_SYNC_PATH, patchCachedStockProduct } from './stockCache'
 
 interface ShowcaseEditorProduct {
@@ -86,6 +86,7 @@ export default function PublicarVitrine() {
             const product = productSnap.val() as InternalProductRecord
             const showcase = showcaseSnap.exists() ? (showcaseSnap.val() as ShowcaseRecord) : null
             const inventory = inventorySnap.exists() ? inventorySnap.val() : null
+            const cartReserved = Number(inventory?.cartReserved || 0)
 
             return {
               id: productId,
@@ -98,8 +99,8 @@ export default function PublicarVitrine() {
               available: Boolean(showcase?.available ?? true),
               featured: Boolean(showcase?.featured),
               promotion: Boolean(showcase?.promotion),
-              stock: Boolean(showcase?.stock ?? (inventory?.available || 0) > 0),
-              availableStock: Number(inventory?.available || 0),
+              stock: hasEffectiveVariationStock((showcase?.variations || product.variations || {}) as Record<string, CatalogVariation>),
+              availableStock: Math.max(Number(inventory?.available || 0) - cartReserved, 0),
               shortDescription: showcase?.shortDescription || product.description || '',
               variations: showcase?.variations || product.variations || {},
             } satisfies ShowcaseEditorProduct
@@ -407,7 +408,7 @@ export default function PublicarVitrine() {
                               fontSize: 14,
                             }}
                           >
-                            {variationLabel(variation)} • {variation.stock} un
+                            {variationLabel(variation)} • {getEffectiveVariationStock(variation)} un
                           </div>
                         ))}
                       </div>

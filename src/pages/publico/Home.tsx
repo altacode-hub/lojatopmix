@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { get, ref } from 'firebase/database'
+import { onValue, ref } from 'firebase/database'
 import { rtdb } from '../../service/firebase'
 import type { ShowcaseRecord } from '../../types/catalog'
 import { showcaseToArray } from '../../utils/catalog'
@@ -11,19 +11,21 @@ export default function Home() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const loadShowcase = async () => {
-      try {
-        const snapshot = await get(ref(rtdb, 'showcase'))
+    const showcaseRef = ref(rtdb, 'showcase')
+    const unsubscribe = onValue(
+      showcaseRef,
+      (snapshot) => {
         const data = snapshot.exists() ? (snapshot.val() as Record<string, ShowcaseRecord>) : null
         setProducts(showcaseToArray(data))
-      } catch (error) {
-        console.error('Erro ao carregar vitrine:', error)
-      } finally {
         setLoading(false)
-      }
-    }
+      },
+      (error) => {
+        console.error('Erro ao carregar vitrine:', error)
+        setLoading(false)
+      },
+    )
 
-    loadShowcase()
+    return () => unsubscribe()
   }, [])
 
   return (

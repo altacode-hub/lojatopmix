@@ -2,6 +2,7 @@ export interface CatalogVariation {
   size: string
   color: string
   stock: number
+  cartReserved?: number
 }
 
 export interface ProductPricing {
@@ -17,6 +18,10 @@ export interface ProductPricing {
   grossMargin: number
   cardFee: number
   salePrice: number
+  finalPrice?: number
+  promotionPrice?: number
+  realMargin?: number
+  realMarginPercentage?: number
 }
 
 export interface InternalProductRecord {
@@ -28,6 +33,7 @@ export interface InternalProductRecord {
   createdAt: number
   updatedAt: number
   image?: string
+  images?: string[]
   pricing: ProductPricing
   variations: Record<string, CatalogVariation>
 }
@@ -36,7 +42,9 @@ export interface ShowcaseRecord {
   purchaseId?: string
   name: string
   image?: string
+  images?: string[]
   price: number
+  promotionPrice?: number
   categoryId: string
   shortDescription: string
   available: boolean

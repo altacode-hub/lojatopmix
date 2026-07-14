@@ -77,6 +77,7 @@ const normalizeItems = (items) => {
     }
 
     return {
+      itemId: sanitizeString(item?.itemId) || undefined,
       quantity,
       price,
       description,
@@ -129,8 +130,9 @@ const normalizeAddress = (address) => {
   };
 };
 
-const buildOrderRecord = ({ orderNsu, items, customer, address }) => ({
+const buildOrderRecord = ({ orderNsu, cartId, items, customer, address }) => ({
   orderNsu,
+  cartId: sanitizeString(cartId) || null,
   handle: INFINITEPAY_HANDLE,
   status: 'creating_checkout',
   totalAmount: items.reduce((sum, item) => sum + item.quantity * item.price, 0),
@@ -178,12 +180,61 @@ const hasAvailableVariationStock = (variations) => {
   return Object.values(variations).some((variation) => toNumber(variation?.stock) > 0);
 };
 
+const readCartReservationItems = (value) => {
+  if (!value || typeof value !== 'object') {
+    return {};
+  }
+
+  return Object.entries(value).reduce((acc, [itemId, itemValue]) => {
+    if (!itemValue || typeof itemValue !== 'object') {
+      return acc;
+    }
+
+    const productId = sanitizeString(itemValue.productId);
+    const variationKey = sanitizeString(itemValue.variationKey);
+
+    if (!productId || !variationKey) {
+      return acc;
+    }
+
+    acc[itemId] = {
+      itemId,
+      productId,
+      variationKey,
+      quantity: toNumber(itemValue.quantity),
+    };
+    return acc;
+  }, {});
+};
+
+const getCartReservedQuantityForItem = (cartItems, rawItem) => {
+  const itemId = sanitizeString(rawItem?.itemId);
+  if (itemId && cartItems[itemId]) {
+    return toNumber(cartItems[itemId].quantity);
+  }
+
+  const productId = sanitizeString(rawItem?.productId);
+  const variationKey = sanitizeString(rawItem?.variationKey);
+
+  return Object.values(cartItems).reduce((sum, item) => {
+    if (item.productId === productId && item.variationKey === variationKey) {
+      return sum + toNumber(item.quantity);
+    }
+
+    return sum;
+  }, 0);
+};
+
+const getCartReservedQuantityForProduct = (cartItems, productId) =>
+  Object.values(cartItems).reduce((sum, item) => (item.productId === productId ? sum + toNumber(item.quantity) : sum), 0);
+
 const ensureOnlineSale = async (orderNsu, order) => {
   if (!order || order.onlineSaleId) {
     return;
   }
 
   const rawItems = Array.isArray(order.items) ? order.items : [];
+  const cartId = sanitizeString(order.cartId);
 
   if (rawItems.length === 0) {
     return;
@@ -194,6 +245,8 @@ const ensureOnlineSale = async (orderNsu, order) => {
   const alerts = [];
   const saleItems = [];
   const stockOperations = [];
+  const cartReservationSnapshot = cartId ? await database.ref(`cartReservations/${cartId}/items`).get() : null;
+  const cartReservationItems = readCartReservationItems(cartReservationSnapshot?.val());
 
   for (const rawItem of rawItems) {
     const productId = sanitizeString(rawItem?.productId);
@@ -236,9 +289,16 @@ const ensureOnlineSale = async (orderNsu, order) => {
     }
 
     const currentVariationStock = toNumber(variation.stock);
+    const currentVariationCartReserved = toNumber(variation.cartReserved);
     const currentAvailable = toNumber(inventory.available);
+    const currentCartReserved = toNumber(inventory.cartReserved);
+    const reservedForThisItem = getCartReservedQuantityForItem(cartReservationItems, rawItem);
+    const reservedForThisProduct = getCartReservedQuantityForProduct(cartReservationItems, productId);
+    const effectiveVariationStock =
+      currentVariationStock - Math.max(currentVariationCartReserved - reservedForThisItem, 0);
+    const effectiveAvailable = currentAvailable - Math.max(currentCartReserved - reservedForThisProduct, 0);
 
-    if (currentVariationStock < quantity || currentAvailable < quantity) {
+    if (effectiveVariationStock < quantity || effectiveAvailable < quantity) {
       alerts.push(`Estoque insuficiente para ${sanitizeString(showcase.name) || productId}.`);
       continue;
     }
@@ -247,6 +307,9 @@ const ensureOnlineSale = async (orderNsu, order) => {
       productId,
       variationKey,
       quantity,
+      itemId: sanitizeString(rawItem?.itemId) || `${productId}:${variationKey}`,
+      reservedForThisItem,
+      reservedForThisProduct,
       inventory,
       showcase,
       product,
@@ -279,6 +342,8 @@ const ensureOnlineSale = async (orderNsu, order) => {
     [`checkoutOrders/${orderNsu}/deliveryStatus`]: needsReview ? 'pending_review' : 'pending_delivery',
     [`checkoutOrders/${orderNsu}/stockStatus`]: needsReview ? 'attention' : 'reserved',
     [`checkoutOrders/${orderNsu}/updatedAt`]: admin.database.ServerValue.TIMESTAMP,
+    ['indexes/catalogSync/updatedAt']: now,
+    ['indexes/catalogSync/source']: needsReview ? 'online_review' : 'reserva_online',
   };
 
   if (!needsReview) {
@@ -293,19 +358,29 @@ const ensureOnlineSale = async (orderNsu, order) => {
       const showcaseVariation = showcaseVariations[variationKey] || {};
       const productVariation = productVariations[variationKey] || {};
       const nextVariationStock = toNumber(showcaseVariation.stock || productVariation.stock) - operation.quantity;
+      const nextVariationCartReserved = Math.max(
+        toNumber(showcaseVariation.cartReserved || productVariation.cartReserved) - operation.reservedForThisItem,
+        0
+      );
 
       showcaseVariations[variationKey] = {
         ...showcaseVariation,
         stock: nextVariationStock,
+        cartReserved: nextVariationCartReserved,
       };
 
       productVariations[variationKey] = {
         ...productVariation,
         stock: nextVariationStock,
+        cartReserved: nextVariationCartReserved,
       };
 
       const nextAvailable = toNumber(operation.inventory.available) - operation.quantity;
       const nextReserved = toNumber(operation.inventory.reserved) + operation.quantity;
+      const nextCartReserved = Math.max(
+        toNumber(operation.inventory.cartReserved) - operation.reservedForThisProduct,
+        0
+      );
       const movementRef = database.ref('stockMovements').push();
 
       if (movementRef.key) {
@@ -324,12 +399,18 @@ const ensureOnlineSale = async (orderNsu, order) => {
         total: toNumber(operation.inventory.total),
         reserved: nextReserved,
         available: nextAvailable,
+        cartReserved: nextCartReserved,
       };
       updates[`showcase/${operation.productId}/variations`] = showcaseVariations;
       updates[`showcase/${operation.productId}/stock`] = hasAvailableVariationStock(showcaseVariations);
       updates[`showcase/${operation.productId}/updatedAt`] = now;
       updates[`products/${operation.productId}/variations`] = productVariations;
       updates[`products/${operation.productId}/updatedAt`] = now;
+      if (cartId) {
+        updates[`cartReservations/${cartId}/items/${operation.itemId}`] = null;
+        updates[`cartReservations/${cartId}/updatedAt`] = now;
+        updates[`cartReservations/${cartId}/status`] = 'checked_out';
+      }
     }
   } else {
     updates[`checkoutOrders/${orderNsu}/alerts`] = alerts;
@@ -385,13 +466,14 @@ exports.createCheckout = onRequest({ region: 'us-central1', cors: true }, async 
   }
 
   try {
+    const cartId = sanitizeString(req.body?.cartId);
     const items = normalizeItems(req.body?.items);
     const customer = normalizeCustomer(req.body?.customer);
     const address = normalizeAddress(req.body?.address);
     const orderNsu = createOrderNsu();
     const orderRef = database.ref(`checkoutOrders/${orderNsu}`);
 
-    await orderRef.set(buildOrderRecord({ orderNsu, items, customer, address }));
+    await orderRef.set(buildOrderRecord({ orderNsu, cartId, items, customer, address }));
 
     const redirectUrl = buildRedirectUrl();
     const webhookUrl = buildWebhookUrl();
@@ -572,6 +654,9 @@ exports.infinitePayWebhook = onRequest({ region: 'us-central1', cors: true }, as
     webhookId: webhookRef.key,
     webhookReceivedAt: admin.database.ServerValue.TIMESTAMP,
   });
+
+  const refreshedOrderSnapshot = await orderRef.get();
+  await ensureOnlineSale(orderNsu, refreshedOrderSnapshot.val());
 
   res.status(200).json({ success: true, message: null });
 });

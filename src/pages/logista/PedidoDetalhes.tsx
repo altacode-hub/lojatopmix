@@ -285,19 +285,22 @@ export default function PedidoDetalhes() {
                     }}>
                       {product.name}
                     </h3>
-                    {/* We don't have edit/remove functions here, but let's keep the styling */}
                     <div style={{ display: 'flex', gap: 12 }}>
-                      <button style={{
-                        padding: '8px 12px',
-                        borderRadius: 10,
-                        border: '1px solid #e5e7eb',
-                        background: '#fff',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        fontSize: 14
-                      }}>
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/logista/estoque/${product.id}`)}
+                        style={{
+                          padding: '8px 12px',
+                          borderRadius: 10,
+                          border: '1px solid #e5e7eb',
+                          background: '#fff',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          fontSize: 14
+                        }}
+                      >
                         <FiEdit /> Editar
                       </button>
                       <button style={{

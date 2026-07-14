@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { get, ref } from 'firebase/database'
+import { onValue, ref } from 'firebase/database'
 import { useCart } from '../../context/CartContext'
 import { rtdb } from '../../service/firebase'
 import type { ShowcaseRecord } from '../../types/catalog'
@@ -13,39 +13,40 @@ export default function ProductDetail() {
   const [product, setProduct] = useState<(({ id: string } & ShowcaseRecord) | null)>(null)
   const [relatedProducts, setRelatedProducts] = useState<Array<{ id: string } & ShowcaseRecord>>([])
   const [loading, setLoading] = useState(true)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [addingToCart, setAddingToCart] = useState(false)
 
   const [qty, setQty] = useState<number>(1)
   const [variationKey, setVariationKey] = useState<string>('')
   const [note, setNote] = useState('')
 
   useEffect(() => {
-    const loadProduct = async () => {
-      if (!id) return
+    if (!id) return
 
-      try {
-        const [productSnap, showcaseSnap] = await Promise.all([
-          get(ref(rtdb, `showcase/${id}`)),
-          get(ref(rtdb, 'showcase')),
-        ])
-
-        const productData = productSnap.exists() ? ({ id, ...productSnap.val() } as { id: string } & ShowcaseRecord) : null
+    const showcaseRef = ref(rtdb, 'showcase')
+    const unsubscribe = onValue(
+      showcaseRef,
+      (snapshot) => {
+        const showcaseData = snapshot.exists() ? (snapshot.val() as Record<string, ShowcaseRecord>) : {}
+        const productData = showcaseData[id] ? ({ id, ...showcaseData[id] } as { id: string } & ShowcaseRecord) : null
         setProduct(productData)
 
-        if (showcaseSnap.exists()) {
-          const allProducts = Object.entries(showcaseSnap.val() as Record<string, ShowcaseRecord>)
-            .map(([productId, item]) => ({ id: productId, ...item }))
-            .filter((item) => item.id !== id && item.available && item.stock)
-            .slice(0, 3)
-          setRelatedProducts(allProducts)
-        }
-      } catch (error) {
-        console.error('Erro ao carregar produto da vitrine:', error)
-      } finally {
+        const allProducts = Object.entries(showcaseData)
+          .map(([productId, item]) => ({ id: productId, ...item }))
+          .filter((item) => item.id !== id && item.available && getVariationOptions(item.variations).length > 0)
+          .slice(0, 3)
+        setRelatedProducts(allProducts)
         setLoading(false)
-      }
-    }
+      },
+      (error) => {
+        console.error('Erro ao carregar produto da vitrine:', error)
+        setLoading(false)
+      },
+    )
 
-    loadProduct()
+    return () => {
+      unsubscribe()
+    }
   }, [id])
 
   const variations = useMemo(() => getVariationOptions(product?.variations), [product?.variations])
@@ -69,21 +70,30 @@ export default function ProductDetail() {
 
   const canAdd = variationKey && qty > 0 && Boolean(selectedVariation)
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
     if (!selectedVariation) return
 
     const idVariant = `${product.id}:${variationKey}`
     const nameVariant = `${product.name} - ${variationLabel(selectedVariation)}${note ? ' (Obs: ' + note + ')' : ''}`
-    add({
-      id: idVariant,
-      productId: product.id,
-      variationKey,
-      name: nameVariant,
-      price: product.price,
-      qty,
-      note: note.trim() || undefined,
-    })
-    navigate('/cart')
+
+    try {
+      setAddingToCart(true)
+      setErrorMessage(null)
+      await add({
+        id: idVariant,
+        productId: product.id,
+        variationKey,
+        name: nameVariant,
+        price: product.price,
+        qty,
+        note: note.trim() || undefined,
+      })
+      navigate('/cart')
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Nao foi possivel reservar o item no carrinho.')
+    } finally {
+      setAddingToCart(false)
+    }
   }
 
   return (
@@ -184,6 +194,20 @@ export default function ProductDetail() {
           }}
         />
 
+        {errorMessage ? (
+          <div
+            style={{
+              padding: '12px 14px',
+              borderRadius: 10,
+              background: '#fff7ed',
+              color: '#9a3412',
+              border: '1px solid #fdba74',
+            }}
+          >
+            {errorMessage}
+          </div>
+        ) : null}
+
         {canAdd ? (
           <button
             style={{
@@ -194,9 +218,10 @@ export default function ProductDetail() {
               borderRadius: 10,
               fontWeight: 700,
             }}
-            onClick={handleAdd}
+            onClick={() => void handleAdd()}
+            disabled={addingToCart}
           >
-            Adicionar ao carrinho
+            {addingToCart ? 'Reservando...' : 'Adicionar ao carrinho'}
           </button>
         ) : (
           <div

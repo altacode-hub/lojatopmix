@@ -9,12 +9,14 @@ type CounterSaleSectionProps = {
   filteredCatalog: SaleableVariationRow[]
   selectedItems: CounterSaleItem[]
   selectedTotal: number
-  savingCounterSale: boolean
+  openingPayment: boolean
+  reservingProducts: boolean
   onSearchChange: (value: string) => void
   onAddItem: (row: SaleableVariationRow) => void
   onUpdateSelectedQty: (itemId: string, nextQty: number) => void
   onRemoveSelectedItem: (itemId: string) => void
   onFinalizeCounterSale: () => void
+  onReserveProducts: () => void
 }
 
 export default function CounterSaleSection({
@@ -23,12 +25,14 @@ export default function CounterSaleSection({
   filteredCatalog,
   selectedItems,
   selectedTotal,
-  savingCounterSale,
+  openingPayment,
+  reservingProducts,
   onSearchChange,
   onAddItem,
   onUpdateSelectedQty,
   onRemoveSelectedItem,
   onFinalizeCounterSale,
+  onReserveProducts,
 }: CounterSaleSectionProps) {
   return (
     <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', alignItems: 'flex-start' }}>
@@ -173,23 +177,44 @@ export default function CounterSaleSection({
             <span>Total</span>
             <strong>{formatCurrency(selectedTotal)}</strong>
           </div>
-          <button
-            onClick={onFinalizeCounterSale}
-            disabled={savingCounterSale || selectedItems.length === 0}
-            style={{
-              width: '100%',
-              padding: '14px 16px',
-              borderRadius: 14,
-              border: 'none',
-              background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
-              color: '#fff',
-              fontWeight: 800,
-              cursor: savingCounterSale || selectedItems.length === 0 ? 'not-allowed' : 'pointer',
-              opacity: savingCounterSale || selectedItems.length === 0 ? 0.7 : 1,
-            }}
-          >
-            {savingCounterSale ? 'Finalizando venda...' : 'Finalizar venda'}
-          </button>
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+            <button
+              onClick={onReserveProducts}
+              disabled={openingPayment || reservingProducts || selectedItems.length === 0}
+              style={{
+                flex: '1 1 180px',
+                padding: '14px 16px',
+                borderRadius: 14,
+                border: '1px solid #f59e0b',
+                background: '#fff7ed',
+                color: '#b45309',
+                fontWeight: 800,
+                cursor: openingPayment || reservingProducts || selectedItems.length === 0 ? 'not-allowed' : 'pointer',
+                opacity: openingPayment || reservingProducts || selectedItems.length === 0 ? 0.7 : 1,
+              }}
+            >
+              {reservingProducts ? 'Reservando...' : 'Reservar produtos'}
+            </button>
+
+            <button
+              onClick={onFinalizeCounterSale}
+              disabled={openingPayment || reservingProducts || selectedItems.length === 0}
+              style={{
+                flex: '1 1 180px',
+                marginLeft: 'auto',
+                padding: '14px 16px',
+                borderRadius: 14,
+                border: 'none',
+                background: '#0f766e',
+                color: '#fff',
+                fontWeight: 800,
+                cursor: openingPayment || reservingProducts || selectedItems.length === 0 ? 'not-allowed' : 'pointer',
+                opacity: openingPayment || reservingProducts || selectedItems.length === 0 ? 0.7 : 1,
+              }}
+            >
+              {openingPayment ? 'Abrindo pagamento...' : 'Ir para pagamento'}
+            </button>
+          </div>
         </div>
       </aside>
     </div>

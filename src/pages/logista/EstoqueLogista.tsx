@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { get, ref } from 'firebase/database'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { get, onValue, ref } from 'firebase/database'
 import { useNavigate } from 'react-router-dom'
 import { FiAlertCircle, FiBox, FiChevronRight, FiDatabase, FiEye, FiPackage, FiRefreshCw, FiSearch, FiStar } from 'react-icons/fi'
 import { rtdb } from '../../service/firebase'
@@ -46,6 +46,7 @@ export default function EstoqueLogista() {
   const [remoteUpdatedAt, setRemoteUpdatedAt] = useState<number | null>(null)
   const [localUpdatedAt, setLocalUpdatedAt] = useState<number | null>(null)
   const [isOutdated, setIsOutdated] = useState(false)
+  const lastObservedRemoteSyncRef = useRef(0)
 
   const applyCacheToState = useCallback((cache: ReturnType<typeof readStockCache>) => {
     if (!cache) return
@@ -152,6 +153,23 @@ export default function EstoqueLogista() {
   useEffect(() => {
     void checkLocalCacheStatus()
   }, [checkLocalCacheStatus])
+
+  useEffect(() => {
+    const syncRef = ref(rtdb, `${CATALOG_SYNC_PATH}/updatedAt`)
+    const unsubscribe = onValue(syncRef, (snapshot) => {
+      const nextRemoteVersion = Number(snapshot.val() || 0)
+      setRemoteUpdatedAt(nextRemoteVersion || null)
+
+      if (!nextRemoteVersion || nextRemoteVersion === lastObservedRemoteSyncRef.current) {
+        return
+      }
+
+      lastObservedRemoteSyncRef.current = nextRemoteVersion
+      void syncWithOnlineDatabase()
+    })
+
+    return () => unsubscribe()
+  }, [syncWithOnlineDatabase])
 
   const filteredProducts = useMemo(() => {
     const normalizedSearch = normalizeText(search.trim())

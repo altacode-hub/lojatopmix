@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { paymentStatus, type PaymentStatusResponse } from '../api/payment'
+import { useCart } from '../context/CartContext'
 
 type StoredCheckoutAttempt = {
   orderNsu: string
@@ -32,6 +33,7 @@ const readStoredCheckoutAttempt = (): StoredCheckoutAttempt | null => {
 
 export default function CheckoutReturn() {
   const [searchParams] = useSearchParams()
+  const { clear } = useCart()
   const [verification, setVerification] = useState<PaymentStatusResponse | null>(null)
   const [status, setStatus] = useState<'loading' | 'success' | 'pending' | 'error'>('loading')
   const [error, setError] = useState<string | null>(null)
@@ -67,6 +69,7 @@ export default function CheckoutReturn() {
         setVerification(result)
 
         if (result.success && result.paid) {
+          await clear({ releaseReservations: false })
           sessionStorage.removeItem(CHECKOUT_ATTEMPT_STORAGE_KEY)
           setStatus('success')
           return
@@ -81,7 +84,7 @@ export default function CheckoutReturn() {
     }
 
     void verifyPayment()
-  }, [params.orderNsu, params.slug, params.transactionNsu])
+  }, [clear, params.orderNsu, params.slug, params.transactionNsu])
 
   return (
     <div style={{ padding: 24, maxWidth: 720, margin: '0 auto' }}>
