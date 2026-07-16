@@ -115,7 +115,13 @@ export default function ProductDetail() {
             <img
               src={product.image}
               alt={product.name}
-              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                transform: `translate(${Number(product.mainImageOffsetX || 0)}%, ${Number(product.mainImageOffsetY || 0)}%) scale(${Number(product.mainImageZoom || 1)})`,
+                transformOrigin: 'center center',
+              }}
             />
           ) : (
             <div style={{ color: '#6b7280', textAlign: 'center', padding: 16 }}>
@@ -275,7 +281,17 @@ export default function ProductDetail() {
               }}
             >
               {p.image ? (
-                <img src={p.image} alt={p.name} style={{ width: '100%', height: 96, objectFit: 'cover' }} />
+                <img
+                  src={p.image}
+                  alt={p.name}
+                  style={{
+                    width: '100%',
+                    height: 96,
+                    objectFit: 'cover',
+                    transform: `translate(${Number(p.mainImageOffsetX || 0)}%, ${Number(p.mainImageOffsetY || 0)}%) scale(${Number(p.mainImageZoom || 1)})`,
+                    transformOrigin: 'center center',
+                  }}
+                />
               ) : (
                 <div style={{ width: '100%', height: 96, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280', background: '#f8fafc' }}>
                   Sem foto

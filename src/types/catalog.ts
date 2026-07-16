@@ -5,6 +5,19 @@ export interface CatalogVariation {
   cartReserved?: number
 }
 
+export interface CatalogCategoryRecord {
+  name: string
+  image?: string
+  thumbnailImage?: string
+  thumbnailZoom?: number
+  thumbnailOffsetX?: number
+  thumbnailOffsetY?: number
+  hidden?: boolean
+  order?: number
+  createdAt?: number
+  updatedAt?: number
+}
+
 export interface ProductPricing {
   unitCost: number
   allocatedCosts: number
@@ -34,6 +47,9 @@ export interface InternalProductRecord {
   updatedAt: number
   image?: string
   images?: string[]
+  mainImageZoom?: number
+  mainImageOffsetX?: number
+  mainImageOffsetY?: number
   pricing: ProductPricing
   variations: Record<string, CatalogVariation>
 }
@@ -43,6 +59,9 @@ export interface ShowcaseRecord {
   name: string
   image?: string
   images?: string[]
+  mainImageZoom?: number
+  mainImageOffsetX?: number
+  mainImageOffsetY?: number
   price: number
   promotionPrice?: number
   categoryId: string

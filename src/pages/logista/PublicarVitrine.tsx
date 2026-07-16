@@ -16,6 +16,9 @@ interface ShowcaseEditorProduct {
   categoryName: string
   price: number
   image: string
+  mainImageZoom: number
+  mainImageOffsetX: number
+  mainImageOffsetY: number
   available: boolean
   featured: boolean
   promotion: boolean
@@ -96,6 +99,9 @@ export default function PublicarVitrine() {
               categoryName: categoryMap[showcase?.categoryId || product.categoryId || ''] || 'Sem categoria',
               price: Number(showcase?.price ?? product.pricing?.salePrice ?? 0),
               image: showcase?.image || product.image || '',
+              mainImageZoom: Number(showcase?.mainImageZoom ?? product.mainImageZoom ?? 1),
+              mainImageOffsetX: Number(showcase?.mainImageOffsetX ?? product.mainImageOffsetX ?? 0),
+              mainImageOffsetY: Number(showcase?.mainImageOffsetY ?? product.mainImageOffsetY ?? 0),
               available: Boolean(showcase?.available ?? true),
               featured: Boolean(showcase?.featured),
               promotion: Boolean(showcase?.promotion),
@@ -141,6 +147,9 @@ export default function PublicarVitrine() {
       await update(ref(rtdb), {
         [`showcase/${productId}/name`]: nextProduct.name,
         [`showcase/${productId}/image`]: nextProduct.image || '',
+        [`showcase/${productId}/mainImageZoom`]: nextProduct.mainImageZoom,
+        [`showcase/${productId}/mainImageOffsetX`]: nextProduct.mainImageOffsetX,
+        [`showcase/${productId}/mainImageOffsetY`]: nextProduct.mainImageOffsetY,
         [`showcase/${productId}/price`]: nextProduct.price,
         [`showcase/${productId}/categoryId`]: nextProduct.categoryId,
         [`showcase/${productId}/shortDescription`]: nextProduct.shortDescription,
@@ -150,6 +159,9 @@ export default function PublicarVitrine() {
         [`showcase/${productId}/promotion`]: nextProduct.promotion,
         [`showcase/${productId}/updatedAt`]: now,
         [`products/${productId}/image`]: nextProduct.image || '',
+        [`products/${productId}/mainImageZoom`]: nextProduct.mainImageZoom,
+        [`products/${productId}/mainImageOffsetX`]: nextProduct.mainImageOffsetX,
+        [`products/${productId}/mainImageOffsetY`]: nextProduct.mainImageOffsetY,
         [`products/${productId}/updatedAt`]: now,
         [`${CATALOG_SYNC_PATH}/updatedAt`]: now,
         [`${CATALOG_SYNC_PATH}/source`]: 'publicar_vitrine',
@@ -187,7 +199,12 @@ export default function PublicarVitrine() {
       const imageRef = storageRef(storage, filePath)
       const snapshot = await uploadBytes(imageRef, file)
       const url = await getDownloadURL(snapshot.ref)
-      await saveShowcaseProduct(productId, { image: url })
+      await saveShowcaseProduct(productId, {
+        image: url,
+        mainImageZoom: 1,
+        mainImageOffsetX: 0,
+        mainImageOffsetY: 0,
+      })
     } catch (error) {
       console.error('Erro ao enviar imagem para o Firebase Storage:', error)
     } finally {
@@ -287,7 +304,13 @@ export default function PublicarVitrine() {
                         <img
                           src={product.image}
                           alt={product.name}
-                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover',
+                            transform: `translate(${Number(product.mainImageOffsetX || 0)}%, ${Number(product.mainImageOffsetY || 0)}%) scale(${Number(product.mainImageZoom || 1)})`,
+                            transformOrigin: 'center center',
+                          }}
                         />
                       ) : (
                         <div style={{ color: '#6b7280', textAlign: 'center', padding: 16 }}>

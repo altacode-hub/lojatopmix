@@ -4,7 +4,7 @@ import { getDownloadURL, ref as storageRef, uploadBytes } from 'firebase/storage
 import { useNavigate, useParams } from 'react-router-dom'
 import { FiArrowLeft, FiCheckCircle, FiExternalLink, FiSave } from 'react-icons/fi'
 import { rtdb, storage } from '../../service/firebase'
-import type { CatalogVariation, InternalProductRecord, ProductPricing, ShowcaseRecord } from '../../types/catalog'
+import type { CatalogCategoryRecord, CatalogVariation, InternalProductRecord, ProductPricing, ShowcaseRecord } from '../../types/catalog'
 import { buildVariationKey } from '../../utils/catalog'
 import { buildInventoryProductRow, CATALOG_SYNC_PATH, upsertCachedStockProduct } from './stockCache'
 import SharedProductEditorForm, { type ProductCategoryOption, type ProductVariationInput } from './components/SharedProductEditorForm'
@@ -12,6 +12,7 @@ import { getProductPricingPreview } from './productPricing'
 
 interface CategoryOption extends ProductCategoryOption {
   name: string
+  image?: string
 }
 
 interface InventoryRecord {
@@ -34,6 +35,9 @@ interface ProductEditorState {
   featured: boolean
   promotion: boolean
   images: string[]
+  mainImageZoom: number
+  mainImageOffsetX: number
+  mainImageOffsetY: number
   pricing: ProductPricing
   variations: ProductVariationInput[]
   inventory: InventoryRecord
@@ -166,9 +170,11 @@ export default function ProdutoEstoque() {
         if (categoriesSnapshot.exists()) {
           const nextCategories: CategoryOption[] = []
           categoriesSnapshot.forEach((child) => {
+            const categoryData = (child.val() || {}) as CatalogCategoryRecord
             nextCategories.push({
               id: child.key || '',
-              name: child.val()?.name || 'Sem nome',
+              name: categoryData.name || 'Sem nome',
+              image: categoryData.image || '',
             })
           })
           setCategories(nextCategories.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')))
@@ -195,6 +201,9 @@ export default function ProdutoEstoque() {
           featured: Boolean(showcaseData?.featured),
           promotion: Boolean(showcaseData?.promotion),
           images: showcaseData?.images || productData.images || (showcaseData?.image || productData.image ? [showcaseData?.image || productData.image || ''] : []),
+          mainImageZoom: Number(showcaseData?.mainImageZoom ?? productData.mainImageZoom ?? 1),
+          mainImageOffsetX: Number(showcaseData?.mainImageOffsetX ?? productData.mainImageOffsetX ?? 0),
+          mainImageOffsetY: Number(showcaseData?.mainImageOffsetY ?? productData.mainImageOffsetY ?? 0),
           pricing: {
             unitCost,
             allocatedCosts,
@@ -332,7 +341,19 @@ export default function ProdutoEstoque() {
 
   const removeImage = (index: number) => {
     setProduct((current) =>
-      current ? { ...current, images: current.images.filter((_, imageIndex) => imageIndex !== index) } : current,
+      current
+        ? {
+            ...current,
+            images: current.images.filter((_, imageIndex) => imageIndex !== index),
+            ...(index === 0
+              ? {
+                  mainImageZoom: 1,
+                  mainImageOffsetX: 0,
+                  mainImageOffsetY: 0,
+                }
+              : {}),
+          }
+        : current,
     )
   }
 
@@ -368,6 +389,9 @@ export default function ProdutoEstoque() {
       updatedAt: now,
       image: product.images[0] || '',
       images: product.images,
+      mainImageZoom: product.mainImageZoom,
+      mainImageOffsetX: product.mainImageOffsetX,
+      mainImageOffsetY: product.mainImageOffsetY,
       pricing: {
         ...product.pricing,
         finalUnitCost: nextFinalUnitCost,
@@ -384,6 +408,9 @@ export default function ProdutoEstoque() {
       name: trimmedName,
       image: product.images[0] || '',
       images: product.images,
+      mainImageZoom: product.mainImageZoom,
+      mainImageOffsetX: product.mainImageOffsetX,
+      mainImageOffsetY: product.mainImageOffsetY,
       price: pricingPreview.chosenFinalPrice,
       promotionPrice: pricingPreview.chosenPromotionPrice || undefined,
       categoryId: product.categoryId,
@@ -607,6 +634,12 @@ export default function ProdutoEstoque() {
         categoryId={product.categoryId}
         onCategoryIdChange={(value) => updateField('categoryId', value)}
         images={product.images}
+        mainImageZoom={product.mainImageZoom}
+        onMainImageZoomChange={(value) => updateField('mainImageZoom', value)}
+        mainImageOffsetX={product.mainImageOffsetX}
+        onMainImageOffsetXChange={(value) => updateField('mainImageOffsetX', value)}
+        mainImageOffsetY={product.mainImageOffsetY}
+        onMainImageOffsetYChange={(value) => updateField('mainImageOffsetY', value)}
         uploadingImages={uploadingImages}
         onUploadImages={(files) => void handleImageUpload(files)}
         onRemoveImage={removeImage}
@@ -649,6 +682,7 @@ export default function ProdutoEstoque() {
         onSave={handleSave}
         saveButtonLabel={saving ? 'Salvando...' : 'Salvar produto'}
         saveButtonDisabled={saving}
+        onManageCategories={() => navigate('/logista/categorias')}
       />
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 20 }}>

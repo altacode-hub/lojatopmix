@@ -1,5 +1,5 @@
 import { Route, Routes } from 'react-router-dom'
-import PublicoLayout from './pages/publico/PublicoLayout'
+import HomeLayout from './pages/publico/HomeLayout'
 import { publicoRoutes } from './pages/publico/PublicoRoutes'
 import Checkout from './pages/Checkout'
 import CheckoutReturn from './pages/CheckoutReturn'
@@ -13,7 +13,7 @@ export default function App() {
   return (
     <div>
       <Routes>
-        <Route path="/" element={<PublicoLayout />}>
+        <Route path="/" element={<HomeLayout />}>
           {publicoRoutes.map((route, i) => (
             <Route key={i} {...route} />
           ))}

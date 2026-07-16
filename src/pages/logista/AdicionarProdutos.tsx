@@ -6,7 +6,7 @@ import { get, push, ref, update } from 'firebase/database'
 import { getDownloadURL, ref as storageRef, uploadBytes } from 'firebase/storage'
 import { FiEdit, FiPackage, FiTrash2, FiTrendingUp } from 'react-icons/fi'
 import { buildVariationKey } from '../../utils/catalog'
-import type { InternalProductRecord, ShowcaseRecord } from '../../types/catalog'
+import type { CatalogCategoryRecord, InternalProductRecord, ShowcaseRecord } from '../../types/catalog'
 import { buildInventoryProductRow, CATALOG_SYNC_PATH, upsertCachedStockProduct } from './stockCache'
 import SharedProductEditorForm, { type ProductCategoryOption, type ProductVariationInput } from './components/SharedProductEditorForm'
 import { getProductPricingPreview } from './productPricing'
@@ -18,6 +18,9 @@ interface Product {
   supplierName: string
   categoryId: string
   images: string[]
+  mainImageZoom: number
+  mainImageOffsetX: number
+  mainImageOffsetY: number
   unitCost: number
   packaging: number
   gifts: number
@@ -44,6 +47,9 @@ interface ProductFormDraft {
   supplierName: string
   categoryId: string
   productImages: string[]
+  mainImageZoom: number
+  mainImageOffsetX: number
+  mainImageOffsetY: number
   unitCost: number | ''
   packaging: number | ''
   gifts: number | ''
@@ -73,6 +79,7 @@ interface PurchaseRecord {
 }
 
 interface CategoryRecord extends ProductCategoryOption {
+  image?: string
   order?: number
 }
 
@@ -101,6 +108,9 @@ export default function AdicionarProdutos() {
   const [supplierName, setSupplierName] = useState('')
   const [categoryId, setCategoryId] = useState('')
   const [productImages, setProductImages] = useState<string[]>([])
+  const [mainImageZoom, setMainImageZoom] = useState(1)
+  const [mainImageOffsetX, setMainImageOffsetX] = useState(0)
+  const [mainImageOffsetY, setMainImageOffsetY] = useState(0)
   const [unitCost, setUnitCost] = useState<number | ''>('')
   const [packaging, setPackaging] = useState<number | ''>('')
   const [gifts, setGifts] = useState<number | ''>('')
@@ -179,6 +189,9 @@ export default function AdicionarProdutos() {
     setSupplierName(draft.supplierName)
     setCategoryId(draft.categoryId)
     setProductImages(draft.productImages || [])
+    setMainImageZoom(Number(draft.mainImageZoom || 1))
+    setMainImageOffsetX(Number(draft.mainImageOffsetX || 0))
+    setMainImageOffsetY(Number(draft.mainImageOffsetY || 0))
     setUnitCost(draft.unitCost)
     setPackaging(draft.packaging)
     setGifts(draft.gifts)
@@ -214,7 +227,13 @@ export default function AdicionarProdutos() {
         if (categoriesSnap.exists()) {
           const cats: CategoryRecord[] = []
           categoriesSnap.forEach((child) => {
-            cats.push({ id: child.key || '', ...(child.val() as Omit<CategoryRecord, 'id'>) })
+            const categoryData = (child.val() || {}) as CatalogCategoryRecord
+            cats.push({
+              id: child.key || '',
+              name: categoryData.name,
+              image: categoryData.image,
+              order: categoryData.order,
+            })
           })
           setCategories(cats.sort((a, b) => Number(a.order || 0) - Number(b.order || 0)))
         }
@@ -266,6 +285,9 @@ export default function AdicionarProdutos() {
                 supplierName: productData.supplierName || '',
                 categoryId: productData.categoryId || '',
                 images: productData.images || (productData.image ? [productData.image] : []),
+                mainImageZoom: Number(productData.mainImageZoom || 1),
+                mainImageOffsetX: Number(productData.mainImageOffsetX || 0),
+                mainImageOffsetY: Number(productData.mainImageOffsetY || 0),
                 unitCost: tempUnitCost,
                 packaging: tempPackaging,
                 gifts: tempGifts,
@@ -339,6 +361,9 @@ export default function AdicionarProdutos() {
       supplierName,
       categoryId,
       productImages,
+      mainImageZoom,
+      mainImageOffsetX,
+      mainImageOffsetY,
       unitCost,
       packaging,
       gifts,
@@ -363,6 +388,9 @@ export default function AdicionarProdutos() {
       !supplierName.trim() &&
       !categoryId &&
       productImages.length === 0 &&
+      mainImageZoom === 1 &&
+      mainImageOffsetX === 0 &&
+      mainImageOffsetY === 0 &&
       unitCost === '' &&
       packaging === '' &&
       gifts === '' &&
@@ -394,6 +422,9 @@ export default function AdicionarProdutos() {
     supplierName,
     categoryId,
     productImages,
+    mainImageZoom,
+    mainImageOffsetX,
+    mainImageOffsetY,
     unitCost,
     packaging,
     gifts,
@@ -477,6 +508,11 @@ export default function AdicionarProdutos() {
 
   const removeImage = (index: number) => {
     setProductImages((current) => current.filter((_, imageIndex) => imageIndex !== index))
+    if (index === 0) {
+      setMainImageZoom(1)
+      setMainImageOffsetX(0)
+      setMainImageOffsetY(0)
+    }
   }
   
   const addVariation = () => {
@@ -518,6 +554,9 @@ export default function AdicionarProdutos() {
             supplierName,
             categoryId,
             images: productImages,
+            mainImageZoom,
+            mainImageOffsetX,
+            mainImageOffsetY,
             unitCost,
             packaging: tempPackaging,
             gifts: tempGifts,
@@ -549,6 +588,9 @@ export default function AdicionarProdutos() {
         supplierName,
         categoryId,
         images: productImages,
+        mainImageZoom,
+        mainImageOffsetX,
+        mainImageOffsetY,
         unitCost,
         packaging: tempPackaging,
         gifts: tempGifts,
@@ -585,6 +627,9 @@ export default function AdicionarProdutos() {
     setSupplierName(product.supplierName)
     setCategoryId(product.categoryId)
     setProductImages(product.images || [])
+    setMainImageZoom(Number(product.mainImageZoom || 1))
+    setMainImageOffsetX(Number(product.mainImageOffsetX || 0))
+    setMainImageOffsetY(Number(product.mainImageOffsetY || 0))
     setUnitCost(product.unitCost)
     setPackaging(product.packaging)
     setGifts(product.gifts)
@@ -606,6 +651,9 @@ export default function AdicionarProdutos() {
     setSupplierName('')
     setCategoryId('')
     setProductImages([])
+    setMainImageZoom(1)
+    setMainImageOffsetX(0)
+    setMainImageOffsetY(0)
     setUnitCost('')
     setPackaging('')
     setGifts('')
@@ -669,6 +717,9 @@ export default function AdicionarProdutos() {
           updatedAt: now,
           image: product.images[0] || '',
           images: product.images,
+          mainImageZoom: product.mainImageZoom,
+          mainImageOffsetX: product.mainImageOffsetX,
+          mainImageOffsetY: product.mainImageOffsetY,
           pricing: {
             unitCost: product.unitCost,
             allocatedCosts,
@@ -704,6 +755,9 @@ export default function AdicionarProdutos() {
           name: product.name,
           image: product.images[0] || '',
           images: product.images,
+          mainImageZoom: product.mainImageZoom,
+          mainImageOffsetX: product.mainImageOffsetX,
+          mainImageOffsetY: product.mainImageOffsetY,
           price: product.finalPrice,
           promotionPrice: product.promotionPrice || undefined,
           categoryId: product.categoryId,
@@ -815,6 +869,12 @@ export default function AdicionarProdutos() {
         categoryId={categoryId}
         onCategoryIdChange={setCategoryId}
         images={productImages}
+        mainImageZoom={mainImageZoom}
+        onMainImageZoomChange={setMainImageZoom}
+        mainImageOffsetX={mainImageOffsetX}
+        onMainImageOffsetXChange={setMainImageOffsetX}
+        mainImageOffsetY={mainImageOffsetY}
+        onMainImageOffsetYChange={setMainImageOffsetY}
         uploadingImages={uploadingImages}
         onUploadImages={(files) => void handleImageUpload(files)}
         onRemoveImage={removeImage}
@@ -850,6 +910,7 @@ export default function AdicionarProdutos() {
         promotionPrice={promotionPrice}
         onPromotionPriceChange={setPromotionPrice}
         pricingPreview={pricingPreview}
+        onManageCategories={() => navigate('/logista/categorias')}
       />
 
       {/* Add Product Button */}

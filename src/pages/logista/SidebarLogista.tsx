@@ -161,22 +161,25 @@ export default function SidebarLogista({ isOpen, onClose }: SidebarLogistaProps)
           <FiClock size={18} />
           {(!isMobile || isOpen) && <span>Histórico</span>}
         </div>
-        <div
+        <Link
+          to="/logista/categorias"
+          onClick={handleLinkClick}
           style={{
             padding: '10px 12px',
             borderRadius: 10,
-            color: '#6b7280',
-            border: '1px dashed #f3e8ff',
+            textDecoration: 'none',
+            color: '#111827',
+            background: location.pathname.startsWith('/logista/categorias') ? '#fae8ff' : 'transparent',
+            border: location.pathname.startsWith('/logista/categorias') ? '1px solid #e9d5ff' : '1px solid transparent',
             display: 'flex',
             alignItems: 'center',
             gap: 10,
             textAlign: 'left',
           }}
-          title="Em breve"
         >
           <FiTag size={18} />
           {(!isMobile || isOpen) && <span>Categorias</span>}
-        </div>
+        </Link>
         <div
           style={{
             padding: '10px 12px',

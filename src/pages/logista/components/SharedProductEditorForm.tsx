@@ -1,4 +1,6 @@
+import { useMemo } from 'react'
 import {
+  FiFolderPlus,
   FiCheckCircle,
   FiCreditCard,
   FiDollarSign,
@@ -37,6 +39,12 @@ interface SharedProductEditorFormProps {
   categoryId: string
   onCategoryIdChange: (value: string) => void
   images: string[]
+  mainImageZoom: number
+  onMainImageZoomChange: (value: number) => void
+  mainImageOffsetX: number
+  onMainImageOffsetXChange: (value: number) => void
+  mainImageOffsetY: number
+  onMainImageOffsetYChange: (value: number) => void
   uploadingImages: boolean
   onUploadImages: (files: File[]) => void
   onRemoveImage: (index: number) => void
@@ -75,6 +83,7 @@ interface SharedProductEditorFormProps {
   onSave?: () => void
   saveButtonLabel?: string
   saveButtonDisabled?: boolean
+  onManageCategories?: () => void
 }
 
 const sectionCardStyle: React.CSSProperties = {
@@ -109,6 +118,10 @@ const labelStyle: React.CSSProperties = {
   fontWeight: 600,
   textAlign: 'left',
 }
+
+const editorFrameSize = 280
+const editorMaskInset = 16
+const editorMaskAspectRatio = '4 / 5'
 
 const currencyFormatter = new Intl.NumberFormat('pt-BR', {
   minimumFractionDigits: 2,
@@ -195,6 +208,12 @@ export default function SharedProductEditorForm({
   categoryId,
   onCategoryIdChange,
   images,
+  mainImageZoom,
+  onMainImageZoomChange,
+  mainImageOffsetX,
+  onMainImageOffsetXChange,
+  mainImageOffsetY,
+  onMainImageOffsetYChange,
   uploadingImages,
   onUploadImages,
   onRemoveImage,
@@ -233,7 +252,24 @@ export default function SharedProductEditorForm({
   onSave,
   saveButtonLabel = 'Salvar produto',
   saveButtonDisabled = false,
+  onManageCategories,
 }: SharedProductEditorFormProps) {
+  const mainImageUrl = images[0] || ''
+  const mainImagePreviewStyle = useMemo<React.CSSProperties>(
+    () => ({
+      position: 'absolute',
+      inset: 0,
+      width: '100%',
+      height: '100%',
+      objectFit: 'cover',
+      transform: `translate(${mainImageOffsetX}%, ${mainImageOffsetY}%) scale(${mainImageZoom})`,
+      transformOrigin: 'center center',
+      userSelect: 'none',
+      pointerEvents: 'none',
+    }),
+    [mainImageOffsetX, mainImageOffsetY, mainImageZoom],
+  )
+
   return (
     <>
       <div style={sectionCardStyle}>
@@ -276,6 +312,131 @@ export default function SharedProductEditorForm({
             />
           </label>
 
+          <div style={{ border: '1px solid #e5e7eb', borderRadius: 16, padding: 16, background: '#fafafa', marginBottom: 16 }}>
+            <div style={{ fontWeight: 700, marginBottom: 8, textAlign: 'left' }}>Imagem principal da vitrine</div>
+            <div style={{ color: '#6b7280', fontSize: 13, textAlign: 'left', marginBottom: 16 }}>
+              Ajuste o enquadramento da primeira imagem para controlar como ela aparece na vitrine.
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 120px', gap: 16, alignItems: 'center' }}>
+              <div
+                style={{
+                  position: 'relative',
+                  width: editorFrameSize,
+                  maxWidth: '100%',
+                  aspectRatio: '1 / 1',
+                  borderRadius: 18,
+                  border: '1px solid #d1d5db',
+                  overflow: 'hidden',
+                  background: '#f8fafc',
+                  justifySelf: 'center',
+                }}
+              >
+                {mainImageUrl ? (
+                  <>
+                    <img src={mainImageUrl} alt="Recorte da imagem principal" style={mainImagePreviewStyle} />
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: editorMaskInset,
+                        right: editorMaskInset,
+                        bottom: editorMaskInset,
+                        left: editorMaskInset,
+                        aspectRatio: editorMaskAspectRatio,
+                        margin: 'auto',
+                        width: `calc(100% - ${editorMaskInset * 2}px)`,
+                        maxHeight: `calc(100% - ${editorMaskInset * 2}px)`,
+                        borderRadius: 16,
+                        border: '2px solid rgba(255,255,255,0.95)',
+                        boxShadow: '0 0 0 999px rgba(15, 23, 42, 0.35)',
+                      }}
+                    />
+                  </>
+                ) : (
+                  <div style={{ color: '#9ca3af', display: 'grid', gap: 8, justifyItems: 'center', alignContent: 'center', height: '100%' }}>
+                    <FiImage size={36} />
+                    <span>Envie uma imagem para ajustar</span>
+                  </div>
+                )}
+              </div>
+
+              <div style={{ display: 'grid', justifyItems: 'center', gap: 12 }}>
+                <div
+                  style={{
+                    width: 84,
+                    height: 112,
+                    borderRadius: 16,
+                    overflow: 'hidden',
+                    border: '1px solid #d1d5db',
+                    position: 'relative',
+                    background: '#f8fafc',
+                  }}
+                >
+                  {mainImageUrl ? (
+                    <img src={mainImageUrl} alt="Miniatura da imagem principal" style={mainImagePreviewStyle} />
+                  ) : (
+                    <div
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#9ca3af',
+                        fontSize: 11,
+                      }}
+                    >
+                      Prévia
+                    </div>
+                  )}
+                </div>
+                <div style={{ fontSize: 12, color: '#6b7280' }}>Miniatura final</div>
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gap: 12, marginTop: 16 }}>
+              <div>
+                <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6, textAlign: 'left' }}>Zoom</label>
+                <input
+                  type="range"
+                  min="1"
+                  max="2.4"
+                  step="0.05"
+                  value={mainImageZoom}
+                  onChange={(event) => onMainImageZoomChange(Number(event.target.value))}
+                  style={{ width: '100%' }}
+                  disabled={!mainImageUrl}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6, textAlign: 'left' }}>Mover horizontalmente</label>
+                <input
+                  type="range"
+                  min="-35"
+                  max="35"
+                  step="1"
+                  value={mainImageOffsetX}
+                  onChange={(event) => onMainImageOffsetXChange(Number(event.target.value))}
+                  style={{ width: '100%' }}
+                  disabled={!mainImageUrl}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6, textAlign: 'left' }}>Mover verticalmente</label>
+                <input
+                  type="range"
+                  min="-35"
+                  max="35"
+                  step="1"
+                  value={mainImageOffsetY}
+                  onChange={(event) => onMainImageOffsetYChange(Number(event.target.value))}
+                  style={{ width: '100%' }}
+                  disabled={!mainImageUrl}
+                />
+              </div>
+            </div>
+          </div>
+
           {images.length === 0 ? (
             <div
               style={{
@@ -307,7 +468,21 @@ export default function SharedProductEditorForm({
                   }}
                 >
                   <div style={{ height: 180, background: '#f9fafb' }}>
-                    <img src={image} alt={`Imagem ${index + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <img
+                      src={image}
+                      alt={`Imagem ${index + 1}`}
+                      style={
+                        index === 0
+                          ? {
+                              width: '100%',
+                              height: '100%',
+                              objectFit: 'cover',
+                              transform: `translate(${mainImageOffsetX}%, ${mainImageOffsetY}%) scale(${mainImageZoom})`,
+                              transformOrigin: 'center center',
+                            }
+                          : { width: '100%', height: '100%', objectFit: 'cover' }
+                      }
+                    />
                   </div>
                   <div style={{ padding: 12, display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center' }}>
                     <span style={{ fontSize: 13, fontWeight: 600, color: index === 0 ? '#7c3aed' : '#4b5563' }}>
@@ -390,6 +565,29 @@ export default function SharedProductEditorForm({
               </option>
             ))}
           </select>
+          {onManageCategories && (
+            <div style={{ marginTop: 10 }}>
+              <button
+                type="button"
+                onClick={onManageCategories}
+                style={{
+                  padding: '12px 16px',
+                  borderRadius: 10,
+                  border: '1px solid #d8b4fe',
+                  background: '#fff',
+                  color: '#7c3aed',
+                  cursor: 'pointer',
+                  fontWeight: 700,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 8,
+                }}
+              >
+                <FiFolderPlus size={16} />
+                Gerenciar categorias
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
