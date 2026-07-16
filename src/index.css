@@ -74,17 +74,17 @@ button:focus-visible {
 }
 @media (min-width: 640px) {
   .products-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(3, 1fr);
   }
 }
 @media (min-width: 900px) {
   .products-grid {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
   }
 }
 @media (min-width: 1200px) {
   .products-grid {
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
   }
 }
 .product-card {
@@ -95,6 +95,7 @@ button:focus-visible {
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  cursor: pointer;
 }
 .product-card .product-img {
   width: 100%;
@@ -106,5 +107,5 @@ button:focus-visible {
   padding: 12px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  text-align: left;
 }

@@ -186,15 +186,13 @@ export default function Home() {
       )}
       <div className="products-grid">
         {filteredProducts.map((p) => (
-          <div key={p.id} className="product-card">
+          <div key={p.id} className="product-card" onClick={() => navigate(`/produto/${p.id}`)}>
             <span
               aria-hidden="true"
               style={{
-                borderRadius: 18,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                textAlign: 'center',
+                borderRadius: 8,
+                aspectRatio: '1 / 1',
+                position: 'relative',
                 overflow: 'hidden',
               }}
             >
@@ -202,10 +200,15 @@ export default function Home() {
                 <img
                   src={p.image}
                   alt={p.name}
-                  className="product-img"
+                  //className="product-img"
                   style={{
                     transform: `translate(${Number(p.mainImageOffsetX || 0)}%, ${Number(p.mainImageOffsetY || 0)}%) scale(${Number(p.mainImageZoom || 1)})`,
                     transformOrigin: 'center center',
+                    objectFit: 'cover',
+                    position: 'absolute',
+                    inset: 0,
+                    width: '100%',
+                    height: '100%',
                   }}
                   onError={(e) => {
                     const t = e.currentTarget
@@ -228,11 +231,8 @@ export default function Home() {
               )}
             </span>
             <div className="product-body">
-              <div style={{ color: '#334155', fontWeight: 600 }}>{p.name}</div>
-              <div style={{ fontSize: 14, color: '#6b7280', marginTop: 4 }}>
-                {p.shortDescription || 'Disponivel na vitrine'}
-              </div>
-              <div style={{ fontSize: 18, fontWeight: 800, color: '#0f172a', marginTop: 8 }}>R$ {p.price.toFixed(2)}</div>
+              <div style={{ color: '#797979', fontWeight: 600, fontSize: '16px' }}>{p.name}</div>
+              <div style={{ fontSize: '24px', fontWeight: 800, color: '#474747ff' }}>R$ {p.price.toFixed(2)}</div>
               <button
                 onClick={() => navigate(`/produto/${p.id}`)}
                 style={{

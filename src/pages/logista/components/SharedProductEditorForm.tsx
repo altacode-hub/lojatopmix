@@ -120,7 +120,7 @@ const labelStyle: React.CSSProperties = {
 }
 
 const editorFrameSize = 280
-const editorMaskInset = 16
+const editorMaskInset = 0
 const editorMaskAspectRatio = '4 / 5'
 
 const currencyFormatter = new Intl.NumberFormat('pt-BR', {
@@ -325,7 +325,7 @@ export default function SharedProductEditorForm({
                   width: editorFrameSize,
                   maxWidth: '100%',
                   aspectRatio: '1 / 1',
-                  borderRadius: 18,
+                  borderRadius: 8,
                   border: '1px solid #d1d5db',
                   overflow: 'hidden',
                   background: '#f8fafc',
