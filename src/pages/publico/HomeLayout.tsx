@@ -75,13 +75,13 @@ export default function HomeLayout() {
       )}
 
       <main style={{ flex: 1 }}>
-        <div style={{ maxWidth: 1120, margin: '0 auto', padding: '16px' }}>
+        <div style={{ width: '-webkit-fill-available', margin: '0 auto', padding: '16px' }}>
           <Outlet />
         </div>
       </main>
 
       <footer style={{ background: '#0f172a', color: '#cbd5e1', marginTop: 'auto' }}>
-        <div style={{ maxWidth: 1120, margin: '0 auto', padding: '16px' }}>
+        <div style={{ width: '-webkit-fill-available', margin: '0 auto', padding: '16px' }}>
           <div>© {new Date().getFullYear()} Top Mix Store</div>
           <div style={{ marginTop: 8, display: 'flex', gap: 12 }}>
             <Link to="/politicaPrivacidade" style={{ color: '#cbd5e1', textDecoration: 'none' }}>
