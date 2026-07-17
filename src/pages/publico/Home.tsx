@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { equalTo, onValue, orderByChild, query, ref } from 'firebase/database'
+import FramedImage from '../../components/FramedImage'
 import { rtdb } from '../../service/firebase'
 import type { CatalogCategoryRecord, ShowcaseRecord } from '../../types/catalog'
 import { showcaseToArray } from '../../utils/catalog'
@@ -196,39 +197,29 @@ export default function Home() {
                 overflow: 'hidden',
               }}
             >
-              {p.image ? (
-                <img
-                  src={p.image}
-                  alt={p.name}
-                  //className="product-img"
-                  style={{
-                    transform: `translate(${Number(p.mainImageOffsetX || 0)}%, ${Number(p.mainImageOffsetY || 0)}%) scale(${Number(p.mainImageZoom || 1)})`,
-                    transformOrigin: 'center center',
-                    objectFit: 'cover',
-                    position: 'absolute',
-                    inset: 0,
-                    width: '100%',
-                    height: '100%',
-                  }}
-                  onError={(e) => {
-                    const t = e.currentTarget
-                    t.style.display = 'none'
-                  }}
-                />
-              ) : (
-                <div
-                  className="product-img"
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: '#6b7280',
-                    background: '#f8fafc',
-                  }}
-                >
-                  Sem foto
-                </div>
-              )}
+              <FramedImage
+                src={p.image || ''}
+                alt={p.name}
+                zoom={Number(p.mainImageZoom || 1)}
+                offsetX={Number(p.mainImageOffsetX || 0)}
+                offsetY={Number(p.mainImageOffsetY || 0)}
+                fallback={
+                  <div
+                    className="product-img"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#6b7280',
+                      background: '#f8fafc',
+                      height: '100%',
+                    }}
+                  >
+                    Sem foto
+                  </div>
+                }
+                fallbackStyle={{ position: 'absolute', inset: 0 }}
+              />
             </span>
             <div className="product-body">
               <div style={{ color: '#797979', fontWeight: 600, fontSize: '16px' }}>{p.name}</div>

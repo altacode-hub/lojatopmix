@@ -14,6 +14,9 @@ export interface InventoryProductRow {
   supplierName: string
   categoryName: string
   image: string
+  mainImageZoom?: number
+  mainImageOffsetX?: number
+  mainImageOffsetY?: number
   salePrice: number
   finalUnitCost: number
   totalStock: number
@@ -87,6 +90,9 @@ export const buildInventoryProductRow = (
     supplierName: product.supplierName || 'Fornecedor nao informado',
     categoryName: categories[categoryId] || 'Sem categoria',
     image: showcase?.image || product.image || '',
+    mainImageZoom: Number(showcase?.mainImageZoom ?? product.mainImageZoom ?? 1),
+    mainImageOffsetX: Number(showcase?.mainImageOffsetX ?? product.mainImageOffsetX ?? 0),
+    mainImageOffsetY: Number(showcase?.mainImageOffsetY ?? product.mainImageOffsetY ?? 0),
     salePrice: Number(showcase?.price ?? product.pricing?.salePrice ?? 0),
     finalUnitCost: Number(product.pricing?.finalUnitCost ?? 0),
     totalStock,

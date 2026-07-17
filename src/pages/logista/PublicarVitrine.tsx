@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { getDownloadURL, ref as storageRef, uploadBytes } from 'firebase/storage'
 import { get, ref, update } from 'firebase/database'
 import { FiCheckCircle, FiExternalLink, FiImage, FiLayers, FiUploadCloud } from 'react-icons/fi'
+import FramedImage from '../../components/FramedImage'
 import { rtdb, storage } from '../../service/firebase'
 import type { CatalogVariation, InternalProductRecord, ShowcaseRecord } from '../../types/catalog'
 import { getEffectiveVariationStock, hasEffectiveVariationStock, variationLabel } from '../../utils/catalog'
@@ -294,26 +295,20 @@ export default function PublicarVitrine() {
                         overflow: 'hidden',
                         border: '1px solid #e5e7eb',
                         background: '#fff',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
+                        position: 'relative',
                         marginBottom: 12,
                       }}
                     >
                       {product.image ? (
-                        <img
+                        <FramedImage
                           src={product.image}
                           alt={product.name}
-                          style={{
-                            width: '100%',
-                            height: '100%',
-                            objectFit: 'cover',
-                            transform: `translate(${Number(product.mainImageOffsetX || 0)}%, ${Number(product.mainImageOffsetY || 0)}%) scale(${Number(product.mainImageZoom || 1)})`,
-                            transformOrigin: 'center center',
-                          }}
+                          zoom={Number(product.mainImageZoom || 1)}
+                          offsetX={Number(product.mainImageOffsetX || 0)}
+                          offsetY={Number(product.mainImageOffsetY || 0)}
                         />
                       ) : (
-                        <div style={{ color: '#6b7280', textAlign: 'center', padding: 16 }}>
+                        <div style={{ color: '#6b7280', textAlign: 'center', padding: 16, position: 'absolute', inset: 0, display: 'grid', placeItems: 'center' }}>
                           <FiImage size={24} style={{ marginBottom: 8 }} />
                           <div>Envie uma foto para aparecer na home do cliente.</div>
                         </div>

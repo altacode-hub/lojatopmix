@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import FramedImage from '../../../components/FramedImage'
 import {
   FiFolderPlus,
   FiCheckCircle,
@@ -118,9 +118,6 @@ const labelStyle: React.CSSProperties = {
   fontWeight: 600,
   textAlign: 'left',
 }
-
-const editorFrameSize = 280
-const editorMaskInset = 0
 
 const currencyFormatter = new Intl.NumberFormat('pt-BR', {
   minimumFractionDigits: 2,
@@ -254,40 +251,6 @@ export default function SharedProductEditorForm({
   onManageCategories,
 }: SharedProductEditorFormProps) {
   const mainImageUrl = images[0] || ''
-  const [mainImageNaturalSize, setMainImageNaturalSize] = useState({ width: 1, height: 1 })
-
-  useEffect(() => {
-    if (!mainImageUrl) {
-      setMainImageNaturalSize({ width: 1, height: 1 })
-      return
-    }
-
-    const image = new Image()
-    image.onload = () => {
-      setMainImageNaturalSize({
-        width: image.naturalWidth || 1,
-        height: image.naturalHeight || 1,
-      })
-    }
-    image.src = mainImageUrl
-  }, [mainImageUrl])
-
-  const mainImagePreviewStyle = useMemo<React.CSSProperties>(
-    () => ({
-      position: 'absolute',
-      left: '50%',
-      top: '50%',
-      width: mainImageNaturalSize.width >= mainImageNaturalSize.height ? `${(mainImageNaturalSize.width / mainImageNaturalSize.height) * 100}%` : '100%',
-      height: mainImageNaturalSize.width >= mainImageNaturalSize.height ? '100%' : `${(mainImageNaturalSize.height / mainImageNaturalSize.width) * 100}%`,
-      maxWidth: 'none',
-      maxHeight: 'none',
-      transform: `translate(calc(-50% + ${mainImageOffsetX}%), calc(-50% + ${mainImageOffsetY}%)) scale(${mainImageZoom})`,
-      transformOrigin: 'center center',
-      userSelect: 'none',
-      pointerEvents: 'none',
-    }),
-    [mainImageNaturalSize.height, mainImageNaturalSize.width, mainImageOffsetX, mainImageOffsetY, mainImageZoom],
-  )
 
   return (
     <>
@@ -331,124 +294,6 @@ export default function SharedProductEditorForm({
             />
           </label>
 
-          <div style={{ border: '1px solid #e5e7eb', borderRadius: 16, padding: 16, background: '#fafafa', marginBottom: 16 }}>
-            <div style={{ fontWeight: 700, marginBottom: 8, textAlign: 'left' }}>Imagem principal da vitrine</div>
-            <div style={{ color: '#6b7280', fontSize: 13, textAlign: 'left', marginBottom: 16 }}>
-              Ajuste o enquadramento da primeira imagem para controlar como ela aparece na vitrine.
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 120px', gap: 16, alignItems: 'center' }}>
-              <div
-                style={{
-                  position: 'relative',
-                  width: editorFrameSize,
-                  maxWidth: '100%',
-                  aspectRatio: '1 / 1',
-                  borderRadius: 8,
-                  border: '1px solid #d1d5db',
-                  overflow: 'hidden',
-                  background: '#f8fafc',
-                  justifySelf: 'center',
-                }}
-              >
-                {mainImageUrl ? (
-                  <>
-                    <img src={mainImageUrl} alt="Recorte da imagem principal" style={mainImagePreviewStyle} />
-                    <div
-                      style={{
-                        position: 'absolute',
-                        inset: editorMaskInset,
-                        borderRadius: 8,
-                        border: '2px solid rgba(255,255,255,0.95)',
-                        boxShadow: '0 0 0 999px rgba(15, 23, 42, 0.35)',
-                      }}
-                    />
-                  </>
-                ) : (
-                  <div style={{ color: '#9ca3af', display: 'grid', gap: 8, justifyItems: 'center', alignContent: 'center', height: '100%' }}>
-                    <FiImage size={36} />
-                    <span>Envie uma imagem para ajustar</span>
-                  </div>
-                )}
-              </div>
-
-              <div style={{ display: 'grid', justifyItems: 'center', gap: 12 }}>
-                <div
-                  style={{
-                    width: 84,
-                    height: 84,
-                    borderRadius: 12,
-                    overflow: 'hidden',
-                    border: '1px solid #d1d5db',
-                    position: 'relative',
-                    background: '#f8fafc',
-                  }}
-                >
-                  {mainImageUrl ? (
-                    <img src={mainImageUrl} alt="Miniatura da imagem principal" style={mainImagePreviewStyle} />
-                  ) : (
-                    <div
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: '#9ca3af',
-                        fontSize: 11,
-                      }}
-                    >
-                      Prévia
-                    </div>
-                  )}
-                </div>
-                <div style={{ fontSize: 12, color: '#6b7280' }}>Miniatura final</div>
-              </div>
-            </div>
-
-            <div style={{ display: 'grid', gap: 12, marginTop: 16 }}>
-              <div>
-                <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6, textAlign: 'left' }}>Zoom</label>
-                <input
-                  type="range"
-                  min="1"
-                  max="2.4"
-                  step="0.05"
-                  value={mainImageZoom}
-                  onChange={(event) => onMainImageZoomChange(Number(event.target.value))}
-                  style={{ width: '100%' }}
-                  disabled={!mainImageUrl}
-                />
-              </div>
-              <div>
-                <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6, textAlign: 'left' }}>Mover horizontalmente</label>
-                <input
-                  type="range"
-                  min="-35"
-                  max="35"
-                  step="1"
-                  value={mainImageOffsetX}
-                  onChange={(event) => onMainImageOffsetXChange(Number(event.target.value))}
-                  style={{ width: '100%' }}
-                  disabled={!mainImageUrl}
-                />
-              </div>
-              <div>
-                <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6, textAlign: 'left' }}>Mover verticalmente</label>
-                <input
-                  type="range"
-                  min="-35"
-                  max="35"
-                  step="1"
-                  value={mainImageOffsetY}
-                  onChange={(event) => onMainImageOffsetYChange(Number(event.target.value))}
-                  style={{ width: '100%' }}
-                  disabled={!mainImageUrl}
-                />
-              </div>
-            </div>
-          </div>
-
           {images.length === 0 ? (
             <div
               style={{
@@ -468,58 +313,108 @@ export default function SharedProductEditorForm({
               <span>Sem imagens cadastradas</span>
             </div>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
-              {images.map((image, index) => (
-                <div
-                  key={`${image}-${index}`}
-                  style={{
-                    borderRadius: 14,
-                    overflow: 'hidden',
-                    border: '1px solid #e5e7eb',
-                    background: '#fff',
-                  }}
-                >
-                  <div style={{ height: 180, background: '#f9fafb' }}>
-                    <img
-                      src={image}
-                      alt={`Imagem ${index + 1}`}
-                      style={
-                        index === 0
-                          ? {
-                              width: '100%',
-                              height: '100%',
-                              objectFit: 'cover',
-                              transform: `translate(${mainImageOffsetX}%, ${mainImageOffsetY}%) scale(${mainImageZoom})`,
-                              transformOrigin: 'center center',
-                            }
-                          : { width: '100%', height: '100%', objectFit: 'cover' }
-                      }
+            <>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
+                {images.map((image, index) => (
+                  <div
+                    key={`${image}-${index}`}
+                    style={{
+                      width: 180,
+                      borderRadius: 14,
+                      overflow: 'hidden',
+                      border: '1px solid #e5e7eb',
+                      background: '#fff',
+                    }}
+                  >
+                    <div style={{ height: 180, background: '#f9fafb', position: 'relative', overflow: 'hidden' }}>
+                      {index === 0 ? (
+                        <FramedImage
+                          src={image}
+                          alt={`Imagem ${index + 1}`}
+                          zoom={mainImageZoom}
+                          offsetX={mainImageOffsetX}
+                          offsetY={mainImageOffsetY}
+                        />
+                      ) : (
+                        <img
+                          src={image}
+                          alt={`Imagem ${index + 1}`}
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        />
+                      )}
+                    </div>
+                    <div style={{ padding: 12, display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center' }}>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: index === 0 ? '#7c3aed' : '#4b5563' }}>
+                        {index === 0 ? 'Imagem principal' : `Imagem ${index + 1}`}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => onRemoveImage(index)}
+                        style={{
+                          border: 'none',
+                          background: 'transparent',
+                          color: '#dc2626',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 6,
+                        }}
+                      >
+                        <FiTrash2 size={16} />
+                        Remover
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ border: '1px solid #e5e7eb', borderRadius: 16, padding: 16, background: '#fafafa', marginTop: 16 }}>
+                <div style={{ fontWeight: 700, marginBottom: 8, textAlign: 'left' }}>Imagem principal da vitrine</div>
+                <div style={{ color: '#6b7280', fontSize: 13, textAlign: 'left', marginBottom: 16 }}>
+                  Ajuste o enquadramento da primeira imagem para controlar como ela aparece na vitrine.
+                </div>
+                <div style={{ display: 'grid', gap: 12, marginTop: 16 }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6, textAlign: 'left' }}>Zoom</label>
+                    <input
+                      type="range"
+                      min="1"
+                      max="2.4"
+                      step="0.05"
+                      value={mainImageZoom}
+                      onChange={(event) => onMainImageZoomChange(Number(event.target.value))}
+                      style={{ width: '100%' }}
+                      disabled={!mainImageUrl}
                     />
                   </div>
-                  <div style={{ padding: 12, display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center' }}>
-                    <span style={{ fontSize: 13, fontWeight: 600, color: index === 0 ? '#7c3aed' : '#4b5563' }}>
-                      {index === 0 ? 'Imagem principal' : `Imagem ${index + 1}`}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => onRemoveImage(index)}
-                      style={{
-                        border: 'none',
-                        background: 'transparent',
-                        color: '#dc2626',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 6,
-                      }}
-                    >
-                      <FiTrash2 size={16} />
-                      Remover
-                    </button>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6, textAlign: 'left' }}>Mover horizontalmente</label>
+                    <input
+                      type="range"
+                      min="-35"
+                      max="35"
+                      step="1"
+                      value={mainImageOffsetX}
+                      onChange={(event) => onMainImageOffsetXChange(Number(event.target.value))}
+                      style={{ width: '100%' }}
+                      disabled={!mainImageUrl}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6, textAlign: 'left' }}>Mover verticalmente</label>
+                    <input
+                      type="range"
+                      min="-35"
+                      max="35"
+                      step="1"
+                      value={mainImageOffsetY}
+                      onChange={(event) => onMainImageOffsetYChange(Number(event.target.value))}
+                      style={{ width: '100%' }}
+                      disabled={!mainImageUrl}
+                    />
                   </div>
                 </div>
-              ))}
-            </div>
+              </div>
+            </>
           )}
         </div>
       </div>

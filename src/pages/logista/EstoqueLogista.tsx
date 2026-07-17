@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { get, onValue, ref } from 'firebase/database'
 import { useNavigate } from 'react-router-dom'
 import { FiAlertCircle, FiBox, FiChevronRight, FiDatabase, FiEye, FiPackage, FiRefreshCw, FiSearch, FiStar } from 'react-icons/fi'
+import FramedImage from '../../components/FramedImage'
 import { rtdb } from '../../service/firebase'
 import type { InternalProductRecord, ShowcaseRecord } from '../../types/catalog'
 import {
@@ -345,8 +346,9 @@ export default function EstoqueLogista() {
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
             gap: 16,
+            alignItems: 'start',
           }}
         >
           {filteredProducts.map((product) => (
@@ -360,27 +362,41 @@ export default function EstoqueLogista() {
                 textAlign: 'left',
                 padding: 0,
                 overflow: 'hidden',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'flex-start',
               }}
             >
               <div
                 style={{
-                  height: 220,
                   background: '#f9fafb',
                   borderBottom: '1px solid #e5e7eb',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
+                  position: 'relative',
                   overflow: 'hidden',
+                  aspectRatio: '1 / 1',
                 }}
               >
                 {product.image ? (
-                  <img
+                  <FramedImage
                     src={product.image}
                     alt={product.name}
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    zoom={Number(product.mainImageZoom || 1)}
+                    offsetX={Number(product.mainImageOffsetX || 0)}
+                    offsetY={Number(product.mainImageOffsetY || 0)}
                   />
                 ) : (
-                  <div style={{ color: '#9ca3af', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+                  <div
+                    style={{
+                      color: '#9ca3af',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 8,
+                      position: 'absolute',
+                      inset: 0,
+                    }}
+                  >
                     <FiPackage size={32} />
                     <span>Sem foto</span>
                   </div>
