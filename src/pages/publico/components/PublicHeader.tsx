@@ -34,11 +34,10 @@ export default function PublicHeader({
     >
       <div
         style={{
-          maxWidth: 1120,
           margin: '0 auto',
-          padding: '10px 16px',
+          padding: '10px 26px',
           display: 'grid',
-          gridTemplateColumns: '100px auto 60px auto',
+          gridTemplateColumns: '200px auto 170px',
           alignItems: 'center',
           gap: 12,
         }}
@@ -54,7 +53,7 @@ export default function PublicHeader({
           />
         </Link>
 
-        <div style={{ display: 'flex', alignItems: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
           <Link
             to="/politicaPrivacidade"
             title="Informações"

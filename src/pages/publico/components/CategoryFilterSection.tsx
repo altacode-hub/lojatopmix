@@ -22,7 +22,7 @@ export default function CategoryFilterSection({
 
   return (
     <section>
-      <div style={{ maxWidth: 1120, margin: '0 auto', padding: '12px 16px' }}>
+      <div style={{ margin: '0 auto', padding: '12px 0px' }}>
         <div
           style={{
             fontWeight: 700,

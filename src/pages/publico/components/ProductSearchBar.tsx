@@ -12,7 +12,7 @@ export default function ProductSearchBar({ value, onChange }: ProductSearchBarPr
         style={{
           display: 'grid',
           gridTemplateColumns: '1fr',
-          padding: '12px 16px',
+          padding: '12px 0px',
         }}
       >
         <div

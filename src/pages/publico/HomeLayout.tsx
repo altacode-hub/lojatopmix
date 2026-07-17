@@ -75,7 +75,7 @@ export default function HomeLayout() {
       )}
 
       <main style={{ flex: 1 }}>
-        <div style={{ width: '-webkit-fill-available', margin: '0 auto', padding: '16px' }}>
+        <div style={{ width: '-webkit-fill-available', margin: '0 auto', padding: '12px 26px' }}>
           <Outlet />
         </div>
       </main>
