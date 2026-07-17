@@ -188,7 +188,7 @@ export default function NovoPedido() {
 
         {erro && <div style={{ color: 'red', marginTop: 12 }}>{erro}</div>}
 
-        <div style={{ display: 'flex', gap: 12, marginTop: 20 }}>
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 20 }}>
           <button
             onClick={() => navigate('/logista')}
             style={{

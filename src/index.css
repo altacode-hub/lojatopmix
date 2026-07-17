@@ -24,10 +24,21 @@ a:hover {
 
 body {
   margin: 0;
-  display: flex;
-  place-items: center;
+  width: 100%;
   min-width: 320px;
   min-height: 100vh;
+  background: #ffffff;
+  overflow-x: hidden;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+img {
+  max-width: 100%;
 }
 
 h1 {

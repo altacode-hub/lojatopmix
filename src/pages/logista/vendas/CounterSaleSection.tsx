@@ -1,4 +1,5 @@
 import { FiSearch, FiShoppingCart, FiX } from 'react-icons/fi'
+import { useMediaQuery } from '../../../hooks/useMediaQuery'
 import { variationLabel } from '../../../utils/catalog'
 import { cardStyle, formatCurrency } from './helpers'
 import type { CounterSaleItem, SaleableVariationRow } from './types'
@@ -34,6 +35,8 @@ export default function CounterSaleSection({
   onFinalizeCounterSale,
   onReserveProducts,
 }: CounterSaleSectionProps) {
+  const isMobile = useMediaQuery('(max-width: 768px)')
+
   return (
     <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', alignItems: 'flex-start' }}>
       <section style={{ ...cardStyle, flex: '1 1 680px', minWidth: 0 }}>
@@ -72,7 +75,7 @@ export default function CounterSaleSection({
                 padding: 16,
                 display: 'grid',
                 gap: 12,
-                gridTemplateColumns: 'minmax(0, 1fr) auto',
+                gridTemplateColumns: isMobile ? '1fr' : 'minmax(0, 1fr) auto',
                 alignItems: 'center',
               }}
             >
@@ -118,7 +121,7 @@ export default function CounterSaleSection({
         </div>
       </section>
 
-      <aside style={{ ...cardStyle, flex: '1 1 360px', minWidth: 320, alignSelf: 'stretch' }}>
+      <aside style={{ ...cardStyle, flex: '1 1 360px', minWidth: 0, width: '100%', alignSelf: 'stretch' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
           <FiShoppingCart size={18} />
           <h2 style={{ margin: 0, fontSize: 24 }}>Itens da venda</h2>
@@ -152,14 +155,14 @@ export default function CounterSaleSection({
                   </button>
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', marginTop: 12 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', flexWrap: 'wrap', marginTop: 12 }}>
                   <input
                     type="number"
                     min={1}
                     max={item.variation.stock}
                     value={item.qty}
                     onChange={(event) => onUpdateSelectedQty(item.id, Number(event.target.value))}
-                    style={{ width: 88, padding: '10px 12px', borderRadius: 10, border: '1px solid #cbd5e1' }}
+                    style={{ width: isMobile ? '100%' : 88, maxWidth: isMobile ? '100%' : 88, padding: '10px 12px', borderRadius: 10, border: '1px solid #cbd5e1' }}
                   />
                   <div style={{ fontWeight: 700 }}>{formatCurrency(item.qty * item.price)}</div>
                 </div>

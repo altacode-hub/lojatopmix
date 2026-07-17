@@ -42,7 +42,7 @@ export default function Cart() {
         <>
           <ul>
             {items.map((i) => (
-              <li key={i.id} style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 8 }}>
+              <li key={i.id} style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', marginBottom: 8 }}>
                 <div>{i.name}</div>
                 <div>Qtd: {i.qty}</div>
                 <div>R$ {(i.price * i.qty).toFixed(2)}</div>
@@ -53,7 +53,7 @@ export default function Cart() {
             ))}
           </ul>
           <div style={{ marginTop: 12, fontWeight: 600 }}>Total: R$ {total.toFixed(2)}</div>
-          <div style={{ marginTop: 12, display: 'flex', gap: 12 }}>
+          <div style={{ marginTop: 12, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
             <button onClick={() => void handleClear()} disabled={clearing}>
               {clearing ? 'Limpando...' : 'Limpar'}
             </button>

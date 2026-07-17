@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext'
 import { rtdb } from '../../service/firebase'
 import { ref, get } from 'firebase/database'
 import { FiPackage, FiEdit, FiTrash2 } from 'react-icons/fi'
+import { useMediaQuery } from '../../hooks/useMediaQuery'
 
 interface ProductVariation {
   size: string
@@ -52,6 +53,7 @@ export default function PedidoDetalhes() {
   const { purchaseId } = useParams<{ purchaseId: string }>()
   useAuth() // We just need to call useAuth for context, even if we don't use the return value
   const navigate = useNavigate()
+  const isMobile = useMediaQuery('(max-width: 768px)')
   
   const [purchase, setPurchase] = useState<PurchaseRecord | null>(null)
   const [products, setProducts] = useState<Product[]>([])
@@ -122,9 +124,9 @@ export default function PedidoDetalhes() {
   }
   
   return (
-    <div style={{ maxWidth: 1200, margin: '0 auto', padding: '24px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16 }}>
+    <div style={{ maxWidth: 1200, margin: '0 auto', padding: isMobile ? 16 : 24 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap', marginBottom: 24 }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap' }}>
           <button
             onClick={() => navigate('/logista')}
             style={{
@@ -145,7 +147,7 @@ export default function PedidoDetalhes() {
             </div>
           </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+        <div style={{ display: 'flex', alignItems: isMobile ? 'stretch' : 'center', gap: 16, flexWrap: 'wrap', width: isMobile ? '100%' : 'auto' }}>
           <div style={{ textAlign: 'right' }}>
             <div style={{ color: '#6b7280', fontSize: 14 }}>Status</div>
             <div style={{
@@ -194,13 +196,13 @@ export default function PedidoDetalhes() {
         background: '#faf5ff',
         border: '1px solid #e9d5ff',
         borderRadius: 16,
-        padding: 24,
+        padding: isMobile ? 16 : 24,
         marginBottom: 24,
         boxShadow: '0 1px 2px rgba(0,0,0,0.04)'
       }}>
         <h2 style={{ margin: '0 0 16px 0', fontSize: 20 }}>Informações do Pedido</h2>
         
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 16, marginBottom: 16 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, minmax(0, 1fr))' : 'repeat(4, minmax(0, 1fr))', gap: 16, marginBottom: 16 }}>
           <div>
             <div style={{ fontSize: 14, color: '#6b7280', marginBottom: 4 }}>Total de Peças</div>
             <div style={{ fontWeight: 700, fontSize: 20 }}>{purchase.totalPieces}</div>
@@ -269,13 +271,15 @@ export default function PedidoDetalhes() {
                   background: '#faf5ff',
                   border: '1px solid #e9d5ff',
                   borderRadius: 16,
-                  padding: 24,
+                  padding: isMobile ? 16 : 24,
                 }}>
                   {/* Product Header */}
                   <div style={{ 
                     display: 'flex', 
                     justifyContent: 'space-between', 
                     alignItems: 'flex-start',
+                    gap: 12,
+                    flexWrap: 'wrap',
                     marginBottom: 16
                   }}>
                     <h3 style={{ 
@@ -285,7 +289,7 @@ export default function PedidoDetalhes() {
                     }}>
                       {product.name}
                     </h3>
-                    <div style={{ display: 'flex', gap: 12 }}>
+                    <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', width: isMobile ? '100%' : 'auto' }}>
                       <button
                         type="button"
                         onClick={() => navigate(`/logista/estoque/${product.id}`)}
@@ -408,12 +412,12 @@ export default function PedidoDetalhes() {
             background: '#faf5ff',
             border: '1px solid #e9d5ff',
             borderRadius: 16,
-            padding: 24,
+            padding: isMobile ? 16 : 24,
             marginTop: 24
           }}>
             <h3 style={{ margin: '0 0 16px 0', fontSize: 20 }}>Resumo Total</h3>
             
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 16 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, minmax(0, 1fr))' : 'repeat(4, minmax(0, 1fr))', gap: 16 }}>
               <div style={{
                 background: '#f3e8ff',
                 borderRadius: 12,

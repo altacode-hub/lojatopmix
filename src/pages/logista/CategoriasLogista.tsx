@@ -6,6 +6,7 @@ import { FiArrowLeft, FiEdit2, FiEyeOff, FiFolderPlus, FiImage, FiSave } from 'r
 import { rtdb, storage } from '../../service/firebase'
 import type { CatalogCategoryRecord } from '../../types/catalog'
 import { CATALOG_SYNC_PATH } from './stockCache'
+import { useMediaQuery } from '../../hooks/useMediaQuery'
 
 interface CategoryListItem extends CatalogCategoryRecord {
   id: string
@@ -24,6 +25,7 @@ const editorMaskInset = 0
 
 export default function CategoriasLogista() {
   const navigate = useNavigate()
+  const isMobile = useMediaQuery('(max-width: 768px)')
   const [categories, setCategories] = useState<CategoryListItem[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -278,7 +280,7 @@ export default function CategoriasLogista() {
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(320px, 420px) minmax(0, 1fr)', gap: 20 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'minmax(320px, 420px) minmax(0, 1fr)', gap: 20 }}>
         <div style={cardStyle}>
           <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
             <FiFolderPlus />
@@ -367,11 +369,11 @@ export default function CategoriasLogista() {
                 Ajuste o enquadramento que sera exibido no botao circular de categoria.
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 120px', gap: 16, alignItems: 'center' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'minmax(0, 1fr) 120px', gap: 16, alignItems: 'center' }}>
                 <div
                   style={{
                     position: 'relative',
-                    width: editorFrameSize,
+                    width: isMobile ? '100%' : editorFrameSize,
                     maxWidth: '100%',
                     aspectRatio: '1 / 1',
                     borderRadius: 18,
@@ -531,6 +533,7 @@ export default function CategoriasLogista() {
                     color: '#374151',
                     cursor: saving ? 'not-allowed' : 'pointer',
                     fontWeight: 700,
+                    width: isMobile ? '100%' : 'auto',
                   }}
                 >
                   Nova categoria

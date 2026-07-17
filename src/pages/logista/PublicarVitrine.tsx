@@ -8,6 +8,7 @@ import { rtdb, storage } from '../../service/firebase'
 import type { CatalogVariation, InternalProductRecord, ShowcaseRecord } from '../../types/catalog'
 import { getEffectiveVariationStock, hasEffectiveVariationStock, variationLabel } from '../../utils/catalog'
 import { CATALOG_SYNC_PATH, patchCachedStockProduct } from './stockCache'
+import { useMediaQuery } from '../../hooks/useMediaQuery'
 
 interface ShowcaseEditorProduct {
   id: string
@@ -40,6 +41,7 @@ const cardStyle: React.CSSProperties = {
 export default function PublicarVitrine() {
   const { purchaseId } = useParams<{ purchaseId: string }>()
   const navigate = useNavigate()
+  const isMobile = useMediaQuery('(max-width: 768px)')
 
   const [purchaseName, setPurchaseName] = useState('')
   const [categories, setCategories] = useState<Record<string, string>>({})
@@ -218,7 +220,7 @@ export default function PublicarVitrine() {
   }
 
   return (
-    <div style={{ maxWidth: 1200, margin: '0 auto', padding: 24 }}>
+    <div style={{ maxWidth: 1200, margin: '0 auto', padding: isMobile ? 16 : 24 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', marginBottom: 24 }}>
         <div>
           <h1 style={{ margin: 0, fontSize: 30 }}>Produtos publicados na vitrine</h1>
@@ -286,11 +288,11 @@ export default function PublicarVitrine() {
 
             return (
               <div key={product.id} style={{ ...cardStyle, background: '#faf5ff', borderColor: '#e9d5ff' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '220px 1fr', gap: 20 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '220px 1fr', gap: 20 }}>
                   <div>
                     <div
                       style={{
-                        height: 260,
+                        height: isMobile ? 220 : 260,
                         borderRadius: 16,
                         overflow: 'hidden',
                         border: '1px solid #e5e7eb',
@@ -328,6 +330,7 @@ export default function PublicarVitrine() {
                         cursor: uploadingId === product.id ? 'not-allowed' : 'pointer',
                         opacity: uploadingId === product.id ? 0.7 : 1,
                         fontWeight: 600,
+                        width: '100%',
                       }}
                     >
                       <FiUploadCloud />

@@ -4,6 +4,7 @@ import { ref, onValue, off, type DataSnapshot } from 'firebase/database'
 import { useCart } from '../../context/CartContext'
 import { useAuth } from '../../context/AuthContext'
 import { rtdb } from '../../service/firebase'
+import { useMediaQuery } from '../../hooks/useMediaQuery'
 import PublicHeader from './components/PublicHeader'
 
 export default function HomeLayout() {
@@ -13,6 +14,7 @@ export default function HomeLayout() {
   const { items } = useCart()
   const cartCount = useMemo(() => items.reduce((sum, item) => sum + item.qty, 0), [items])
   const { user } = useAuth()
+  const isMobile = useMediaQuery('(max-width: 768px)')
 
   useEffect(() => {
     const update = () => setOnline(navigator.onLine)
@@ -45,7 +47,7 @@ export default function HomeLayout() {
   }, [user])
 
   return (
-    <div style={{ minHeight: '100vh', minWidth: 500, background: '#f5f6f8', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ minHeight: '100vh', width: '100%', background: '#f5f6f8', display: 'flex', flexDirection: 'column' }}>
       <PublicHeader
         cartCount={cartCount}
         infoActive={location.pathname === '/politicaPrivacidade'}
@@ -75,15 +77,15 @@ export default function HomeLayout() {
       )}
 
       <main style={{ flex: 1 }}>
-        <div style={{ width: '-webkit-fill-available', minWidth: 500, margin: '0 auto', padding: '12px 26px' }}>
+        <div style={{ width: '100%', maxWidth: 1440, margin: '0 auto', padding: isMobile ? '12px 14px 20px' : '12px 26px 24px' }}>
           <Outlet />
         </div>
       </main>
 
       <footer style={{ background: '#0f172a', color: '#cbd5e1', marginTop: 'auto' }}>
-        <div style={{ width: '-webkit-fill-available', margin: '0 auto', padding: '16px' }}>
+        <div style={{ width: '100%', maxWidth: 1440, margin: '0 auto', padding: isMobile ? '16px 14px 20px' : '16px 26px' }}>
           <div>© {new Date().getFullYear()} Top Mix Store</div>
-          <div style={{ marginTop: 8, display: 'flex', gap: 12 }}>
+          <div style={{ marginTop: 8, display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
             <Link to="/politicaPrivacidade" style={{ color: '#cbd5e1', textDecoration: 'none' }}>
               Política de Privacidade
             </Link>

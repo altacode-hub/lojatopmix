@@ -14,11 +14,13 @@ import SalesHistorySection from './vendas/SalesHistorySection'
 import { getDateInputValue, getDateRange, hasVariationStock } from './vendas/helpers'
 import type { CounterSaleItem, ReservedSaleViewRecord, SaleItemRecord, SaleRecord, SaleableVariationRow } from './vendas/types'
 import { CATALOG_SYNC_PATH, patchCachedStockProduct } from './stockCache'
+import { useMediaQuery } from '../../hooks/useMediaQuery'
 
 export default function VendasLogista() {
   const { user } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
+  const isMobile = useMediaQuery('(max-width: 768px)')
   const [catalogRows, setCatalogRows] = useState<SaleableVariationRow[]>([])
   const [sales, setSales] = useState<SaleRecord[]>([])
   const [cartReservedSales, setCartReservedSales] = useState<ReservedSaleViewRecord[]>([])
@@ -764,7 +766,7 @@ export default function VendasLogista() {
   }
 
   return (
-    <div style={{ maxWidth: 1320, margin: '0 auto', padding: 24, display: 'grid', gap: 24 }}>
+    <div style={{ maxWidth: 1320, margin: '0 auto', padding: isMobile ? 16 : 24, display: 'grid', gap: 24 }}>
       <SalesHeader pendingDeliveriesCount={pendingDeliveries.length} totalSalesInPeriod={historyStats.totalSales} />
 
       {error ? (

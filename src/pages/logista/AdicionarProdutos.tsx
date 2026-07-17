@@ -10,6 +10,7 @@ import type { CatalogCategoryRecord, InternalProductRecord, ShowcaseRecord } fro
 import { buildInventoryProductRow, CATALOG_SYNC_PATH, upsertCachedStockProduct } from './stockCache'
 import SharedProductEditorForm, { type ProductCategoryOption, type ProductVariationInput } from './components/SharedProductEditorForm'
 import { getProductPricingPreview } from './productPricing'
+import { useMediaQuery } from '../../hooks/useMediaQuery'
 
 interface Product {
   id: string
@@ -95,6 +96,7 @@ export default function AdicionarProdutos() {
   const { purchaseId } = useParams<{ purchaseId: string }>()
   const { user } = useAuth()
   const navigate = useNavigate()
+  const isMobile = useMediaQuery('(max-width: 768px)')
   
   const [purchase, setPurchase] = useState<PurchaseRecord | null>(null)
   const [products, setProducts] = useState<Product[]>([])
@@ -830,7 +832,7 @@ export default function AdicionarProdutos() {
   
   return (
     <div style={{ maxWidth: 1200, margin: '0 auto', padding: '16px' }}>
-      <div style={{ display: 'flex', flexDirection: 'row', gap: 16, marginBottom: 24 }}>
+      <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: 16, marginBottom: 24 }}>
         <div style={{width:'-webkit-fill-available'}}>
           <h1 style={{ margin: 0, fontSize: 28, textAlign: 'left' }}>Adicionar Produto</h1>
           <div style={{ color: '#6b7280', marginTop: 4, textAlign: 'left' }}>
@@ -849,7 +851,7 @@ export default function AdicionarProdutos() {
             opacity: saving ? 0.7 : 1,
             alignSelf: 'flex-start',
             fontSize: '12px',
-            width: '200px',
+            width: isMobile ? '100%' : '200px',
           }}
         >
           {saving ? 'Finalizando...' : 'Finalizar Pedido'}
@@ -914,7 +916,7 @@ export default function AdicionarProdutos() {
       />
 
       {/* Add Product Button */}
-      <div style={{ display: 'flex', flexDirection: 'row', gap: 16, marginBottom: 24 }}>
+      <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: 16, marginBottom: 24 }}>
         <button
           onClick={finalizePurchase}
           disabled={saving}
@@ -927,7 +929,7 @@ export default function AdicionarProdutos() {
             opacity: saving ? 0.7 : 1,
             alignSelf: 'flex-start',
             fontSize: '12px',
-            width: '200px',
+            width: isMobile ? '100%' : '200px',
           }}
         >
           {saving ? 'Finalizando...' : 'Finalizar Pedido'}
@@ -990,13 +992,15 @@ export default function AdicionarProdutos() {
                 background: '#faf5ff',
                 border: '1px solid #e9d5ff',
                 borderRadius: 16,
-                padding: 24,
+                padding: isMobile ? 16 : 24,
               }}>
                 {/* Product Header */}
                 <div style={{ 
                   display: 'flex', 
                   justifyContent: 'space-between', 
                   alignItems: 'flex-start',
+                  gap: 12,
+                  flexWrap: 'wrap',
                   marginBottom: 16
                 }}>
                   <h3 style={{ 
@@ -1006,7 +1010,7 @@ export default function AdicionarProdutos() {
                   }}>
                     {product.name}
                   </h3>
-                  <div style={{ display: 'flex', gap: 12 }}>
+                  <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', width: isMobile ? '100%' : 'auto' }}>
                     <button
                       onClick={() => handleEditProduct(product)}
                       style={{
