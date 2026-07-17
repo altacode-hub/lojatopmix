@@ -41,7 +41,7 @@ export default function PublicHeader({
           maxWidth: 1440,
           padding: isMobile ? '10px 14px 12px' : '10px 26px',
           display: 'grid',
-          gridTemplateColumns: isMobile ? '128px auto 55px' : '180px auto 170px',
+          gridTemplateColumns: isMobile ? '128px auto 55px' : '170px auto 180px',
           alignItems: 'center',
           gap: 12,
         }}
@@ -61,10 +61,9 @@ export default function PublicHeader({
             src={logo}
             alt="Top Mix Store"
             style={{
-              height: isMobile ? 64 : 90,
-              width: isMobile ? 64 : 90,
+              width: isMobile ? 78 : 110,
               objectFit: 'contain',
-              borderRadius: 25,
+              borderRadius: 8,
               background: '#f1f5f9',
             }}
             onError={(event) => {
