@@ -45,13 +45,13 @@ export default function HomeLayout() {
   }, [user])
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f5f6f8', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ minHeight: '100vh', minWidth: 500, background: '#f5f6f8', display: 'flex', flexDirection: 'column' }}>
       <PublicHeader
         cartCount={cartCount}
         infoActive={location.pathname === '/politicaPrivacidade'}
         cartActive={location.pathname === '/cart'}
         accountHref={user ? (isLogista ? '/logista' : '/cliente') : '/login'}
-        accountPrimaryLabel={user ? (isLogista ? 'Área Logista' : 'Olá!') : 'olá, faça seu'}
+        accountPrimaryLabel={user ? (isLogista ? 'Área Logista' : 'Olá!') : ''}
         accountSecondaryLabel={user ? user.phoneNumber || 'Usuário' : 'login ou cadastre-se'}
       />
 
@@ -75,7 +75,7 @@ export default function HomeLayout() {
       )}
 
       <main style={{ flex: 1 }}>
-        <div style={{ width: '-webkit-fill-available', margin: '0 auto', padding: '12px 26px' }}>
+        <div style={{ width: '-webkit-fill-available', minWidth: 500, margin: '0 auto', padding: '12px 26px' }}>
           <Outlet />
         </div>
       </main>

@@ -30,6 +30,7 @@ export default function PublicHeader({
         position: 'sticky',
         top: 0,
         zIndex: 10,
+        minWidth: 500,
       }}
     >
       <div
@@ -37,7 +38,7 @@ export default function PublicHeader({
           margin: '0 auto',
           padding: '10px 26px',
           display: 'grid',
-          gridTemplateColumns: '200px auto 170px',
+          gridTemplateColumns: '180px auto 170px',
           alignItems: 'center',
           gap: 12,
         }}
@@ -46,7 +47,7 @@ export default function PublicHeader({
           <img
             src={logo}
             alt="Top Mix Store"
-            style={{ height: 100, width: 100, objectFit: 'contain', borderRadius: 25, background: '#f1f5f9' }}
+            style={{ height: 90, width: 90, objectFit: 'contain', borderRadius: 25, background: '#f1f5f9' }}
             onError={(event) => {
               event.currentTarget.style.display = 'none'
             }}

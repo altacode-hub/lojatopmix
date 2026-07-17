@@ -18,7 +18,7 @@ export default function CategoryFilterSection({
   selectedCategoryId,
   onSelect,
 }: CategoryFilterSectionProps) {
-  const options = [{ id: '', label: 'Todos' }, ...categories]
+  const options = [...categories]
 
   return (
     <section>
