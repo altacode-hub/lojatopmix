@@ -4,6 +4,7 @@ import { getDownloadURL, ref as storageRef, uploadBytes } from 'firebase/storage
 import { useNavigate } from 'react-router-dom'
 import { FiArrowLeft, FiEdit2, FiEyeOff, FiFolderPlus, FiImage, FiSave } from 'react-icons/fi'
 import CategoryRoundImage from '../../components/CategoryRoundImage'
+import FramedImage from '../../components/FramedImage'
 import { rtdb, storage } from '../../service/firebase'
 import type { CatalogCategoryRecord } from '../../types/catalog'
 import { CATALOG_SYNC_PATH } from './stockCache'
@@ -137,18 +138,6 @@ export default function CategoriasLogista() {
       setCropY(0)
     }
   }
-
-  const getPreviewFrameStyle = (): React.CSSProperties => ({
-    position: 'absolute',
-    inset: 0,
-    width: '100%',
-    height: '100%',
-    objectFit: 'cover',
-    transform: `translate(${cropX}%, ${cropY}%) scale(${cropZoom})`,
-    transformOrigin: 'center center',
-    userSelect: 'none',
-    pointerEvents: 'none',
-  })
 
   const startEditing = (category: CategoryListItem) => {
     if (imagePreviewUrl.startsWith('blob:')) {
@@ -340,28 +329,6 @@ export default function CategoriasLogista() {
                   style={{ display: 'none' }}
                 />
               </label>
-
-              <div
-                style={{
-                  height: 220,
-                  borderRadius: 16,
-                  border: '1px dashed #d1d5db',
-                  background: '#f9fafb',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  overflow: 'hidden',
-                }}
-              >
-                {currentSourceImageUrl ? (
-                  <img src={currentSourceImageUrl} alt="Preview da categoria" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                ) : (
-                  <div style={{ color: '#9ca3af', display: 'grid', gap: 8, justifyItems: 'center' }}>
-                    <FiImage size={36} />
-                    <span>Sem imagem selecionada</span>
-                  </div>
-                )}
-              </div>
             </div>
 
             <div style={{ border: '1px solid #e5e7eb', borderRadius: 16, padding: 16, background: '#fafafa' }}>
@@ -369,8 +336,7 @@ export default function CategoriasLogista() {
               <div style={{ color: '#6b7280', fontSize: 13, textAlign: 'left', marginBottom: 16 }}>
                 Ajuste o enquadramento que sera exibido no botao circular de categoria.
               </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'minmax(0, 1fr) 120px', gap: 16, alignItems: 'center' }}>
+              <div>
                 <div
                   style={{
                     position: 'relative',
@@ -386,10 +352,12 @@ export default function CategoriasLogista() {
                 >
                   {currentSourceImageUrl ? (
                     <>
-                      <img
+                      <FramedImage
                         src={currentSourceImageUrl}
                         alt="Recorte da categoria"
-                        style={getPreviewFrameStyle()}
+                        zoom={cropZoom}
+                        offsetX={cropX}
+                        offsetY={cropY}
                       />
                       <div
                         style={{
@@ -410,26 +378,6 @@ export default function CategoriasLogista() {
                 </div>
 
                 <div style={{ display: 'grid', justifyItems: 'center', gap: 12 }}>
-                  <CategoryRoundImage
-                    src={currentSourceImageUrl}
-                    alt="Miniatura da categoria"
-                    label="Prévia"
-                    zoom={cropZoom}
-                    offsetX={cropX}
-                    offsetY={cropY}
-                    style={{
-                      width: 84,
-                      height: 84,
-                      border: '1px solid #d1d5db',
-                      background: '#f8fafc',
-                    }}
-                    fallbackStyle={{
-                      color: '#9ca3af',
-                      fontSize: 11,
-                      background: '#f8fafc',
-                    }}
-                  />
-                  <div style={{ fontSize: 12, color: '#6b7280' }}>Miniatura final</div>
                 </div>
               </div>
 
