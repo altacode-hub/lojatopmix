@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { onValue, ref } from 'firebase/database'
-import FramedImage from '../../components/FramedImage'
 import { useCart } from '../../context/CartContext'
 import { rtdb } from '../../service/firebase'
 import type { ShowcaseRecord } from '../../types/catalog'
@@ -258,6 +257,13 @@ export default function ProductDetail() {
       >
         {galleryImages.map((image, index) => {
           const isPrimaryImage = index === 0
+          const imageStyle = isPrimaryImage
+            ? {
+                ...thumbnailStyle,
+                transform: `translate(${Number(product.mainImageOffsetX || 0)}%, ${Number(product.mainImageOffsetY || 0)}%) scale(${Number(product.mainImageZoom || 1)})`,
+                transformOrigin: 'center center',
+              }
+            : thumbnailStyle
 
           return (
             <button
@@ -274,20 +280,9 @@ export default function ProductDetail() {
                 background: '#fff',
                 cursor: 'pointer',
                 boxShadow: selectedImageIndex === index ? '0 0 0 3px rgba(181, 133, 22, 0.15)' : 'none',
-                position: 'relative',
               }}
             >
-              {isPrimaryImage ? (
-                <FramedImage
-                  src={image}
-                  alt={`${product.name} ${index + 1}`}
-                  zoom={Number(product.mainImageZoom || 1)}
-                  offsetX={Number(product.mainImageOffsetX || 0)}
-                  offsetY={Number(product.mainImageOffsetY || 0)}
-                />
-              ) : (
-                <img src={image} alt={`${product.name} ${index + 1}`} style={thumbnailStyle} />
-              )}
+              <img src={image} alt={`${product.name} ${index + 1}`} style={imageStyle} />
             </button>
           )
         })}
@@ -301,47 +296,32 @@ export default function ProductDetail() {
           background: '#fff',
           border: '1px solid #ede7df',
           minHeight: isMobile ? 320 : 560,
-          position: 'relative',
         }}
       >
         {selectedImage ? (
-          selectedImageIndex === 0 ? (
-            <FramedImage
-              src={selectedImage}
-              alt={product.name}
-              zoom={Number(product.mainImageZoom || 1)}
-              offsetX={Number(product.mainImageOffsetX || 0)}
-              offsetY={Number(product.mainImageOffsetY || 0)}
-              fallback={
-                <div
-                  style={{
+          <img
+            src={selectedImage}
+            alt={product.name}
+            style={
+              selectedImageIndex === 0
+                ? {
+                    width: '100%',
+                    height: '100%',
                     minHeight: isMobile ? 320 : 560,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: '#6b7280',
-                    background: '#f8fafc',
-                    padding: 16,
-                  }}
-                >
-                  Foto em breve
-                </div>
-              }
-              fallbackStyle={{ position: 'absolute', inset: 0 }}
-            />
-          ) : (
-            <img
-              src={selectedImage}
-              alt={product.name}
-              style={{
-                width: '100%',
-                height: '100%',
-                minHeight: isMobile ? 320 : 560,
-                objectFit: 'cover',
-                display: 'block',
-              }}
-            />
-          )
+                    objectFit: 'cover',
+                    transform: `translate(${Number(product.mainImageOffsetX || 0)}%, ${Number(product.mainImageOffsetY || 0)}%) scale(${Number(product.mainImageZoom || 1)})`,
+                    transformOrigin: 'center center',
+                    display: 'block',
+                  }
+                : {
+                    width: '100%',
+                    height: '100%',
+                    minHeight: isMobile ? 320 : 560,
+                    objectFit: 'cover',
+                    display: 'block',
+                  }
+            }
+          />
         ) : (
           <div
             style={{
