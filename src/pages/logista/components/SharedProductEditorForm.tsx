@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   FiFolderPlus,
   FiCheckCircle,
@@ -121,7 +121,6 @@ const labelStyle: React.CSSProperties = {
 
 const editorFrameSize = 280
 const editorMaskInset = 0
-const editorMaskAspectRatio = '4 / 5'
 
 const currencyFormatter = new Intl.NumberFormat('pt-BR', {
   minimumFractionDigits: 2,
@@ -255,19 +254,39 @@ export default function SharedProductEditorForm({
   onManageCategories,
 }: SharedProductEditorFormProps) {
   const mainImageUrl = images[0] || ''
+  const [mainImageNaturalSize, setMainImageNaturalSize] = useState({ width: 1, height: 1 })
+
+  useEffect(() => {
+    if (!mainImageUrl) {
+      setMainImageNaturalSize({ width: 1, height: 1 })
+      return
+    }
+
+    const image = new Image()
+    image.onload = () => {
+      setMainImageNaturalSize({
+        width: image.naturalWidth || 1,
+        height: image.naturalHeight || 1,
+      })
+    }
+    image.src = mainImageUrl
+  }, [mainImageUrl])
+
   const mainImagePreviewStyle = useMemo<React.CSSProperties>(
     () => ({
       position: 'absolute',
-      inset: 0,
-      width: '100%',
-      height: '100%',
-      objectFit: 'cover',
-      transform: `translate(${mainImageOffsetX}%, ${mainImageOffsetY}%) scale(${mainImageZoom})`,
+      left: '50%',
+      top: '50%',
+      width: mainImageNaturalSize.width >= mainImageNaturalSize.height ? `${(mainImageNaturalSize.width / mainImageNaturalSize.height) * 100}%` : '100%',
+      height: mainImageNaturalSize.width >= mainImageNaturalSize.height ? '100%' : `${(mainImageNaturalSize.height / mainImageNaturalSize.width) * 100}%`,
+      maxWidth: 'none',
+      maxHeight: 'none',
+      transform: `translate(calc(-50% + ${mainImageOffsetX}%), calc(-50% + ${mainImageOffsetY}%)) scale(${mainImageZoom})`,
       transformOrigin: 'center center',
       userSelect: 'none',
       pointerEvents: 'none',
     }),
-    [mainImageOffsetX, mainImageOffsetY, mainImageZoom],
+    [mainImageNaturalSize.height, mainImageNaturalSize.width, mainImageOffsetX, mainImageOffsetY, mainImageZoom],
   )
 
   return (
@@ -338,15 +357,8 @@ export default function SharedProductEditorForm({
                     <div
                       style={{
                         position: 'absolute',
-                        top: editorMaskInset,
-                        right: editorMaskInset,
-                        bottom: editorMaskInset,
-                        left: editorMaskInset,
-                        aspectRatio: editorMaskAspectRatio,
-                        margin: 'auto',
-                        width: `calc(100% - ${editorMaskInset * 2}px)`,
-                        maxHeight: `calc(100% - ${editorMaskInset * 2}px)`,
-                        borderRadius: 16,
+                        inset: editorMaskInset,
+                        borderRadius: 8,
                         border: '2px solid rgba(255,255,255,0.95)',
                         boxShadow: '0 0 0 999px rgba(15, 23, 42, 0.35)',
                       }}
@@ -364,8 +376,8 @@ export default function SharedProductEditorForm({
                 <div
                   style={{
                     width: 84,
-                    height: 112,
-                    borderRadius: 16,
+                    height: 84,
+                    borderRadius: 12,
                     overflow: 'hidden',
                     border: '1px solid #d1d5db',
                     position: 'relative',
