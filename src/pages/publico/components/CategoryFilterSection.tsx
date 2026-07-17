@@ -1,3 +1,5 @@
+import CategoryRoundImage from '../../../components/CategoryRoundImage'
+
 interface CategoryOption {
   id: string
   label: string
@@ -83,21 +85,20 @@ export default function CategoryFilterSection({
                     overflow: 'hidden',
                   }}
                 >
-                  {category.imageUrl ? (
-                    <img
-                      src={category.imageUrl}
-                      alt={category.label}
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                        objectFit: 'cover',
-                        transform: `translate(${Number(category.thumbnailOffsetX || 0)}%, ${Number(category.thumbnailOffsetY || 0)}%) scale(${Number(category.thumbnailZoom || 1)})`,
-                        transformOrigin: 'center center',
-                      }}
-                    />
-                  ) : (
-                    <span style={{ padding: 8 }}>{category.label.slice(0, 2).toUpperCase()}</span>
-                  )}
+                  <CategoryRoundImage
+                    src={category.imageUrl}
+                    alt={category.label}
+                    label={category.label}
+                    zoom={Number(category.thumbnailZoom || 1)}
+                    offsetX={Number(category.thumbnailOffsetX || 0)}
+                    offsetY={Number(category.thumbnailOffsetY || 0)}
+                    style={{ width: '100%', height: '100%' }}
+                    fallbackStyle={{
+                      padding: 8,
+                      color: isSelected ? '#fff' : '#334155',
+                      background: isSelected ? '#b58516' : '#f1f5f9',
+                    }}
+                  />
                 </span>
                 <span style={{ fontSize: 12, color: isSelected ? '#0f172a' : '#334155', fontWeight: isSelected ? 700 : 500 }}>
                   {category.label}

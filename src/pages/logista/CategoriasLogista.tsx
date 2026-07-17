@@ -3,6 +3,7 @@ import { onValue, push, ref, update } from 'firebase/database'
 import { getDownloadURL, ref as storageRef, uploadBytes } from 'firebase/storage'
 import { useNavigate } from 'react-router-dom'
 import { FiArrowLeft, FiEdit2, FiEyeOff, FiFolderPlus, FiImage, FiSave } from 'react-icons/fi'
+import CategoryRoundImage from '../../components/CategoryRoundImage'
 import { rtdb, storage } from '../../service/firebase'
 import type { CatalogCategoryRecord } from '../../types/catalog'
 import { CATALOG_SYNC_PATH } from './stockCache'
@@ -409,25 +410,25 @@ export default function CategoriasLogista() {
                 </div>
 
                 <div style={{ display: 'grid', justifyItems: 'center', gap: 12 }}>
-                  <div
+                  <CategoryRoundImage
+                    src={currentSourceImageUrl}
+                    alt="Miniatura da categoria"
+                    label="Prévia"
+                    zoom={cropZoom}
+                    offsetX={cropX}
+                    offsetY={cropY}
                     style={{
                       width: 84,
                       height: 84,
-                      borderRadius: 999,
-                      overflow: 'hidden',
                       border: '1px solid #d1d5db',
-                      position: 'relative',
                       background: '#f8fafc',
                     }}
-                  >
-                    {currentSourceImageUrl ? (
-                      <img src={currentSourceImageUrl} alt="Miniatura da categoria" style={getPreviewFrameStyle()} />
-                    ) : (
-                      <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca3af', fontSize: 11 }}>
-                        Prévia
-                      </div>
-                    )}
-                  </div>
+                    fallbackStyle={{
+                      color: '#9ca3af',
+                      fontSize: 11,
+                      background: '#f8fafc',
+                    }}
+                  />
                   <div style={{ fontSize: 12, color: '#6b7280' }}>Miniatura final</div>
                 </div>
               </div>
@@ -568,34 +569,28 @@ export default function CategoriasLogista() {
                     }}
                   >
                     {category.image ? (
-                      <div
+                      <CategoryRoundImage
+                        src={category.thumbnailImage || category.image}
+                        alt={category.name}
+                        label={category.name}
+                        zoom={Number(category.thumbnailZoom || 1)}
+                        offsetX={Number(category.thumbnailOffsetX || 0)}
+                        offsetY={Number(category.thumbnailOffsetY || 0)}
                         style={{
                           width: 96,
                           height: 96,
-                          borderRadius: 999,
-                          overflow: 'hidden',
                           border: '1px solid #e5e7eb',
-                          position: 'relative',
                           background: '#fff',
                           flexShrink: 0,
                         }}
-                      >
-                        <img
-                          src={category.thumbnailImage || category.image}
-                          alt={category.name}
-                          style={{
-                            width: '100%',
-                            height: '100%',
-                            objectFit: 'cover',
-                            transform: `translate(${Number(category.thumbnailOffsetX || 0)}%, ${Number(category.thumbnailOffsetY || 0)}%) scale(${Number(category.thumbnailZoom || 1)})`,
-                            transformOrigin: 'center center',
-                          }}
-                        />
-                      </div>
+                      />
                     ) : (
-                      <div style={{ width: 82, height: 82, borderRadius: 999, background: '#ede9fe', color: '#7c3aed', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800 }}>
-                        {category.name.slice(0, 2).toUpperCase()}
-                      </div>
+                      <CategoryRoundImage
+                        alt={category.name}
+                        label={category.name}
+                        style={{ width: 82, height: 82, background: '#ede9fe' }}
+                        fallbackStyle={{ color: '#7c3aed', background: '#ede9fe' }}
+                      />
                     )}
                   </div>
                   <div style={{ padding: 14, textAlign: 'left' }}>
