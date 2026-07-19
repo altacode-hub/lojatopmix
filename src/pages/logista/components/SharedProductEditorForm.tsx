@@ -29,7 +29,6 @@ export interface ProductVariationInput {
 interface SharedProductEditorFormProps {
   categories: ProductCategoryOption[]
   sizes: string[]
-  colors: string[]
   productName: string
   onProductNameChange: (value: string) => void
   supplierName: string
@@ -194,7 +193,6 @@ const percentInput = (
 export default function SharedProductEditorForm({
   categories,
   sizes,
-  colors,
   productName,
   onProductNameChange,
   supplierName,
@@ -521,14 +519,13 @@ export default function SharedProductEditorForm({
 
               <div>
                 <label style={labelStyle}>Cor (opcional)</label>
-                <select value={newVariationColor} onChange={(event) => onNewVariationColorChange(event.target.value)} style={inputStyle}>
-                  <option value="">Selecione uma cor</option>
-                  {colors.map((color) => (
-                    <option key={color} value={color}>
-                      {color}
-                    </option>
-                  ))}
-                </select>
+                <input
+                  type="text"
+                  value={newVariationColor}
+                  onChange={(event) => onNewVariationColorChange(event.target.value)}
+                  placeholder="Ex.: Azul marinho, Preto com branco"
+                  style={inputStyle}
+                />
               </div>
 
               <div>

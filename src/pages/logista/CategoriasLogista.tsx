@@ -3,8 +3,8 @@ import { onValue, push, ref, update } from 'firebase/database'
 import { getDownloadURL, ref as storageRef, uploadBytes } from 'firebase/storage'
 import { useNavigate } from 'react-router-dom'
 import { FiArrowLeft, FiEdit2, FiEyeOff, FiFolderPlus, FiImage, FiSave } from 'react-icons/fi'
+import CategoryRoundCropEditor from '../../components/CategoryRoundCropEditor'
 import CategoryRoundImage from '../../components/CategoryRoundImage'
-import FramedImage from '../../components/FramedImage'
 import { rtdb, storage } from '../../service/firebase'
 import type { CatalogCategoryRecord } from '../../types/catalog'
 import { CATALOG_SYNC_PATH } from './stockCache'
@@ -21,9 +21,6 @@ const cardStyle: React.CSSProperties = {
   padding: 20,
   boxShadow: '0 1px 2px rgba(0, 0, 0, 0.04)',
 }
-
-const editorFrameSize = 280
-const editorMaskInset = 0
 
 export default function CategoriasLogista() {
   const navigate = useNavigate()
@@ -331,98 +328,16 @@ export default function CategoriasLogista() {
               </label>
             </div>
 
-            <div style={{ border: '1px solid #e5e7eb', borderRadius: 16, padding: 16, background: '#fafafa' }}>
-              <div style={{ fontWeight: 700, marginBottom: 8, textAlign: 'left' }}>Miniatura da tela do cliente</div>
-              <div style={{ color: '#6b7280', fontSize: 13, textAlign: 'left', marginBottom: 16 }}>
-                Ajuste o enquadramento que sera exibido no botao circular de categoria.
-              </div>
-              <div>
-                <div
-                  style={{
-                    position: 'relative',
-                    width: isMobile ? '100%' : editorFrameSize,
-                    maxWidth: '100%',
-                    aspectRatio: '1 / 1',
-                    borderRadius: 18,
-                    border: '1px solid #d1d5db',
-                    overflow: 'hidden',
-                    background: '#f8fafc',
-                    justifySelf: 'center',
-                  }}
-                >
-                  {currentSourceImageUrl ? (
-                    <>
-                      <FramedImage
-                        src={currentSourceImageUrl}
-                        alt="Recorte da categoria"
-                        zoom={cropZoom}
-                        offsetX={cropX}
-                        offsetY={cropY}
-                      />
-                      <div
-                        style={{
-                          position: 'absolute',
-                          inset: editorMaskInset,
-                          borderRadius: 999,
-                          border: '2px solid rgba(255,255,255,0.95)',
-                          boxShadow: '0 0 0 999px rgba(15, 23, 42, 0.35)',
-                        }}
-                      />
-                    </>
-                  ) : (
-                    <div style={{ color: '#9ca3af', display: 'grid', gap: 8, justifyItems: 'center', alignContent: 'center', height: '100%' }}>
-                      <FiImage size={36} />
-                      <span>Selecione uma imagem para recortar</span>
-                    </div>
-                  )}
-                </div>
-
-                <div style={{ display: 'grid', justifyItems: 'center', gap: 12 }}>
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gap: 12, marginTop: 16 }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6, textAlign: 'left' }}>Zoom</label>
-                  <input
-                    type="range"
-                    min="1"
-                    max="2.4"
-                    step="0.05"
-                    value={cropZoom}
-                    onChange={(event) => setCropZoom(Number(event.target.value))}
-                    style={{ width: '100%' }}
-                    disabled={!currentSourceImageUrl}
-                  />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6, textAlign: 'left' }}>Mover horizontalmente</label>
-                  <input
-                    type="range"
-                    min="-35"
-                    max="35"
-                    step="1"
-                    value={cropX}
-                    onChange={(event) => setCropX(Number(event.target.value))}
-                    style={{ width: '100%' }}
-                    disabled={!currentSourceImageUrl}
-                  />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6, textAlign: 'left' }}>Mover verticalmente</label>
-                  <input
-                    type="range"
-                    min="-35"
-                    max="35"
-                    step="1"
-                    value={cropY}
-                    onChange={(event) => setCropY(Number(event.target.value))}
-                    style={{ width: '100%' }}
-                    disabled={!currentSourceImageUrl}
-                  />
-                </div>
-              </div>
-            </div>
+            <CategoryRoundCropEditor
+              src={currentSourceImageUrl}
+              zoom={cropZoom}
+              offsetX={cropX}
+              offsetY={cropY}
+              onZoomChange={setCropZoom}
+              onOffsetXChange={setCropX}
+              onOffsetYChange={setCropY}
+              isMobile={isMobile}
+            />
 
             <label
               style={{

@@ -135,8 +135,7 @@ export default function ProdutoEstoque() {
   const [error, setError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
-  const sizes = ['34', '36', '38', '40', '42', '44', '46', 'PP', 'P', 'M', 'G', 'GG', 'XG']
-  const colors = ['Branco', 'Preto', 'Vermelho', 'Azul', 'Verde', 'Amarelo', 'Rosa', 'Bege', 'Marrom', 'Cinza']
+  const sizes = ['34', '36', '38', '40', '42', '44', '46', 'PP', 'P', 'M', 'G', 'GG', 'XG', 'Único']
 
   useEffect(() => {
     const loadProduct = async () => {
@@ -259,6 +258,7 @@ export default function ProdutoEstoque() {
         promotionPrice: product.pricing.promotionPrice ?? '',
       },
       Number(product.pricing.allocatedCosts || 0),
+      product.inventory.available,
     )
   }, [product])
 
@@ -624,7 +624,6 @@ export default function ProdutoEstoque() {
       <SharedProductEditorForm
         categories={categories}
         sizes={sizes}
-        colors={colors}
         productName={product.name}
         onProductNameChange={(value) => updateField('name', value)}
         supplierName={product.supplierName}

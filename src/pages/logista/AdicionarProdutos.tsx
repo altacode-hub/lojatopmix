@@ -132,8 +132,7 @@ export default function AdicionarProdutos() {
   
   // Categories
   const [categories, setCategories] = useState<CategoryRecord[]>([])
-  const [sizes] = useState(['34', '36', '38', '40', '42', '44', '46', 'PP', 'P', 'M', 'G', 'GG', 'XG'])
-  const [colors] = useState(['Branco', 'Preto', 'Vermelho', 'Azul', 'Verde', 'Amarelo', 'Rosa', 'Bege', 'Marrom', 'Cinza'])
+  const [sizes] = useState(['34', '36', '38', '40', '42', '44', '46', 'PP', 'P', 'M', 'G', 'GG', 'XG', 'Único'])
 
   const getDraftStorageKey = (id: string) => `adicionar-produtos-rascunho:${id}`
   const getFormDraftStorageKey = (id: string) => `adicionar-produtos-formulario:${id}`
@@ -450,8 +449,10 @@ export default function AdicionarProdutos() {
     : 0
   
   const pricingPreview = useMemo(
-    () =>
-      getProductPricingPreview(
+    () => {
+      const projectedPieces = variations.reduce((sum, variation) => sum + variation.quantity, 0)
+
+      return getProductPricingPreview(
         {
           unitCost,
           packaging,
@@ -466,7 +467,9 @@ export default function AdicionarProdutos() {
           promotionPrice,
         },
         Number(custoPorPeca),
-      ),
+        projectedPieces,
+      )
+    },
     [
       accessories,
       cardFee,
@@ -861,7 +864,6 @@ export default function AdicionarProdutos() {
       <SharedProductEditorForm
         categories={categories}
         sizes={sizes}
-        colors={colors}
         productName={productName}
         onProductNameChange={setProductName}
         supplierName={supplierName}

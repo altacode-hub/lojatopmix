@@ -68,6 +68,7 @@ const calculateRealMargin = (
 export const getProductPricingPreview = (
   values: ProductPricingFormValues,
   logisticsCost: number,
+  projectedPiecesInput = 0,
 ): ProductPricingPreview => {
   const unitaryCost = toNumber(values.unitCost)
   const packaging = toNumber(values.packaging)
@@ -108,7 +109,7 @@ export const getProductPricingPreview = (
     cardFee,
   )
 
-  const projectedPieces = 2
+  const projectedPieces = Math.max(0, Number.isFinite(projectedPiecesInput) ? projectedPiecesInput : 0)
   const projectedRevenue = chosenFinalPrice * projectedPieces
   const projectedProfit = realMarginData.realMargin * projectedPieces
 
