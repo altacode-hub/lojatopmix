@@ -517,13 +517,18 @@ export default function PedidoDetalhes() {
                             style={{
                               padding: '8px 12px',
                               borderRadius: 10,
-                              border: '1px solid #e5e7eb',
-                              background: '#fff',
-                              cursor: 'pointer',
                               display: 'flex',
                               alignItems: 'center',
+                              justifyContent: 'center',
                               gap: '6px',
-                              fontSize: 14
+                              fontSize: 14,
+                              width:150,
+
+                              border: 'none',
+                              background: 'linear-gradient(135deg, #c084fc 0%, #8b5cf6 100%)',
+                              color: '#fff',
+                              fontWeight: 600,
+                              cursor: 'pointer'
                             }}
                           >
                             <FiEdit /> Editar
