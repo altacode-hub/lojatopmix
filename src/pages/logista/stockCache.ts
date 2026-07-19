@@ -206,3 +206,17 @@ export const patchCachedStockProduct = (
     rows: nextRows,
   })
 }
+
+export const removeCachedStockProduct = (productId: string, remoteUpdatedAt: number) => {
+  const currentCache = readStockCache()
+  if (!currentCache) return
+
+  const nextRows = currentCache.rows.filter((item) => item.id !== productId)
+  if (nextRows.length === currentCache.rows.length) return
+
+  writeStockCache({
+    syncedAt: Date.now(),
+    remoteUpdatedAt,
+    rows: nextRows,
+  })
+}

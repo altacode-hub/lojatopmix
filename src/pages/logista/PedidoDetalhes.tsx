@@ -1,16 +1,20 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { rtdb } from '../../service/firebase'
-import { ref, get } from 'firebase/database'
-import { FiPackage, FiEdit, FiTrash2 } from 'react-icons/fi'
+import { get, ref } from 'firebase/database'
+import { FiEdit, FiImage, FiPackage } from 'react-icons/fi'
 import { useMediaQuery } from '../../hooks/useMediaQuery'
+import type { CatalogVariation, InternalProductRecord, ProductPricing, ShowcaseRecord } from '../../types/catalog'
+import FramedImage from '../../components/FramedImage'
+import DeleteProductButton from './components/DeleteProductButton'
+import { getProductPricingPreview } from './productPricing'
 
-interface ProductVariation {
-  size: string
-  color: string
-  quantity: number
-  stock: number
+interface InventoryRecord {
+  total?: number
+  reserved?: number
+  available?: number
+  cartReserved?: number
 }
 
 interface Product {
@@ -19,19 +23,14 @@ interface Product {
   description: string
   supplierName: string
   categoryId: string
-  pricing: {
-    unitCost: number
-    packaging: number
-    gifts: number
-    accessories: number
-    sellerCommission: number
-    taxes: number
-    operational: number
-    grossMargin: number
-    cardFee: number
-    salePrice: number
-  }
-  variations: Record<string, ProductVariation>
+  image: string
+  images: string[]
+  mainImageZoom: number
+  mainImageOffsetX: number
+  mainImageOffsetY: number
+  pricing: ProductPricing
+  variations: Record<string, CatalogVariation>
+  inventory: InventoryRecord
   active: boolean
   createdAt: number
 }
@@ -49,6 +48,55 @@ interface PurchaseRecord {
   }
 }
 
+const currencyFormatter = new Intl.NumberFormat('pt-BR', {
+  style: 'currency',
+  currency: 'BRL',
+})
+
+const toNumber = (value: unknown) => {
+  const numericValue = Number(value)
+  return Number.isFinite(numericValue) ? numericValue : 0
+}
+
+const hasNumericValue = (value: unknown) => value !== undefined && value !== null && value !== '' && Number.isFinite(Number(value))
+
+const getVariationStock = (variation: CatalogVariation) => toNumber(variation.stock)
+
+const getTotalVariationStock = (variations: CatalogVariation[]) => variations.reduce((sum, variation) => sum + getVariationStock(variation), 0)
+
+const getTotalStock = (inventory: InventoryRecord, variations: CatalogVariation[]) => {
+  if (hasNumericValue(inventory.total)) {
+    return Math.max(toNumber(inventory.total), 0)
+  }
+
+  return getTotalVariationStock(variations)
+}
+
+const getAvailableStock = (inventory: InventoryRecord, variations: CatalogVariation[]) => {
+  const cartReserved = Math.max(toNumber(inventory.cartReserved), 0)
+
+  if (hasNumericValue(inventory.available)) {
+    return Math.max(toNumber(inventory.available) - cartReserved, 0)
+  }
+
+  const totalStock = getTotalVariationStock(variations)
+  return Math.max(totalStock - toNumber(inventory.reserved) - cartReserved, 0)
+}
+
+const buildPricingFormValues = (pricing: ProductPricing) => ({
+  unitCost: toNumber(pricing.unitCost),
+  packaging: toNumber(pricing.packaging),
+  gifts: toNumber(pricing.gifts),
+  accessories: toNumber(pricing.accessories),
+  sellerCommission: toNumber(pricing.sellerCommission),
+  taxes: toNumber(pricing.taxes),
+  operational: toNumber(pricing.operational),
+  grossMargin: toNumber(pricing.grossMargin),
+  cardFee: toNumber(pricing.cardFee),
+  finalPrice: toNumber(pricing.finalPrice ?? pricing.salePrice),
+  promotionPrice: toNumber(pricing.promotionPrice),
+})
+
 export default function PedidoDetalhes() {
   const { purchaseId } = useParams<{ purchaseId: string }>()
   useAuth() // We just need to call useAuth for context, even if we don't use the return value
@@ -61,28 +109,70 @@ export default function PedidoDetalhes() {
   
   useEffect(() => {
     const loadData = async () => {
-      if (!purchaseId) return
+      if (!purchaseId) {
+        setLoading(false)
+        return
+      }
       
       try {
-        // Load purchase
         const purchaseSnap = await get(ref(rtdb, `purchases/${purchaseId}`))
         if (purchaseSnap.exists()) {
           setPurchase(purchaseSnap.val())
         }
         
-        // Load purchase items and their products
         const itemsSnap = await get(ref(rtdb, `purchaseItems/${purchaseId}`))
         if (itemsSnap.exists()) {
           const itemKeys = Object.keys(itemsSnap.val())
           const productPromises = itemKeys.map(async (productId) => {
-            const productSnap = await get(ref(rtdb, `products/${productId}`))
+            const [productSnap, showcaseSnap, inventorySnap] = await Promise.all([
+              get(ref(rtdb, `products/${productId}`)),
+              get(ref(rtdb, `showcase/${productId}`)),
+              get(ref(rtdb, `inventory/${productId}`)),
+            ])
+
             if (productSnap.exists()) {
-              return { id: productId, ...productSnap.val() } as Product
+              const productData = productSnap.val() as InternalProductRecord
+              const showcaseData = showcaseSnap.exists() ? (showcaseSnap.val() as ShowcaseRecord) : null
+              const inventoryData = inventorySnap.exists() ? (inventorySnap.val() as InventoryRecord) : {}
+              const images = Array.from(
+                new Set(
+                  [showcaseData?.images, productData.images, showcaseData?.image, productData.image]
+                    .flatMap((value) => (Array.isArray(value) ? value : value ? [value] : []))
+                    .filter(Boolean),
+                ),
+              )
+
+              return {
+                id: productId,
+                name: showcaseData?.name || productData.name || 'Produto sem nome',
+                description: productData.description || showcaseData?.shortDescription || '',
+                supplierName: productData.supplierName || '',
+                categoryId: showcaseData?.categoryId || productData.categoryId || '',
+                image: showcaseData?.image || productData.image || images[0] || '',
+                images,
+                mainImageZoom: toNumber(showcaseData?.mainImageZoom ?? productData.mainImageZoom ?? 1) || 1,
+                mainImageOffsetX: toNumber(showcaseData?.mainImageOffsetX ?? productData.mainImageOffsetX ?? 0),
+                mainImageOffsetY: toNumber(showcaseData?.mainImageOffsetY ?? productData.mainImageOffsetY ?? 0),
+                pricing: {
+                  ...productData.pricing,
+                  salePrice: toNumber(productData.pricing?.salePrice ?? showcaseData?.price),
+                  finalPrice: toNumber(productData.pricing?.finalPrice ?? productData.pricing?.salePrice ?? showcaseData?.price),
+                  promotionPrice: toNumber(productData.pricing?.promotionPrice),
+                  realMargin: toNumber(productData.pricing?.realMargin),
+                  realMarginPercentage: toNumber(productData.pricing?.realMarginPercentage),
+                },
+                variations: (showcaseData?.variations || productData.variations || {}) as Record<string, CatalogVariation>,
+                inventory: inventoryData,
+                active: Boolean(productData.active ?? true),
+                createdAt: toNumber(productData.createdAt),
+              } satisfies Product
             }
             return null
           })
           const loadedProducts = (await Promise.all(productPromises)).filter(Boolean) as Product[]
           setProducts(loadedProducts)
+        } else {
+          setProducts([])
         }
       } catch (e) {
         console.error('Error loading data:', e)
@@ -98,22 +188,29 @@ export default function PedidoDetalhes() {
     ? Number(((purchase.costs?.freight || 0) + (purchase.costs?.travel || 0) + (purchase.costs?.consultancy || 0) + (purchase.costs?.other || 0)) / purchase.totalPieces).toFixed(2)
     : 0
   
-  const totalProducts = products.length
-  const totalPieces = products.reduce((sum, p) => {
-    const variations = Object.values(p.variations || {})
-    return sum + variations.reduce((s, v) => s + (v.quantity || 0), 0)
-  }, 0)
-  const totalRevenue = products.reduce((sum, p) => {
-    const variations = Object.values(p.variations || {})
-    const qty = variations.reduce((s, v) => s + (v.quantity || 0), 0)
-    return sum + (p.pricing?.salePrice || 0) * qty
-  }, 0)
-  const totalCost = products.reduce((sum, p) => {
-    const variations = Object.values(p.variations || {})
-    const qty = variations.reduce((s, v) => s + (v.quantity || 0), 0)
-    return sum + (p.pricing?.unitCost || 0) * qty
-  }, 0)
-  const totalProfit = totalRevenue - totalCost
+  const productCards = useMemo(
+    () =>
+      products.map((product) => {
+        const variations = Object.values(product.variations || {})
+        const availableStock = getAvailableStock(product.inventory, variations)
+        const totalStock = getTotalStock(product.inventory, variations)
+        const pricingPreview = getProductPricingPreview(buildPricingFormValues(product.pricing), Number(custoPorPeca), availableStock)
+
+        return {
+          product,
+          variations,
+          availableStock,
+          totalStock,
+          pricingPreview,
+        }
+      }),
+    [custoPorPeca, products],
+  )
+
+  const totalProducts = productCards.length
+  const totalAvailableStock = productCards.reduce((sum, item) => sum + item.availableStock, 0)
+  const totalRevenue = productCards.reduce((sum, item) => sum + item.pricingPreview.projectedRevenue, 0)
+  const totalProfit = productCards.reduce((sum, item) => sum + item.pricingPreview.projectedProfit, 0)
   
   if (loading) {
     return <div style={{ padding: '24px' }}>Carregando...</div>
@@ -251,21 +348,7 @@ export default function PedidoDetalhes() {
           </h2>
           
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            {products.map((product) => {
-              const variations = Object.values(product.variations || {})
-              const totalQty = variations.reduce((sum, v) => sum + (v.quantity || 0), 0)
-              
-              // Calculate additional fields
-              const tempUnitCost = product.pricing?.unitCost || 0
-              const tempPackaging = product.pricing?.packaging || 0
-              const tempGifts = product.pricing?.gifts || 0
-              const tempAccessories = product.pricing?.accessories || 0
-              const tempLogisticsCost = Number(custoPorPeca)
-              const tempGrossMargin = product.pricing?.grossMargin || 0
-              
-              const tempBaseCost = tempUnitCost + tempPackaging + tempGifts + tempAccessories + tempLogisticsCost
-              const tempPriceWithMargin = tempBaseCost + tempGrossMargin
-              
+            {productCards.map(({ product, variations, availableStock, pricingPreview }) => {
               return (
                 <div key={product.id} style={{
                   background: '#faf5ff',
@@ -273,133 +356,179 @@ export default function PedidoDetalhes() {
                   borderRadius: 16,
                   padding: isMobile ? 16 : 24,
                 }}>
-                  {/* Product Header */}
-                  <div style={{ 
-                    display: 'flex', 
-                    justifyContent: 'space-between', 
-                    alignItems: 'flex-start',
-                    gap: 12,
-                    flexWrap: 'wrap',
-                    marginBottom: 16
-                  }}>
-                    <h3 style={{ 
-                      margin: 0, 
-                      fontSize: 20, 
-                      fontWeight: 600 
-                    }}>
-                      {product.name}
-                    </h3>
-                    <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', width: isMobile ? '100%' : 'auto' }}>
-                      <button
-                        type="button"
-                        onClick={() => navigate(`/logista/estoque/${product.id}`)}
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: isMobile ? '1fr' : '140px 1fr',
+                      gap: 16,
+                      alignItems: 'start',
+                    }}
+                  >
+                    <div>
+                      <div
                         style={{
-                          padding: '8px 12px',
-                          borderRadius: 10,
+                          width: '100%',
+                          height: isMobile ? 180 : 140,
+                          borderRadius: 16,
+                          overflow: 'hidden',
                           border: '1px solid #e5e7eb',
                           background: '#fff',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          fontSize: 14
+                          position: 'relative',
                         }}
                       >
-                        <FiEdit /> Editar
-                      </button>
-                      <button style={{
-                        padding: '8px 12px',
-                        borderRadius: 10,
-                        border: '1px solid #fee2e2',
-                        background: '#fff',
-                        color: '#dc2626',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        fontSize: 14
+                        {product.image ? (
+                          <FramedImage
+                            src={product.image}
+                            alt={product.name}
+                            zoom={product.mainImageZoom}
+                            offsetX={product.mainImageOffsetX}
+                            offsetY={product.mainImageOffsetY}
+                          />
+                        ) : (
+                          <div
+                            style={{
+                              position: 'absolute',
+                              inset: 0,
+                              display: 'grid',
+                              placeItems: 'center',
+                              color: '#6b7280',
+                              textAlign: 'center',
+                              padding: 16,
+                            }}
+                          >
+                            <div>
+                              <FiImage size={22} style={{ marginBottom: 8 }} />
+                              <div>Sem imagem</div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div>
+                      <div style={{ 
+                        display: 'flex', 
+                        justifyContent: 'space-between', 
+                        alignItems: 'flex-start',
+                        gap: 12,
+                        flexWrap: 'wrap',
+                        marginBottom: 16
                       }}>
-                        <FiTrash2 />
-                      </button>
-                    </div>
-                  </div>
-                  
-                  {/* Supplier */}
-                  {product.supplierName && (
-                    <div style={{ 
-                      fontSize: 14, 
-                      color: '#6b7280', 
-                      marginBottom: 16,
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px'
-                    }}>
-                      Fornecedor: {product.supplierName}
-                    </div>
-                  )}
-                  
-                  {/* Pricing Info */}
-                  <div style={{ 
-                    display: 'grid', 
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', 
-                    gap: 16, 
-                    marginBottom: 16
-                  }}>
-                    <div>
-                      <div style={{ fontSize: 14, color: '#6b7280', marginBottom: 4 }}>Preço à vista</div>
-                      <div style={{ fontSize: 18, fontWeight: 700, color: '#059669' }}>
-                        R$ {tempPriceWithMargin.toFixed(2)}
-                      </div>
-                    </div>
-                    <div>
-                      <div style={{ fontSize: 14, color: '#6b7280', marginBottom: 4 }}>Preço no cartão</div>
-                      <div style={{ fontSize: 18, fontWeight: 700, color: '#2563eb' }}>
-                        R$ {(product.pricing?.salePrice || 0).toFixed(2)}
-                      </div>
-                    </div>
-                    <div>
-                      <div style={{ fontSize: 14, color: '#6b7280', marginBottom: 4 }}>Total de peças</div>
-                      <div style={{ fontSize: 18, fontWeight: 700 }}>
-                        {totalQty}
-                      </div>
-                    </div>
-                    <div>
-                      <div style={{ fontSize: 14, color: '#6b7280', marginBottom: 4 }}>Margem</div>
-                      <div style={{ fontSize: 18, fontWeight: 700 }}>
-                        R$ {tempGrossMargin.toFixed(2)}
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* Variations */}
-                  <div style={{ marginBottom: 16 }}>
-                    <div style={{ fontSize: 14, color: '#6b7280', marginBottom: 8 }}>Variações:</div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center' }}>
-                      {variations.map((v, idx) => (
-                        <div key={idx} style={{
-                          background: '#fff',
-                          border: '1px solid #e5e7eb',
-                          borderRadius: 8,
-                          padding: '6px 12px',
-                          fontSize: 14
-                        }}>
-                          {v.size}{v.color ? ` • ${v.color}` : ''} • {v.quantity || 0}x
+                        <div>
+                          <h3 style={{ 
+                            margin: 0, 
+                            fontSize: 20, 
+                            fontWeight: 600 
+                          }}>
+                            {product.name}
+                          </h3>
+                          {product.supplierName && (
+                            <div style={{ 
+                              fontSize: 14, 
+                              color: '#6b7280', 
+                              marginTop: 6,
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px'
+                            }}>
+                              Fornecedor: {product.supplierName}
+                            </div>
+                          )}
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                  
-                  {/* Total Revenue */}
-                  <div style={{
-                    background: '#ecfdf5',
-                    border: '1px solid #10b981',
-                    borderRadius: 12,
-                    padding: 16,
-                    textAlign: 'center'
-                  }}>
-                    <div style={{ fontSize: 14, color: '#059669', marginBottom: 4 }}>Receita Total</div>
-                    <div style={{ fontSize: 20, fontWeight: 700, color: '#059669' }}>
-                      R$ {(tempPriceWithMargin * totalQty).toFixed(2)}
+                      </div>
+                      
+                      <div style={{ 
+                        display: 'grid', 
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', 
+                        gap: 16, 
+                        marginBottom: 16
+                      }}>
+                        <div>
+                          <div style={{ fontSize: 14, color: '#6b7280', marginBottom: 4 }}>Preço com margem</div>
+                          <div style={{ fontSize: 18, fontWeight: 700, color: '#059669' }}>
+                            {currencyFormatter.format(pricingPreview.priceWithMargin)}
+                          </div>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 14, color: '#6b7280', marginBottom: 4 }}>Preço final</div>
+                          <div style={{ fontSize: 18, fontWeight: 700, color: '#2563eb' }}>
+                            {currencyFormatter.format(pricingPreview.chosenFinalPrice)}
+                          </div>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 14, color: '#6b7280', marginBottom: 4 }}>Estoque disponível</div>
+                          <div style={{ fontSize: 18, fontWeight: 700 }}>
+                            {availableStock}
+                          </div>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 14, color: '#6b7280', marginBottom: 4 }}>Margem real</div>
+                          <div style={{ fontSize: 18, fontWeight: 700 }}>
+                            {currencyFormatter.format(pricingPreview.realMargin)}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div style={{ marginBottom: 16 }}>
+                        <div style={{ fontSize: 14, color: '#6b7280', marginBottom: 8 }}>Variações:</div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center' }}>
+                          {variations.map((variation, idx) => (
+                            <div key={idx} style={{
+                              background: '#fff',
+                              border: '1px solid #e5e7eb',
+                              borderRadius: 8,
+                              padding: '6px 12px',
+                              fontSize: 14
+                            }}>
+                              {variation.size}
+                              {variation.color ? ` • ${variation.color}` : ''}
+                              {' • '}
+                              {getVariationStock(variation)}x
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      
+                      <div style={{
+                        background: '#ecfdf5',
+                        border: '1px solid #10b981',
+                        borderRadius: 12,
+                        padding: 16,
+                        textAlign: 'center'
+                      }}>
+                        <div style={{ fontSize: 14, color: '#059669', marginBottom: 4 }}>Receita Total</div>
+                        <div style={{ fontSize: 20, fontWeight: 700, color: '#059669' }}>
+                          {currencyFormatter.format(pricingPreview.projectedRevenue)}
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, flexWrap: 'wrap', paddingTop: 16, width: isMobile ? '100%' : 'auto' }}>
+                          <DeleteProductButton
+                            purchaseId={purchaseId || ''}
+                            product={product}
+                            products={products}
+                            onDeleted={(remainingProducts, remainingTotalPieces) => {
+                              setProducts(remainingProducts as Product[])
+                              setPurchase((current) => (current ? { ...current, totalPieces: remainingTotalPieces } : current))
+                            }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => navigate(`/logista/estoque/${product.id}`)}
+                            style={{
+                              padding: '8px 12px',
+                              borderRadius: 10,
+                              border: '1px solid #e5e7eb',
+                              background: '#fff',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              fontSize: 14
+                            }}
+                          >
+                            <FiEdit /> Editar
+                          </button>
+                        </div>
                     </div>
                   </div>
                 </div>
@@ -434,8 +563,8 @@ export default function PedidoDetalhes() {
                 padding: 20,
                 textAlign: 'center'
               }}>
-                <div style={{ fontSize: 28, fontWeight: 700, color: '#8b5cf6' }}>{totalPieces}</div>
-                <div style={{ color: '#6b7280', fontSize: 14 }}>Peças Totais</div>
+                <div style={{ fontSize: 28, fontWeight: 700, color: '#8b5cf6' }}>{totalAvailableStock}</div>
+                <div style={{ color: '#6b7280', fontSize: 14 }}>Estoque Disponível</div>
               </div>
               
               <div style={{
@@ -444,7 +573,7 @@ export default function PedidoDetalhes() {
                 padding: 20,
                 textAlign: 'center'
               }}>
-                <div style={{ fontSize: 24, fontWeight: 700, color: '#059669' }}>R$ {totalRevenue.toFixed(2)}</div>
+                <div style={{ fontSize: 24, fontWeight: 700, color: '#059669' }}>{currencyFormatter.format(totalRevenue)}</div>
                 <div style={{ color: '#6b7280', fontSize: 14 }}>Receita Total</div>
               </div>
               
@@ -455,8 +584,8 @@ export default function PedidoDetalhes() {
                 textAlign: 'center',
                 border: '1px solid #fbbf24'
               }}>
-                <div style={{ fontSize: 24, fontWeight: 700, color: '#d97706' }}>R$ {totalProfit.toFixed(2)}</div>
-                <div style={{ color: '#6b7280', fontSize: 14 }}>Lucro Total</div>
+                <div style={{ fontSize: 24, fontWeight: 700, color: '#d97706' }}>{currencyFormatter.format(totalProfit)}</div>
+                <div style={{ color: '#6b7280', fontSize: 14 }}>Lucro Pela Margem Real</div>
               </div>
             </div>
           </div>
