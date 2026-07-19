@@ -348,7 +348,6 @@ export default function EstoqueLogista() {
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
             gap: 16,
-            alignItems: 'start',
           }}
         >
           {filteredProducts.map((product) => (
