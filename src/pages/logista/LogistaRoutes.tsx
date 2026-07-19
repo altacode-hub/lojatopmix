@@ -1,3 +1,4 @@
+import { Navigate } from 'react-router-dom'
 import Logista from './Logista'
 import NovoPedido from './NovoPedido'
 import AdicionarProdutos from './AdicionarProdutos'
@@ -20,4 +21,5 @@ export const logistaRoutes = [
   { path: 'novo-pedido/:purchaseId/produtos', element: <AdicionarProdutos /> },
   { path: 'pedido/:purchaseId/vitrine', element: <PublicarVitrine /> },
   { path: 'pedido/:purchaseId', element: <PedidoDetalhes /> },
+  { path: '*', element: <Navigate to="/logista" replace /> },
 ]

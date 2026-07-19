@@ -1,6 +1,108 @@
 {
   "rules": {
-    ".read": true,
-    ".write": true
+    ".read": false,
+    ".write": false,
+    "loja": {
+      "arealogista": {
+        "$uid": {
+          ".read": "auth != null && auth.uid === $uid",
+          ".write": false
+        }
+      }
+    },
+    "categories": {
+      ".read": true,
+      "$categoryId": {
+        ".write": "auth != null && root.child('loja/arealogista/' + auth.uid).val() === true"
+      }
+    },
+    "showcase": {
+      ".read": true,
+      "$productId": {
+        ".write": "auth != null && root.child('loja/arealogista/' + auth.uid).val() === true",
+        "variations": {
+          "$variationKey": {
+            ".write": "auth != null && (root.child('loja/arealogista/' + auth.uid).val() === true || (data.exists() && newData.exists() && newData.child('size').val() === data.child('size').val() && newData.child('color').val() === data.child('color').val() && newData.child('stock').val() === data.child('stock').val() && newData.child('cartReserved').isNumber()))"
+          }
+        }
+      }
+    },
+    "products": {
+      ".read": "auth != null && root.child('loja/arealogista/' + auth.uid).val() === true",
+      "$productId": {
+        ".write": "auth != null && root.child('loja/arealogista/' + auth.uid).val() === true",
+        "variations": {
+          "$variationKey": {
+            "cartReserved": {
+              ".write": "auth != null",
+              ".validate": "newData.isNumber() && newData.val() >= 0"
+            }
+          }
+        }
+      }
+    },
+    "inventory": {
+      ".read": "auth != null",
+      "$productId": {
+        ".write": "auth != null && (root.child('loja/arealogista/' + auth.uid).val() === true || (data.exists() && newData.exists() && newData.child('total').val() === data.child('total').val() && newData.child('reserved').val() === data.child('reserved').val() && newData.child('available').val() === data.child('available').val() && newData.child('cartReserved').isNumber() && newData.child('cartReserved').val() >= 0))"
+      }
+    },
+    "purchases": {
+      ".read": "auth != null && root.child('loja/arealogista/' + auth.uid).val() === true",
+      ".write": "auth != null && root.child('loja/arealogista/' + auth.uid).val() === true"
+    },
+    "purchaseItems": {
+      ".read": "auth != null && root.child('loja/arealogista/' + auth.uid).val() === true",
+      ".write": "auth != null && root.child('loja/arealogista/' + auth.uid).val() === true"
+    },
+    "sales": {
+      ".read": "auth != null && root.child('loja/arealogista/' + auth.uid).val() === true",
+      ".write": "auth != null && root.child('loja/arealogista/' + auth.uid).val() === true"
+    },
+    "stockMovements": {
+      ".read": "auth != null && root.child('loja/arealogista/' + auth.uid).val() === true",
+      ".write": "auth != null && root.child('loja/arealogista/' + auth.uid).val() === true"
+    },
+    "checkoutOrders": {
+      ".read": "auth != null && root.child('loja/arealogista/' + auth.uid).val() === true",
+      ".write": "auth != null && root.child('loja/arealogista/' + auth.uid).val() === true"
+    },
+    "infinitePayWebhooks": {
+      ".read": "auth != null && root.child('loja/arealogista/' + auth.uid).val() === true",
+      ".write": false
+    },
+    "cartReservations": {
+      "$cartId": {
+        ".read": "auth != null",
+        "status": {
+          ".write": "auth != null",
+          ".validate": "newData.isString()"
+        },
+        "updatedAt": {
+          ".write": "auth != null",
+          ".validate": "newData.isNumber()"
+        },
+        "items": {
+          "$itemId": {
+            ".write": "auth != null",
+            ".validate": "newData.val() === null || (newData.hasChildren(['itemId', 'productId', 'variationKey', 'quantity', 'updatedAt']) && newData.child('itemId').isString() && newData.child('productId').isString() && newData.child('variationKey').isString() && newData.child('quantity').isNumber() && newData.child('quantity').val() >= 0 && newData.child('updatedAt').isNumber())"
+          }
+        }
+      }
+    },
+    "indexes": {
+      "catalogSync": {
+        ".read": "auth != null && root.child('loja/arealogista/' + auth.uid).val() === true",
+        ".write": "auth != null && root.child('loja/arealogista/' + auth.uid).val() === true",
+        "updatedAt": {
+          ".write": "auth != null",
+          ".validate": "newData.isNumber()"
+        },
+        "source": {
+          ".write": "auth != null",
+          ".validate": "newData.isString()"
+        }
+      }
+    }
   }
 }

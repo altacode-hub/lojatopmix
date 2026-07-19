@@ -1,4 +1,4 @@
-import { Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes } from 'react-router-dom'
 import HomeLayout from './pages/publico/HomeLayout'
 import { publicoRoutes } from './pages/publico/PublicoRoutes'
 import Checkout from './pages/Checkout'
@@ -7,7 +7,16 @@ import Cliente from './pages/Cliente'
 import LogistaLayout from './pages/logista/LogistaLayout'
 import { logistaRoutes } from './pages/logista/LogistaRoutes'
 import ProtectedRoute from './components/ProtectedRoute'
+import { useAuth } from './context/AuthContext'
 import './App.css'
+
+function FallbackRoute() {
+  const { user, loading, isLogista, profileLoading } = useAuth()
+
+  if (loading || profileLoading) return <div>Carregando...</div>
+  if (!user) return <Navigate to="/" replace />
+  return <Navigate to={isLogista ? '/logista' : '/cliente'} replace />
+}
 
 export default function App() {
   return (
@@ -38,7 +47,7 @@ export default function App() {
         <Route
           path="/logista"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute requireLogista>
               <LogistaLayout />
             </ProtectedRoute>
           }
@@ -47,6 +56,7 @@ export default function App() {
             <Route key={i} {...route} />
           ))}
         </Route>
+        <Route path="*" element={<FallbackRoute />} />
       </Routes>
     </div>
   )

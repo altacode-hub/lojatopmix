@@ -1,6 +1,7 @@
 import { onValue, ref } from 'firebase/database'
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { getOrCreateCartId, releaseCartItem, reserveCartItem } from '../utils/cartReservations'
+import { useAuth } from './AuthContext'
 import { rtdb } from '../service/firebase'
 
 export type CartItem = {
@@ -60,6 +61,7 @@ const CartContext = createContext<CartContextType>({
 export const CartProvider = ({ children }: { children: React.ReactNode }) => {
   const [items, setItems] = useState<CartItem[]>(readStoredCartItems)
   const [cartId] = useState(() => getOrCreateCartId())
+  const { user, loading, signInAnonymously } = useAuth()
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -67,6 +69,8 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
   }, [items])
 
   useEffect(() => {
+    if (loading || !user) return
+
     const reservationRef = ref(rtdb, `cartReservations/${cartId}`)
 
     const unsubscribe = onValue(reservationRef, (snapshot) => {
@@ -104,10 +108,19 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
     })
 
     return () => unsubscribe()
-  }, [cartId])
+  }, [cartId, loading, user])
+
+  const ensureCartSession = useCallback(async () => {
+    if (user) return
+    if (loading) {
+      throw new Error('Aguarde a autenticacao ser concluida e tente novamente.')
+    }
+    await signInAnonymously()
+  }, [loading, signInAnonymously, user])
 
   const add = useCallback(
     async (item: CartItem) => {
+      await ensureCartSession()
       await reserveCartItem({
         cartId,
         itemId: item.id,
@@ -124,7 +137,7 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
         return [...prev, item]
       })
     },
-    [cartId],
+    [cartId, ensureCartSession],
   )
 
   const remove = useCallback(
@@ -132,6 +145,7 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
       const item = items.find((entry) => entry.id === id)
       if (!item) return
 
+      await ensureCartSession()
       await releaseCartItem({
         cartId,
         itemId: item.id,
@@ -142,7 +156,7 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
 
       setItems((prev) => prev.filter((entry) => entry.id !== id))
     },
-    [cartId, items],
+    [cartId, ensureCartSession, items],
   )
 
   const clear = useCallback(
@@ -150,6 +164,7 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
       const shouldReleaseReservations = options?.releaseReservations ?? true
 
       if (shouldReleaseReservations) {
+        await ensureCartSession()
         for (const item of items) {
           await releaseCartItem({
             cartId,
@@ -163,7 +178,7 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
 
       setItems([])
     },
-    [cartId, items],
+    [cartId, ensureCartSession, items],
   )
 
   const total = useMemo(() => items.reduce((sum, i) => sum + i.price * i.qty, 0), [items])

@@ -1,19 +1,16 @@
 import { Outlet, useLocation, Link } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
-import { ref, onValue, off, type DataSnapshot } from 'firebase/database'
 import { useCart } from '../../context/CartContext'
 import { useAuth } from '../../context/AuthContext'
-import { rtdb } from '../../service/firebase'
 import { useMediaQuery } from '../../hooks/useMediaQuery'
 import PublicHeader from './components/PublicHeader'
 
 export default function HomeLayout() {
   const [online, setOnline] = useState(true)
-  const [isLogista, setIsLogista] = useState(false)
   const location = useLocation()
   const { items } = useCart()
   const cartCount = useMemo(() => items.reduce((sum, item) => sum + item.qty, 0), [items])
-  const { user } = useAuth()
+  const { user, isLogista } = useAuth()
   const isMobile = useMediaQuery('(max-width: 768px)')
 
   useEffect(() => {
@@ -27,24 +24,6 @@ export default function HomeLayout() {
       window.removeEventListener('offline', update)
     }
   }, [])
-
-  useEffect(() => {
-    if (!user) {
-      setIsLogista(false)
-      return
-    }
-
-    const logistaRef = ref(rtdb, `loja/arealogista/${user.uid}`)
-    const handleValue = (snapshot: DataSnapshot) => {
-      setIsLogista(Boolean(snapshot.val()))
-    }
-
-    onValue(logistaRef, handleValue)
-
-    return () => {
-      off(logistaRef, 'value', handleValue)
-    }
-  }, [user])
 
   return (
     <div style={{ minHeight: '100vh', width: '100%', background: '#f5f6f8', display: 'flex', flexDirection: 'column' }}>
