@@ -30,9 +30,10 @@ export default function HomeLayout() {
       <PublicHeader
         cartCount={cartCount}
         infoActive={location.pathname === '/politicaPrivacidade'}
-        cartActive={location.pathname === '/cart'}
+        cartActive={location.pathname.startsWith('/cliente/carrinho')}
+        cartHref={user ? '/cliente/carrinho' : '/login'}
         accountHref={user ? (isLogista ? '/logista' : '/cliente') : '/login'}
-        accountPrimaryLabel={user ? (isLogista ? 'Área Logista' : 'Olá!') : ''}
+        accountPrimaryLabel={user ? (isLogista ? 'Área Logista' : 'Minha conta') : ''}
         accountSecondaryLabel={user ? user.phoneNumber || 'Usuário' : 'login ou cadastre-se'}
       />
 

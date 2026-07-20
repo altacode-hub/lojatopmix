@@ -9,6 +9,7 @@ interface PublicHeaderProps {
   cartCount: number
   infoActive: boolean
   cartActive: boolean
+  cartHref: string
   accountHref: string
   accountPrimaryLabel: string
   accountSecondaryLabel: string
@@ -18,6 +19,7 @@ export default function PublicHeader({
   cartCount,
   infoActive,
   cartActive,
+  cartHref,
   accountHref,
   accountPrimaryLabel,
   accountSecondaryLabel,
@@ -92,7 +94,7 @@ export default function PublicHeader({
             </div>
           </Link>
           <Link
-            to="/cart"
+            to={cartHref}
             title="Carrinho"
             style={{
               position: 'relative',

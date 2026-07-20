@@ -1,9 +1,8 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import HomeLayout from './pages/publico/HomeLayout'
 import { publicoRoutes } from './pages/publico/PublicoRoutes'
-import Checkout from './pages/Checkout'
-import CheckoutReturn from './pages/CheckoutReturn'
-import Cliente from './pages/Cliente'
+import ClienteLayout from './pages/cliente/ClienteLayout'
+import { clienteRoutes } from './pages/cliente/ClienteRoutes'
 import LogistaLayout from './pages/logista/LogistaLayout'
 import { logistaRoutes } from './pages/logista/LogistaRoutes'
 import ProtectedRoute from './components/ProtectedRoute'
@@ -27,23 +26,18 @@ export default function App() {
             <Route key={i} {...route} />
           ))}
         </Route>
-        <Route path="/checkout/retorno" element={<CheckoutReturn />} />
-        <Route
-          path="/checkout"
-          element={
-            <ProtectedRoute>
-              <Checkout />
-            </ProtectedRoute>
-          }
-        />
         <Route
           path="/cliente"
           element={
             <ProtectedRoute>
-              <Cliente />
+              <ClienteLayout />
             </ProtectedRoute>
           }
-        />
+        >
+          {clienteRoutes.map((route, i) => (
+            <Route key={i} {...route} />
+          ))}
+        </Route>
         <Route
           path="/logista"
           element={

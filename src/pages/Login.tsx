@@ -3,6 +3,7 @@ import type { FirebaseError } from 'firebase/app'
 import { useAuth } from '../context/AuthContext'
 import type { ConfirmationResult } from 'firebase/auth'
 import { Link, useNavigate } from 'react-router-dom'
+import { siteTheme } from './siteTheme'
 
 const AUTH_ERROR_MESSAGES: Record<string, string> = {
   'auth/invalid-phone-number': 'O telefone informado e invalido. Digite o numero com DDD.',
@@ -16,9 +17,9 @@ const errorBoxStyle = {
   marginTop: 8,
   padding: '10px 12px',
   borderRadius: 10,
-  border: '1px solid #f3b3b3',
-  background: '#fff5f5',
-  color: '#b42318',
+  border: `1px solid ${siteTheme.colors.errorBorder}`,
+  background: siteTheme.colors.errorBackground,
+  color: siteTheme.colors.errorText,
   fontSize: 14,
 } as const
 
@@ -77,7 +78,7 @@ export default function Login() {
     setLoading(true)
     try {
       await confirmation.confirm(code)
-      navigate('/checkout', { replace: true })
+      navigate('/cliente', { replace: true })
     } catch (error) {
       setError(getErrorMessage(error, 'Nao foi possivel confirmar o codigo informado. Revise o SMS e tente novamente.'))
     } finally {
@@ -90,7 +91,7 @@ export default function Login() {
     setLoading(true)
     try {
       await signInAnonymously()
-      navigate('/checkout', { replace: true })
+      navigate('/cliente/carrinho', { replace: true })
     } catch (error) {
       setError(getErrorMessage(error, 'Nao foi possivel entrar como convidado no momento. Tente novamente.'))
     } finally {
@@ -100,10 +101,10 @@ export default function Login() {
 
   return (
     <div style={
-      { maxWidth: 360, 
-        margin: '40px auto', 
-        display: 'flex', 
-        flexDirection: 'column' 
+      { maxWidth: 360,
+        margin: '40px auto',
+        display: 'flex',
+        flexDirection: 'column'
       }}
     >
       <h2>Entrar com telefone</h2>
@@ -115,11 +116,11 @@ export default function Login() {
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             style={{ 
-              width: '100%', 
-              padding: '14px 16px', 
+              width: '100%',
+              padding: '14px 16px',
               marginTop: 12,
               borderRadius: 12,
-              border: '1px solid #b58516',
+              border: `1px solid ${siteTheme.colors.primary}`,
               outline: 'none',
             }}
           />
@@ -132,8 +133,8 @@ export default function Login() {
               marginTop: 12,
               borderRadius: 12,
               border: '1px solid transparent',
-              background: phone.length === 11 ? '#b58516' : '#b9b5b1',
-              color: '#fff',
+              background: phone.length === 11 ? siteTheme.colors.primary : siteTheme.colors.primaryMuted,
+              color: siteTheme.colors.surface,
               fontWeight: 700,
               cursor: phone.length === 11 ? 'pointer' : 'not-allowed', 
             }}>
@@ -142,7 +143,7 @@ export default function Login() {
           <div id="recaptcha-container" style={{ display: 'flex', justifyContent: 'center', width: '100%', marginTop: 12,
           }} />
           {error && <div style={errorBoxStyle}>{error}</div>}
-          <div style={{ margin: '16px 0', height: 1, background: '#ddd' }} />
+          <div style={{ margin: '16px 0', height: 1, background: siteTheme.colors.divider }} />
           
         </>
       ) : (
@@ -157,7 +158,7 @@ export default function Login() {
             Confirmar
           </button>
           {error && <div style={errorBoxStyle}>{error}</div>}
-          <div style={{ margin: '16px 0', height: 1, background: '#ddd' }} />
+          <div style={{ margin: '16px 0', height: 1, background: siteTheme.colors.divider }} />
 
         </>
       )}
@@ -169,7 +170,7 @@ export default function Login() {
             marginTop: 12,
             display: 'inline-block',
             textAlign: 'center',
-            color: '#b58516',
+            color: siteTheme.colors.primary,
             textDecoration: 'none',
             fontWeight: 600,
             fontSize: 12,
@@ -187,7 +188,7 @@ export default function Login() {
             textAlign: 'center',
             marginTop: 12,
             padding: 0,
-            color: '#b58516',
+            color: siteTheme.colors.primary,
             textDecoration: 'none',
             fontWeight: 600,
             fontSize: 12,
