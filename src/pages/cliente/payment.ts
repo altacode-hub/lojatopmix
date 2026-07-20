@@ -1,4 +1,4 @@
-export type InfinitePayCheckoutItem = {
+export type CheckoutOrderItem = {
   itemId?: string
   quantity: number
   price: number
@@ -6,6 +6,12 @@ export type InfinitePayCheckoutItem = {
   productId?: string
   variationKey?: string
   note?: string
+}
+
+export type InfinitePayItem = {
+  quantity: number
+  price: number
+  description: string
 }
 
 export type InfinitePayCustomer = {
@@ -22,7 +28,7 @@ export type InfinitePayAddress = {
 
 export type CreatePaymentInput = {
   cartId?: string
-  items: InfinitePayCheckoutItem[]
+  orderItems: CheckoutOrderItem[]
   customer?: InfinitePayCustomer
   address?: InfinitePayAddress
 }
@@ -64,6 +70,12 @@ const getApiBaseUrl = () => {
 
 const buildApiUrl = (path: string) => `${getApiBaseUrl()}${path}`
 
+export const toInfinitePayItem = ({ quantity, price, description }: CheckoutOrderItem): InfinitePayItem => ({
+  quantity,
+  price,
+  description,
+})
+
 const buildErrorMessage = async (response: Response) => {
   const fallbackMessage = `InfinitePay respondeu com status ${response.status}.`
 
@@ -75,7 +87,12 @@ const buildErrorMessage = async (response: Response) => {
   }
 }
 
-export const createPayment = async ({ cartId, items, customer, address }: CreatePaymentInput): Promise<CreatePaymentResponse> => {
+export const createPayment = async ({
+  cartId,
+  orderItems,
+  customer,
+  address,
+}: CreatePaymentInput): Promise<CreatePaymentResponse> => {
   const response = await fetch(buildApiUrl('/api/createCheckout'), {
     method: 'POST',
     headers: {
@@ -83,7 +100,7 @@ export const createPayment = async ({ cartId, items, customer, address }: Create
     },
     body: JSON.stringify({
       cartId,
-      items,
+      orderItems,
       customer,
       address,
     }),

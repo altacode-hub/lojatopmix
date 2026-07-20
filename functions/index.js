@@ -77,13 +77,13 @@ const normalizeItems = (items) => {
     }
 
     return {
-      itemId: sanitizeString(item?.itemId) || undefined,
+      itemId: sanitizeString(item?.itemId) || null,
       quantity,
       price,
       description,
-      productId: sanitizeString(item?.productId) || undefined,
-      variationKey: sanitizeString(item?.variationKey) || undefined,
-      note: sanitizeString(item?.note) || undefined,
+      productId: sanitizeString(item?.productId) || null,
+      variationKey: sanitizeString(item?.variationKey) || null,
+      note: sanitizeString(item?.note) || null,
     };
   });
 };
@@ -104,8 +104,8 @@ const normalizeCustomer = (customer) => {
 
   return {
     name,
-    email: email || undefined,
-    phone_number: phoneNumber || undefined,
+    email: email || null,
+    phone_number: phoneNumber || null,
   };
 };
 
@@ -126,7 +126,38 @@ const normalizeAddress = (address) => {
   return {
     cep,
     number,
-    complement: complement || undefined,
+    complement: complement || null,
+  };
+};
+
+const buildInfinitePayItems = (items) =>
+  items.map((item) => ({
+    quantity: item.quantity,
+    price: item.price,
+    description: item.description,
+  }));
+
+const buildInfinitePayCustomer = (customer) => {
+  if (!customer?.name) {
+    return undefined;
+  }
+
+  return {
+    name: customer.name,
+    email: customer.email || undefined,
+    phone_number: customer.phone_number || undefined,
+  };
+};
+
+const buildInfinitePayAddress = (address) => {
+  if (!address?.cep || !address?.number) {
+    return undefined;
+  }
+
+  return {
+    cep: address.cep,
+    number: address.number,
+    complement: address.complement || undefined,
   };
 };
 
@@ -467,7 +498,7 @@ exports.createCheckout = onRequest({ region: 'us-central1', cors: true }, async 
 
   try {
     const cartId = sanitizeString(req.body?.cartId);
-    const items = normalizeItems(req.body?.items);
+    const items = normalizeItems(req.body?.orderItems ?? req.body?.items);
     const customer = normalizeCustomer(req.body?.customer);
     const address = normalizeAddress(req.body?.address);
     const orderNsu = createOrderNsu();
@@ -477,6 +508,9 @@ exports.createCheckout = onRequest({ region: 'us-central1', cors: true }, async 
 
     const redirectUrl = buildRedirectUrl();
     const webhookUrl = buildWebhookUrl();
+    const infinitePayItems = buildInfinitePayItems(items);
+    const infinitePayCustomer = buildInfinitePayCustomer(customer);
+    const infinitePayAddress = buildInfinitePayAddress(address);
 
     const response = await fetch(`${INFINITEPAY_API_BASE_URL}/links`, {
       method: 'POST',
@@ -488,9 +522,9 @@ exports.createCheckout = onRequest({ region: 'us-central1', cors: true }, async 
         redirect_url: redirectUrl,
         webhook_url: webhookUrl,
         order_nsu: orderNsu,
-        items,
-        customer: customer || undefined,
-        address: address || undefined,
+        items: infinitePayItems,
+        customer: infinitePayCustomer,
+        address: infinitePayAddress,
       }),
     });
 

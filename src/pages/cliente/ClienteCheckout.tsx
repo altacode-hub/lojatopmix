@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { createPayment } from './payment'
+import { createPayment, type CheckoutOrderItem } from './payment'
 import { useAuth } from '../../context/AuthContext'
 import { useCart } from '../../context/CartContext'
 import { formatCurrency, siteTheme } from '../siteTheme'
@@ -57,7 +57,7 @@ export default function ClienteCheckout() {
     }))
   }, [clientProfile?.email, clientProfile?.fullName, clientProfile?.phone, storageKey, user?.phoneNumber])
 
-  const checkoutItems = useMemo(
+  const checkoutOrderItems = useMemo<CheckoutOrderItem[]>(
     () =>
       items.map((item) => ({
         itemId: item.id,
@@ -120,7 +120,7 @@ export default function ClienteCheckout() {
 
       const { url, orderNsu } = await createPayment({
         cartId,
-        items: checkoutItems,
+        orderItems: checkoutOrderItems,
         customer,
         address,
       })
