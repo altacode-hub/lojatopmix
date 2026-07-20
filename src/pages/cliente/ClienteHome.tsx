@@ -3,7 +3,6 @@ import { FiArrowRight, FiMapPin, FiPackage, FiPhoneCall, FiShoppingCart, FiUser 
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { siteTheme } from '../siteTheme'
-import { getClienteProfileDraft } from './clientStorage'
 
 const quickAccessCards = [
   {
@@ -33,12 +32,10 @@ const quickAccessCards = [
 ]
 
 export default function ClienteHome() {
-  const { user } = useAuth()
-  const storageKey = user?.uid || 'anonimo'
+  const { user, clientProfile } = useAuth()
   const greetingName = useMemo(() => {
-    const profileDraft = getClienteProfileDraft(storageKey)
-    return profileDraft.fullName.trim() || user?.phoneNumber || 'cliente'
-  }, [storageKey, user?.phoneNumber])
+    return clientProfile?.fullName.trim() || user?.phoneNumber || 'cliente'
+  }, [clientProfile?.fullName, user?.phoneNumber])
 
   return (
     <div style={{ display: 'grid', gap: 28 }}>
@@ -53,7 +50,7 @@ export default function ClienteHome() {
       >
         <div style={{ color: siteTheme.colors.primary, fontSize: 15, fontWeight: 700 }}>Minha conta</div>
         <h1 style={{ margin: '8px 0 10px', fontSize: 22, color: siteTheme.colors.text }}>Olá, {greetingName}.</h1>
-        <p style={{ margin: 0, color: siteTheme.colors.textMuted, maxWidth: 720 }}>
+        <p style={{ margin: 0, color: siteTheme.colors.textMuted }}>
           Acompanhe seus pedidos, atualize seu cadastro, organize seus endereços e finalize compras com mais rapidez.
         </p>
       </section>

@@ -29,7 +29,7 @@ export default function App() {
         <Route
           path="/cliente"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute requireCliente>
               <ClienteLayout />
             </ProtectedRoute>
           }

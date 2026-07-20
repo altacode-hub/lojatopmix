@@ -62,7 +62,7 @@ export default function SidebarCliente({ isOpen, onClose }: SidebarClienteProps)
         display: 'flex',
         flexDirection: 'column',
         padding: isMobile ? (isOpen ? 18 : 0) : 18,
-        minHeight: '100vh',
+        maxHeight: '100vh',
         position: isMobile ? 'fixed' : 'sticky',
         top: 0,
         left: isMobile ? (isOpen ? 0 : -siteTheme.layout.sidebarWidth) : 0,

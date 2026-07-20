@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { FiCheckCircle } from 'react-icons/fi'
 import { useAuth } from '../../context/AuthContext'
 import { siteTheme } from '../siteTheme'
-import { getClienteProfileDraft, saveClienteProfileDraft, toUppercaseInput, type ClienteProfileDraft } from './clientStorage'
+import { toUppercaseInput, type ClienteProfileDraft } from './clientStorage'
 
 const inputStyle = {
   width: '100%',
@@ -17,25 +17,26 @@ const inputStyle = {
 }
 
 export default function ClienteDadosCadastrais() {
-  const { user } = useAuth()
-  const storageKey = user?.uid || 'anonimo'
+  const { user, clientProfile, saveClienteProfile } = useAuth()
   const initialPhone = user?.phoneNumber || ''
-  const [form, setForm] = useState<ClienteProfileDraft>(() => {
-    const stored = getClienteProfileDraft(storageKey)
-    return {
-      ...stored,
-      phone: stored.phone || initialPhone,
-    }
-  })
+  const [form, setForm] = useState<ClienteProfileDraft>(() => ({
+    fullName: '',
+    email: '',
+    cpf: '',
+    phone: initialPhone,
+  }))
   const [saved, setSaved] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
   useEffect(() => {
-    const stored = getClienteProfileDraft(storageKey)
     setForm({
-      ...stored,
-      phone: stored.phone || initialPhone,
+      fullName: clientProfile?.fullName || '',
+      email: clientProfile?.email || '',
+      cpf: clientProfile?.cpf || '',
+      phone: clientProfile?.phone || initialPhone,
     })
-  }, [initialPhone, storageKey])
+  }, [clientProfile?.cpf, clientProfile?.email, clientProfile?.fullName, clientProfile?.phone, initialPhone])
 
   const completion = useMemo(() => {
     const fields = [form.fullName, form.email, form.cpf, form.phone]
@@ -45,15 +46,24 @@ export default function ClienteDadosCadastrais() {
 
   const handleChange = (field: keyof ClienteProfileDraft, value: string) => {
     setSaved(false)
+    setErrorMessage(null)
     setForm((current) => ({
       ...current,
       [field]: toUppercaseInput(value),
     }))
   }
 
-  const handleSave = () => {
-    saveClienteProfileDraft(storageKey, form)
-    setSaved(true)
+  const handleSave = async () => {
+    try {
+      setSaving(true)
+      setErrorMessage(null)
+      await saveClienteProfile(form)
+      setSaved(true)
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Nao foi possivel salvar os dados cadastrais.')
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
@@ -132,7 +142,28 @@ export default function ClienteDadosCadastrais() {
             />
           </label>
         </div>
-
+        <label style={{ display: 'grid', gap: 8 }}>
+          <span style={{ color: siteTheme.colors.text, fontWeight: 600 }}>Token</span>
+          <span
+            style={{...inputStyle, color: siteTheme.colors.textSoft}}
+          >
+            {user?.uid}
+          </span>
+        </label>
+        {errorMessage ? (
+          <div
+            style={{
+              borderRadius: 12,
+              padding: '12px 14px',
+              border: `1px solid ${siteTheme.colors.errorBorder}`,
+              background: siteTheme.colors.errorBackground,
+              color: siteTheme.colors.errorText,
+              width: 'fit-content',
+            }}
+          >
+            {errorMessage}
+          </div>
+        ) : null}
         {saved ? (
           <div
             style={{
@@ -148,24 +179,25 @@ export default function ClienteDadosCadastrais() {
             }}
           >
             <FiCheckCircle size={18} />
-            Dados salvos neste dispositivo.
+            Dados salvos no banco de dados.
           </div>
         ) : null}
 
         <div>
           <button
-            onClick={handleSave}
+            onClick={() => void handleSave()}
+            disabled={saving}
             style={{
               padding: '14px 20px',
               borderRadius: 12,
               border: 'none',
-              background: siteTheme.colors.primary,
+              background: saving ? siteTheme.colors.primaryMuted : siteTheme.colors.primary,
               color: siteTheme.colors.surface,
               fontWeight: 700,
-              cursor: 'pointer',
+              cursor: saving ? 'not-allowed' : 'pointer',
             }}
           >
-            Salvar dados
+            {saving ? 'Salvando...' : 'Salvar dados'}
           </button>
         </div>
       </section>

@@ -46,18 +46,6 @@ const safeWrite = <T>(key: string, value: T) => {
   window.localStorage.setItem(key, JSON.stringify(value))
 }
 
-export const getClienteProfileDraft = (userId: string): ClienteProfileDraft =>
-  safeRead<ClienteProfileDraft>(getStorageKey(userId, 'profile'), {
-    fullName: '',
-    email: '',
-    cpf: '',
-    phone: '',
-  })
-
-export const saveClienteProfileDraft = (userId: string, draft: ClienteProfileDraft) => {
-  safeWrite(getStorageKey(userId, 'profile'), draft)
-}
-
 export const getClienteAddresses = (userId: string): ClienteAddress[] =>
   safeRead<ClienteAddress[]>(getStorageKey(userId, 'addresses'), [])
 

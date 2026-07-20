@@ -3,7 +3,7 @@ import { createPayment } from './payment'
 import { useAuth } from '../../context/AuthContext'
 import { useCart } from '../../context/CartContext'
 import { formatCurrency, siteTheme } from '../siteTheme'
-import { getClienteAddresses, getClienteProfileDraft, toUppercaseInput } from './clientStorage'
+import { getClienteAddresses, toUppercaseInput } from './clientStorage'
 
 type CheckoutFormState = {
   customerName: string
@@ -30,7 +30,7 @@ const inputStyle = {
 
 export default function ClienteCheckout() {
   const { items, total, cartId } = useCart()
-  const { user } = useAuth()
+  const { user, clientProfile } = useAuth()
   const storageKey = user?.uid || 'anonimo'
   const [form, setForm] = useState<CheckoutFormState>({
     customerName: '',
@@ -44,19 +44,18 @@ export default function ClienteCheckout() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    const profile = getClienteProfileDraft(storageKey)
     const address = getClienteAddresses(storageKey)[0]
 
     setForm((current) => ({
       ...current,
-      customerName: current.customerName || profile.fullName,
-      customerEmail: current.customerEmail || profile.email,
-      customerPhone: current.customerPhone || profile.phone || user?.phoneNumber || '',
+      customerName: current.customerName || clientProfile?.fullName || '',
+      customerEmail: current.customerEmail || clientProfile?.email || '',
+      customerPhone: current.customerPhone || clientProfile?.phone || user?.phoneNumber || '',
       addressCep: current.addressCep || address?.zipCode || '',
       addressNumber: current.addressNumber || address?.number || '',
       addressComplement: current.addressComplement || address?.complement || '',
     }))
-  }, [storageKey, user?.phoneNumber])
+  }, [clientProfile?.email, clientProfile?.fullName, clientProfile?.phone, storageKey, user?.phoneNumber])
 
   const checkoutItems = useMemo(
     () =>
