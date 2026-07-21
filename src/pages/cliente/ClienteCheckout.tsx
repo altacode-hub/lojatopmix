@@ -3,7 +3,12 @@ import { createPayment, type CheckoutOrderItem } from './payment'
 import { useAuth } from '../../context/AuthContext'
 import { useCart } from '../../context/CartContext'
 import { formatCurrency, siteTheme } from '../siteTheme'
-import { getClienteAddresses, toUppercaseInput } from './clientStorage'
+import {
+  getClienteAddresses,
+  loadClienteCheckoutAddress,
+  saveClienteCheckoutAddress,
+  toUppercaseInput,
+} from './clientStorage'
 
 type CheckoutFormState = {
   customerName: string
@@ -15,6 +20,7 @@ type CheckoutFormState = {
 }
 
 const CHECKOUT_ATTEMPT_STORAGE_KEY = 'infinitepay_checkout_attempt'
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 const inputStyle = {
   width: '100%',
@@ -30,7 +36,7 @@ const inputStyle = {
 
 export default function ClienteCheckout() {
   const { items, total, cartId } = useCart()
-  const { user, clientProfile } = useAuth()
+  const { user, clientProfile, saveClienteProfile } = useAuth()
   const storageKey = user?.uid || 'anonimo'
   const [form, setForm] = useState<CheckoutFormState>({
     customerName: '',
@@ -55,7 +61,30 @@ export default function ClienteCheckout() {
       addressNumber: current.addressNumber || address?.number || '',
       addressComplement: current.addressComplement || address?.complement || '',
     }))
-  }, [clientProfile?.email, clientProfile?.fullName, clientProfile?.phone, storageKey, user?.phoneNumber])
+
+    if (!user?.uid) {
+      return
+    }
+
+    let active = true
+
+    void loadClienteCheckoutAddress(user.uid).then((checkoutAddress) => {
+      if (!active || !checkoutAddress) {
+        return
+      }
+
+      setForm((current) => ({
+        ...current,
+        addressCep: current.addressCep || checkoutAddress.cep,
+        addressNumber: current.addressNumber || checkoutAddress.number,
+        addressComplement: current.addressComplement || checkoutAddress.complement,
+      }))
+    })
+
+    return () => {
+      active = false
+    }
+  }, [clientProfile?.email, clientProfile?.fullName, clientProfile?.phone, storageKey, user?.phoneNumber, user?.uid])
 
   const checkoutOrderItems = useMemo<CheckoutOrderItem[]>(
     () =>
@@ -78,20 +107,40 @@ export default function ClienteCheckout() {
     }))
   }
 
+  const customerName = form.customerName.trim()
+  const customerEmail = form.customerEmail.trim()
+  const customerPhone = form.customerPhone.trim()
+  const cep = form.addressCep.replace(/\D/g, '')
+  const addressNumber = form.addressNumber.trim()
+  const addressComplement = form.addressComplement.trim()
+  const isEmailValid = EMAIL_PATTERN.test(customerEmail)
+  const isCheckoutFormValid =
+    customerName.length > 0 &&
+    customerEmail.length > 0 &&
+    isEmailValid &&
+    customerPhone.length > 0 &&
+    cep.length === 8 &&
+    addressNumber.length > 0 &&
+    addressComplement.length > 0
+  const isCheckoutDisabled = loading || items.length === 0 || !isCheckoutFormValid
+
   const handleCheckout = async () => {
     if (items.length === 0) {
       setError('Seu carrinho esta vazio.')
       return
     }
 
-    const customerName = form.customerName.trim()
-    const customerEmail = form.customerEmail.trim()
-    const customerPhone = form.customerPhone.trim()
-    const cep = form.addressCep.replace(/\D/g, '')
-    const addressNumber = form.addressNumber.trim()
-    const addressComplement = form.addressComplement.trim()
+    if (!customerName || !customerEmail || !customerPhone || !cep || !addressNumber || !addressComplement) {
+      setError('Preencha todos os campos obrigatorios do comprador e do endereco.')
+      return
+    }
 
-    if (form.addressCep && cep.length !== 8) {
+    if (!isEmailValid) {
+      setError('Informe um e-mail valido.')
+      return
+    }
+
+    if (cep.length !== 8) {
       setError('Informe um CEP com 8 digitos.')
       return
     }
@@ -100,23 +149,33 @@ export default function ClienteCheckout() {
     setError(null)
 
     try {
-      const customer =
-        customerName.length > 0
-          ? {
-              name: customerName,
-              email: customerEmail || undefined,
-              phone_number: customerPhone || undefined,
-            }
-          : undefined
-
-      const address =
-        cep && addressNumber
-          ? {
+      await Promise.all([
+        saveClienteProfile({
+          fullName: customerName,
+          email: customerEmail,
+          cpf: clientProfile?.cpf || '',
+          phone: customerPhone,
+        }),
+        user?.uid
+          ? saveClienteCheckoutAddress(user.uid, {
               cep,
               number: addressNumber,
-              complement: addressComplement || undefined,
-            }
-          : undefined
+              complement: addressComplement,
+            })
+          : Promise.resolve(),
+      ])
+
+      const customer = {
+        name: customerName,
+        email: customerEmail,
+        phone_number: customerPhone,
+      }
+
+      const address = {
+        cep,
+        number: addressNumber,
+        complement: addressComplement,
+      }
 
       const { url, orderNsu } = await createPayment({
         cartId,
@@ -208,6 +267,7 @@ export default function ClienteCheckout() {
               <span>Nome</span>
               <input
                 type="text"
+                required
                 value={form.customerName}
                 onChange={(event) => handleInputChange('customerName', event.target.value)}
                 placeholder="Nome completo"
@@ -219,6 +279,7 @@ export default function ClienteCheckout() {
               <span>E-mail</span>
               <input
                 type="email"
+                required
                 value={form.customerEmail}
                 onChange={(event) => handleInputChange('customerEmail', event.target.value)}
                 placeholder="cliente@exemplo.com"
@@ -230,10 +291,11 @@ export default function ClienteCheckout() {
               <span>Telefone</span>
               <input
                 type="tel"
+                required
                 value={form.customerPhone}
-                onChange={(event) => handleInputChange('customerPhone', event.target.value)}
+                readOnly
                 placeholder="+5511999999999"
-                style={inputStyle}
+                style={{ ...inputStyle, color: siteTheme.colors.textSoft, background: siteTheme.colors.surfaceAlt }}
               />
             </label>
           </div>
@@ -245,6 +307,7 @@ export default function ClienteCheckout() {
                 <span>CEP</span>
                 <input
                   type="text"
+                  required
                   inputMode="numeric"
                   value={form.addressCep}
                   onChange={(event) => handleInputChange('addressCep', event.target.value)}
@@ -257,6 +320,7 @@ export default function ClienteCheckout() {
                 <span>Numero</span>
                 <input
                   type="text"
+                  required
                   value={form.addressNumber}
                   onChange={(event) => handleInputChange('addressNumber', event.target.value)}
                   placeholder="123"
@@ -269,6 +333,7 @@ export default function ClienteCheckout() {
               <span>Complemento</span>
               <input
                 type="text"
+                required
                 value={form.addressComplement}
                 onChange={(event) => handleInputChange('addressComplement', event.target.value)}
                 placeholder="Apartamento, bloco, referencia"
@@ -278,7 +343,7 @@ export default function ClienteCheckout() {
           </div>
 
           <p style={{ margin: 0, color: siteTheme.colors.textMuted }}>
-            Nome, dados do comprador e endereco sao opcionais, mas ajudam a preencher o checkout.
+            Preencha todos os campos obrigatorios para habilitar o pagamento. O telefone vem do cadastro e nao pode ser editado aqui.
           </p>
 
           {error ? (
@@ -298,16 +363,16 @@ export default function ClienteCheckout() {
           <div>
             <button
               onClick={() => void handleCheckout()}
-              disabled={loading || items.length === 0}
+              disabled={isCheckoutDisabled}
               style={{
                 width: '100%',
                 padding: '14px 16px',
                 borderRadius: 12,
                 border: 'none',
-                background: loading || items.length === 0 ? siteTheme.colors.primaryMuted : siteTheme.colors.primary,
+                background: isCheckoutDisabled ? siteTheme.colors.primaryMuted : siteTheme.colors.primary,
                 color: siteTheme.colors.surface,
                 fontWeight: 700,
-                cursor: loading || items.length === 0 ? 'not-allowed' : 'pointer',
+                cursor: isCheckoutDisabled ? 'not-allowed' : 'pointer',
               }}
             >
               {loading ? 'Gerando link...' : 'Pagar com InfinitePay'}

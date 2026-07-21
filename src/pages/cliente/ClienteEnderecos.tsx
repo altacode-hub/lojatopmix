@@ -1,8 +1,14 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { FiMapPin, FiPlus, FiTrash2 } from 'react-icons/fi'
 import { useAuth } from '../../context/AuthContext'
 import { siteTheme } from '../siteTheme'
-import { getClienteAddresses, saveClienteAddresses, toUppercaseInput, type ClienteAddress } from './clientStorage'
+import {
+  getClienteAddresses,
+  loadClienteAddresses,
+  saveClienteAddresses,
+  toUppercaseInput,
+  type ClienteAddress,
+} from './clientStorage'
 
 type AddressFormState = Omit<ClienteAddress, 'id'>
 
@@ -34,22 +40,60 @@ const inputStyle = {
 export default function ClienteEnderecos() {
   const { user } = useAuth()
   const storageKey = user?.uid || 'anonimo'
-  const [addresses, setAddresses] = useState<ClienteAddress[]>([])
+  const [addresses, setAddresses] = useState<ClienteAddress[]>(() => getClienteAddresses(storageKey))
   const [form, setForm] = useState<AddressFormState>(createEmptyForm)
+  const [loadingAddresses, setLoadingAddresses] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
   useEffect(() => {
+    let active = true
+
     setAddresses(getClienteAddresses(storageKey))
+    setLoadingAddresses(true)
+
+    void loadClienteAddresses(storageKey)
+      .then((loadedAddresses) => {
+        if (!active) {
+          return
+        }
+
+        setAddresses(loadedAddresses)
+      })
+      .catch(() => {
+        if (!active) {
+          return
+        }
+
+        setErrorMessage('Nao foi possivel carregar os enderecos salvos.')
+      })
+      .finally(() => {
+        if (active) {
+          setLoadingAddresses(false)
+        }
+      })
+
+    return () => {
+      active = false
+    }
   }, [storageKey])
 
   const handleChange = (field: keyof AddressFormState, value: string) => {
+    setErrorMessage(null)
     setForm((current) => ({
       ...current,
       [field]: toUppercaseInput(value),
     }))
   }
 
-  const handleSave = () => {
-    if (!form.label.trim() || !form.street.trim() || !form.number.trim() || !form.city.trim()) {
+  const isFormValid = useMemo(
+    () => Boolean(form.label.trim() && form.street.trim() && form.number.trim() && form.city.trim()),
+    [form.city, form.label, form.number, form.street],
+  )
+
+  const handleSave = async () => {
+    if (!isFormValid) {
+      setErrorMessage('Preencha identificacao, rua, numero e cidade para salvar o endereco.')
       return
     }
 
@@ -61,15 +105,37 @@ export default function ClienteEnderecos() {
       },
     ]
 
-    setAddresses(nextAddresses)
-    saveClienteAddresses(storageKey, nextAddresses)
-    setForm(createEmptyForm())
+    const previousAddresses = addresses
+
+    try {
+      setSaving(true)
+      setErrorMessage(null)
+      setAddresses(nextAddresses)
+      await saveClienteAddresses(storageKey, nextAddresses)
+      setForm(createEmptyForm())
+    } catch (error) {
+      setAddresses(previousAddresses)
+      setErrorMessage(error instanceof Error ? error.message : 'Nao foi possivel salvar o endereco.')
+    } finally {
+      setSaving(false)
+    }
   }
 
-  const handleRemove = (addressId: string) => {
+  const handleRemove = async (addressId: string) => {
+    const previousAddresses = addresses
     const nextAddresses = addresses.filter((address) => address.id !== addressId)
-    setAddresses(nextAddresses)
-    saveClienteAddresses(storageKey, nextAddresses)
+
+    try {
+      setSaving(true)
+      setErrorMessage(null)
+      setAddresses(nextAddresses)
+      await saveClienteAddresses(storageKey, nextAddresses)
+    } catch (error) {
+      setAddresses(previousAddresses)
+      setErrorMessage(error instanceof Error ? error.message : 'Nao foi possivel remover o endereco.')
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
@@ -85,7 +151,7 @@ export default function ClienteEnderecos() {
       >
         <h1 style={{ margin: 0, fontSize: 28, color: siteTheme.colors.text }}>Endereços</h1>
         <p style={{ margin: '10px 0 0', color: siteTheme.colors.textMuted }}>
-          Cadastre endereços de entrega para acelerar o checkout e manter seus pedidos organizados.
+          Cadastre enderecos de entrega para acelerar o checkout e manter seus pedidos organizados no banco de dados.
         </p>
       </section>
 
@@ -143,30 +209,58 @@ export default function ClienteEnderecos() {
           <input value={form.reference} onChange={(event) => handleChange('reference', event.target.value)} placeholder="Ponto de referência para entrega" style={inputStyle} />
         </label>
 
+        {errorMessage ? (
+          <div
+            style={{
+              borderRadius: 12,
+              padding: '12px 14px',
+              border: `1px solid ${siteTheme.colors.errorBorder}`,
+              background: siteTheme.colors.errorBackground,
+              color: siteTheme.colors.errorText,
+              width: 'fit-content',
+            }}
+          >
+            {errorMessage}
+          </div>
+        ) : null}
+
         <div>
           <button
-            onClick={handleSave}
+            onClick={() => void handleSave()}
+            disabled={saving || !isFormValid}
             style={{
               padding: '14px 20px',
               borderRadius: 12,
               border: 'none',
-              background: siteTheme.colors.primary,
+              background: saving || !isFormValid ? siteTheme.colors.primaryMuted : siteTheme.colors.primary,
               color: siteTheme.colors.surface,
               fontWeight: 700,
-              cursor: 'pointer',
+              cursor: saving || !isFormValid ? 'not-allowed' : 'pointer',
               display: 'inline-flex',
               alignItems: 'center',
               gap: 8,
             }}
           >
             <FiPlus size={16} />
-            Adicionar endereço
+            {saving ? 'Salvando...' : 'Adicionar endereco'}
           </button>
         </div>
       </section>
 
       <section style={{ display: 'grid', gap: 14 }}>
-        {addresses.length === 0 ? (
+        {loadingAddresses ? (
+          <div
+            style={{
+              background: siteTheme.colors.surface,
+              borderRadius: siteTheme.radius.md,
+              border: `1px solid ${siteTheme.colors.border}`,
+              padding: 24,
+              color: siteTheme.colors.textMuted,
+            }}
+          >
+            Carregando enderecos salvos...
+          </div>
+        ) : addresses.length === 0 ? (
           <div
             style={{
               background: siteTheme.colors.surface,
@@ -197,13 +291,15 @@ export default function ClienteEnderecos() {
                   <strong>{address.label || 'Endereço'}</strong>
                 </div>
                 <button
-                  onClick={() => handleRemove(address.id)}
+                  onClick={() => void handleRemove(address.id)}
+                  disabled={saving}
                   style={{
                     border: `1px solid ${siteTheme.colors.border}`,
                     background: siteTheme.colors.surface,
                     borderRadius: 10,
                     padding: '8px 12px',
-                    cursor: 'pointer',
+                    cursor: saving ? 'not-allowed' : 'pointer',
+                    opacity: saving ? 0.7 : 1,
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: 8,
