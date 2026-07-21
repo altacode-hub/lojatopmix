@@ -10,6 +10,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { useMediaQuery } from '../../hooks/useMediaQuery'
 import { siteTheme } from '../siteTheme'
+import { IoStorefrontOutline } from 'react-icons/io5'
 
 interface SidebarClienteProps {
   isOpen: boolean
@@ -63,6 +64,7 @@ export default function SidebarCliente({ isOpen, onClose }: SidebarClienteProps)
         flexDirection: 'column',
         padding: isMobile ? (isOpen ? 18 : 0) : 18,
         maxHeight: '100vh',
+        minHeight: '100vh',
         position: isMobile ? 'fixed' : 'sticky',
         top: 0,
         left: isMobile ? (isOpen ? 0 : -siteTheme.layout.sidebarWidth) : 0,
@@ -93,9 +95,23 @@ export default function SidebarCliente({ isOpen, onClose }: SidebarClienteProps)
           pointerEvents: isMobile && !isOpen ? 'none' : 'auto',
         }}
       >
+        <Link to="/" style={navLinkStyle(isActive('/'))}>
+          <IoStorefrontOutline size={18} />
+          {(!isMobile || isOpen) && <span>Ir para loja</span>} 
+        </Link>
+        
         <Link to="/cliente" onClick={handleNavigate} style={navLinkStyle(isActive('/cliente'))}>
           <FiHome size={18} />
           {(!isMobile || isOpen) && <span>Minha conta</span>}
+        </Link>
+
+        <Link
+          to="/cliente/carrinho"
+          onClick={handleNavigate}
+          style={navLinkStyle(startsWith('/cliente/carrinho') || startsWith('/cliente/checkout'))}
+        >
+          <FiShoppingCart size={18} />
+          {(!isMobile || isOpen) && <span>Meu carrinho</span>}
         </Link>
 
         <Link to="/cliente/pedidos" onClick={handleNavigate} style={navLinkStyle(startsWith('/cliente/pedidos'))}>
@@ -117,25 +133,18 @@ export default function SidebarCliente({ isOpen, onClose }: SidebarClienteProps)
           {(!isMobile || isOpen) && <span>Endereços</span>}
         </Link>
 
-        <Link
-          to="/cliente/carrinho"
-          onClick={handleNavigate}
-          style={navLinkStyle(startsWith('/cliente/carrinho') || startsWith('/cliente/checkout'))}
-        >
-          <FiShoppingCart size={18} />
-          {(!isMobile || isOpen) && <span>Meu carrinho</span>}
-        </Link>
       </nav>
 
       <div
         style={{
           marginTop: 'auto',
+          paddingTop: 25,
           width: '100%',
           opacity: isMobile && !isOpen ? 0 : 1,
           pointerEvents: isMobile && !isOpen ? 'none' : 'auto',
         }}
       >
-        <div style={{ fontSize: 12, color: siteTheme.colors.textMuted, marginBottom: 6 }}>Logado como</div>
+        <div style={{ fontSize: 12, color: siteTheme.colors.textMuted, marginBottom: 6 }}>Logado com</div>
         <div style={{ fontSize: 14, marginBottom: 12, wordBreak: 'break-all', color: siteTheme.colors.text }}>
           {user?.phoneNumber || user?.uid}
         </div>

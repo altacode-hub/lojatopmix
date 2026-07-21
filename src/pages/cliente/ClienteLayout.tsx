@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { FiMenu } from 'react-icons/fi'
-import { Outlet } from 'react-router-dom'
+import { Link, Outlet } from 'react-router-dom'
 import { useMediaQuery } from '../../hooks/useMediaQuery'
 import { siteTheme } from '../siteTheme'
 import SidebarCliente from './SidebarCliente'
+import { FiChevronRight } from 'react-icons/fi'
 
 export default function ClienteLayout() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
@@ -30,18 +31,34 @@ export default function ClienteLayout() {
           <button
             onClick={() => setIsMenuOpen((current) => !current)}
             style={{
-              padding: 8,
+              padding: '0px 29px 0px 8px',
               border: 'none',
               background: 'transparent',
               cursor: 'pointer',
               fontSize: 20,
               color: siteTheme.colors.primary,
+              display: 'flex',
             }}
           >
             <FiMenu />
           </button>
-          <div style={{ fontWeight: 800, fontSize: 16, color: siteTheme.colors.text }}>Minha conta</div>
-          <div style={{ width: 36 }} />
+          <div style={{  fontWeight: 800, fontSize: 20, color: siteTheme.colors.primary }}>Top Mix</div>
+          <div style={{ padding: '0px 8px 0px 0.37px', display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}> 
+            <Link
+              to="/"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                color: siteTheme.colors.primary,
+                textDecoration: 'none',
+                fontWeight: 600,
+                fontSize: 14,
+                }}
+            >
+              Loja
+              <FiChevronRight style={{ marginLeft: 8 }} />
+            </Link>
+          </div>
         </div>
       )}
 

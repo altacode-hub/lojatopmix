@@ -66,7 +66,7 @@ export default function ClienteCheckout() {
         description: item.name,
         productId: item.productId,
         variationKey: item.variationKey,
-        note: item.note,
+        note: item.note || "",
       })),
     [items],
   )
@@ -152,7 +152,7 @@ export default function ClienteCheckout() {
           boxShadow: siteTheme.shadow.card,
         }}
       >
-        <h1 style={{ margin: 0, fontSize: 28, color: siteTheme.colors.text }}>Checkout</h1>
+        <h1 style={{ margin: 0, fontSize: 28, color: siteTheme.colors.text }}>Pagamento</h1>
         <p style={{ margin: '10px 0 0', color: siteTheme.colors.textMuted }}>
           Revise os itens do pedido e gere o link de pagamento da InfinitePay.
         </p>
@@ -188,11 +188,8 @@ export default function ClienteCheckout() {
           )}
 
           <div style={{ marginTop: 16, fontWeight: 800, color: siteTheme.colors.primary, fontSize: 24 }}>
-            {formatCurrency(total)}
+            Total: {formatCurrency(total)}
           </div>
-          <p style={{ marginTop: 8, color: siteTheme.colors.textMuted }}>
-            Os valores sao enviados para a InfinitePay em centavos.
-          </p>
         </section>
 
         <section

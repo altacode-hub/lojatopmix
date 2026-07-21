@@ -1,6 +1,5 @@
 import { Link } from 'react-router-dom'
-import { FiUser } from 'react-icons/fi'
-import { TiShoppingCart } from 'react-icons/ti'
+import { FiShoppingCart, FiUser } from 'react-icons/fi'
 import { IoInformationOutline } from 'react-icons/io5'
 import logo from '../../../assets/logo.png'
 import { useMediaQuery } from '../../../hooks/useMediaQuery'
@@ -109,7 +108,7 @@ export default function PublicHeader({
             }}
           >
             <div style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
-              <TiShoppingCart size={20} color="#333" />
+              <FiShoppingCart size={20} color="#333" />
             </div>
             {cartCount > 0 && (
               <span

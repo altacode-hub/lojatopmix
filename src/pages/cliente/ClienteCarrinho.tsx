@@ -194,7 +194,7 @@ export default function ClienteCarrinho() {
                 textAlign: 'center',
               }}
             >
-              Continuar para checkout
+              Continuar para pagamento
             </Link>
 
             <button

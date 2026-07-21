@@ -228,7 +228,7 @@ export default function ProductDetail() {
         qty,
         note: note.trim() || undefined,
       })
-      navigate('/cart')
+      navigate('/cliente/carrinho')
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Nao foi possivel reservar o item no carrinho.')
     } finally {
