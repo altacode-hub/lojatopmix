@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react'
 import { useEffect, useMemo, useState } from 'react'
 import { get, ref, update } from 'firebase/database'
 import { getDownloadURL, ref as storageRef, uploadBytes } from 'firebase/storage'
@@ -5,10 +6,12 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { FiArrowLeft, FiCheckCircle, FiExternalLink, FiSave } from 'react-icons/fi'
 import { rtdb, storage } from '../../service/firebase'
 import type { CatalogCategoryRecord, CatalogVariation, InternalProductRecord, ProductPricing, ShowcaseRecord } from '../../types/catalog'
+import { useMediaQuery } from '../../hooks/useMediaQuery'
 import { buildVariationKey } from '../../utils/catalog'
 import { buildInventoryProductRow, CATALOG_SYNC_PATH, upsertCachedStockProduct } from './stockCache'
 import SharedProductEditorForm, { type ProductCategoryOption, type ProductVariationInput } from './components/SharedProductEditorForm'
 import { getProductPricingPreview } from './productPricing'
+import { logistaCardStyle, logistaInputStyle, logistaTheme } from './logistaTheme'
 
 interface CategoryOption extends ProductCategoryOption {
   name: string
@@ -43,12 +46,11 @@ interface ProductEditorState {
   inventory: InventoryRecord
 }
 
-const cardStyle: React.CSSProperties = {
-  background: '#fff',
-  border: '1px solid #e5e7eb',
-  borderRadius: 18,
-  padding: 20,
-  boxShadow: '0 1px 2px rgba(0, 0, 0, 0.04)',
+const cardStyle: CSSProperties = logistaCardStyle
+
+const statLabelStyle: CSSProperties = {
+  color: logistaTheme.colors.textMuted,
+  fontSize: 12,
 }
 
 const currencyFormatter = new Intl.NumberFormat('pt-BR', {
@@ -123,6 +125,7 @@ const buildInventoryFromVariations = (variations: ProductVariationInput[], reser
 export default function ProdutoEstoque() {
   const { productId } = useParams<{ productId: string }>()
   const navigate = useNavigate()
+  const isMobile = useMediaQuery('(max-width: 768px)')
 
   const [categories, setCategories] = useState<CategoryOption[]>([])
   const [product, setProduct] = useState<ProductEditorState | null>(null)
@@ -467,7 +470,7 @@ export default function ProdutoEstoque() {
   }
 
   if (loading) {
-    return <div style={{ padding: 24 }}>Carregando produto...</div>
+    return <div style={{ padding: 24, color: logistaTheme.colors.textMuted }}>Carregando produto...</div>
   }
 
   if (!product) {
@@ -483,7 +486,7 @@ export default function ProdutoEstoque() {
             gap: 8,
             border: 'none',
             background: 'transparent',
-            color: '#7c3aed',
+            color: logistaTheme.colors.accentDark,
             cursor: 'pointer',
             fontWeight: 700,
             padding: 0,
@@ -492,7 +495,14 @@ export default function ProdutoEstoque() {
           <FiArrowLeft size={16} />
           Voltar ao estoque
         </button>
-        <div style={{ ...cardStyle, borderColor: '#fecaca', background: '#fef2f2', color: '#991b1b' }}>
+        <div
+          style={{
+            ...cardStyle,
+            borderColor: logistaTheme.colors.errorBorder,
+            background: logistaTheme.colors.errorBackground,
+            color: logistaTheme.colors.errorText,
+          }}
+        >
           {error || 'Produto nao encontrado.'}
         </div>
       </div>
@@ -501,7 +511,16 @@ export default function ProdutoEstoque() {
 
   return (
     <div style={{ maxWidth: 1180, margin: '0 auto', display: 'grid', gap: 20 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: isMobile ? 'stretch' : 'flex-start',
+          flexDirection: isMobile ? 'column' : 'row',
+          gap: 16,
+          flexWrap: 'wrap',
+        }}
+      >
         <div>
           <button
             type="button"
@@ -513,7 +532,7 @@ export default function ProdutoEstoque() {
               gap: 8,
               border: 'none',
               background: 'transparent',
-              color: '#7c3aed',
+              color: logistaTheme.colors.accentDark,
               cursor: 'pointer',
               fontWeight: 700,
               padding: 0,
@@ -524,24 +543,27 @@ export default function ProdutoEstoque() {
             Voltar ao estoque
           </button>
           <h1 style={{ margin: 0, fontSize: 30 }}>{product.name || 'Editar produto'}</h1>
-          <p style={{ margin: '8px 0 0', color: '#6b7280', maxWidth: 720 }}>
+          <p style={{ margin: '8px 0 0', color: logistaTheme.colors.textMuted, maxWidth: 720 }}>
             A edição usa o mesmo formulário do lançamento do produto, com múltiplas imagens, preços e margem real.
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', width: isMobile ? '100%' : 'auto' }}>
           <button
             type="button"
             onClick={() => navigate(`/produto/${productId}`)}
             style={{
               padding: '12px 16px',
               borderRadius: 12,
-              border: '1px solid #e5e7eb',
-              background: '#fff',
+              border: `1px solid ${logistaTheme.colors.border}`,
+              background: logistaTheme.colors.surface,
+              color: logistaTheme.colors.text,
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               gap: 8,
+              justifyContent: 'center',
+              width: isMobile ? '100%' : 'auto',
             }}
           >
             <FiExternalLink size={16} />
@@ -555,14 +577,16 @@ export default function ProdutoEstoque() {
               padding: '12px 16px',
               borderRadius: 12,
               border: 'none',
-              background: 'linear-gradient(135deg, #c084fc 0%, #8b5cf6 100%)',
-              color: '#fff',
+              background: logistaTheme.colors.accent,
+              color: logistaTheme.colors.surface,
               cursor: saving ? 'not-allowed' : 'pointer',
               display: 'flex',
               alignItems: 'center',
               gap: 8,
               fontWeight: 700,
               opacity: saving ? 0.7 : 1,
+              justifyContent: 'center',
+              width: isMobile ? '100%' : 'auto',
             }}
           >
             <FiSave size={16} />
@@ -572,16 +596,25 @@ export default function ProdutoEstoque() {
       </div>
 
       {error && (
-        <div style={{ ...cardStyle, borderColor: '#fecaca', background: '#fef2f2', color: '#991b1b' }}>{error}</div>
+        <div
+          style={{
+            ...cardStyle,
+            borderColor: logistaTheme.colors.errorBorder,
+            background: logistaTheme.colors.errorBackground,
+            color: logistaTheme.colors.errorText,
+          }}
+        >
+          {error}
+        </div>
       )}
 
       {successMessage && (
         <div
           style={{
             ...cardStyle,
-            borderColor: '#86efac',
-            background: '#f0fdf4',
-            color: '#166534',
+            borderColor: logistaTheme.colors.successBorder,
+            background: logistaTheme.colors.successBackground,
+            color: logistaTheme.colors.successText,
             display: 'flex',
             alignItems: 'center',
             gap: 10,
@@ -599,25 +632,29 @@ export default function ProdutoEstoque() {
           gap: 12,
         }}
       >
-        <div style={{ ...cardStyle, background: '#faf5ff', borderColor: '#e9d5ff' }}>
-          <div style={{ color: '#6b7280', fontSize: 13 }}>Preço final</div>
-          <div style={{ fontSize: 26, fontWeight: 700, marginTop: 10 }}>
+        <div style={{ ...cardStyle, background: logistaTheme.colors.accentSoft, borderColor: logistaTheme.colors.accentBorder }}>
+          <div style={{ color: logistaTheme.colors.textMuted, fontSize: 13 }}>Preço final</div>
+          <div style={{ fontSize: 26, fontWeight: 700, marginTop: 10, color: logistaTheme.colors.accentDark }}>
             {currencyFormatter.format(pricingPreview.chosenFinalPrice)}
           </div>
         </div>
-        <div style={{ ...cardStyle, background: '#eff6ff', borderColor: '#bfdbfe' }}>
-          <div style={{ color: '#6b7280', fontSize: 13 }}>Preço promoção</div>
-          <div style={{ fontSize: 26, fontWeight: 700, marginTop: 10 }}>
+        <div style={{ ...cardStyle, background: logistaTheme.colors.surfaceAlt, borderColor: logistaTheme.colors.borderStrong }}>
+          <div style={{ color: logistaTheme.colors.textMuted, fontSize: 13 }}>Preço promoção</div>
+          <div style={{ fontSize: 26, fontWeight: 700, marginTop: 10, color: logistaTheme.colors.accentDark }}>
             {currencyFormatter.format(pricingPreview.chosenPromotionPrice || 0)}
           </div>
         </div>
-        <div style={{ ...cardStyle, background: '#f0fdf4', borderColor: '#bbf7d0' }}>
-          <div style={{ color: '#6b7280', fontSize: 13 }}>Margem real</div>
-          <div style={{ fontSize: 26, fontWeight: 700, marginTop: 10 }}>{currencyFormatter.format(pricingPreview.realMargin)}</div>
+        <div style={{ ...cardStyle, background: logistaTheme.colors.successBackground, borderColor: logistaTheme.colors.successBorder }}>
+          <div style={{ color: logistaTheme.colors.textMuted, fontSize: 13 }}>Margem real</div>
+          <div style={{ fontSize: 26, fontWeight: 700, marginTop: 10, color: logistaTheme.colors.successText }}>
+            {currencyFormatter.format(pricingPreview.realMargin)}
+          </div>
         </div>
-        <div style={{ ...cardStyle, background: '#fff7ed', borderColor: '#fed7aa' }}>
-          <div style={{ color: '#6b7280', fontSize: 13 }}>Estoque disponivel</div>
-          <div style={{ fontSize: 26, fontWeight: 700, marginTop: 10 }}>{product.inventory.available}</div>
+        <div style={{ ...cardStyle, background: logistaTheme.colors.warningBackground, borderColor: logistaTheme.colors.warningBorder }}>
+          <div style={{ color: logistaTheme.colors.textMuted, fontSize: 13 }}>Estoque disponivel</div>
+          <div style={{ fontSize: 26, fontWeight: 700, marginTop: 10, color: logistaTheme.colors.warningText }}>
+            {product.inventory.available}
+          </div>
         </div>
       </div>
 
@@ -696,16 +733,14 @@ export default function ProdutoEstoque() {
                 rows={3}
                 style={{
                   width: '100%',
-                  padding: '12px 14px',
-                  borderRadius: 12,
-                  border: '1px solid #d1d5db',
+                  ...logistaInputStyle,
                   fontSize: 15,
                   resize: 'vertical',
                   boxSizing: 'border-box',
                 }}
               />
             </div>
-            <div style={{ color: '#6b7280', fontSize: 13 }}>
+            <div style={{ color: logistaTheme.colors.textMuted, fontSize: 13 }}>
               O preço final alimenta a vitrine. O preço promoção fica salvo para uso em campanhas e badges promocionais.
             </div>
           </div>
@@ -748,8 +783,9 @@ export default function ProdutoEstoque() {
                   gap: 12,
                   padding: 14,
                   borderRadius: 14,
-                  border: '1px solid #e5e7eb',
+                  border: `1px solid ${logistaTheme.colors.border}`,
                   cursor: 'pointer',
+                  background: logistaTheme.colors.surface,
                 }}
               >
                 <input
@@ -759,8 +795,8 @@ export default function ProdutoEstoque() {
                   style={{ marginTop: 4 }}
                 />
                 <span>
-                  <span style={{ display: 'block', fontWeight: 600, color: '#111827' }}>{item.label}</span>
-                  <span style={{ display: 'block', color: '#6b7280', marginTop: 4 }}>{item.description}</span>
+                  <span style={{ display: 'block', fontWeight: 600, color: logistaTheme.colors.text }}>{item.label}</span>
+                  <span style={{ display: 'block', color: logistaTheme.colors.textMuted, marginTop: 4 }}>{item.description}</span>
                 </span>
               </label>
             ))}
@@ -771,25 +807,25 @@ export default function ProdutoEstoque() {
           <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 16 }}>Resumo do estoque</div>
           <div style={{ display: 'grid', gap: 14 }}>
             <div>
-              <div style={{ color: '#6b7280', fontSize: 12 }}>Total em estoque</div>
+              <div style={statLabelStyle}>Total em estoque</div>
               <div style={{ fontSize: 24, fontWeight: 700 }}>{product.inventory.total}</div>
             </div>
             <div>
-              <div style={{ color: '#6b7280', fontSize: 12 }}>Disponivel</div>
+              <div style={statLabelStyle}>Disponivel</div>
               <div style={{ fontSize: 24, fontWeight: 700 }}>{product.inventory.available}</div>
             </div>
             <div>
-              <div style={{ color: '#6b7280', fontSize: 12 }}>Reservado</div>
+              <div style={statLabelStyle}>Reservado</div>
               <div style={{ fontSize: 24, fontWeight: 700 }}>{product.inventory.reserved}</div>
             </div>
             <div>
-              <div style={{ color: '#6b7280', fontSize: 12 }}>Status automatico da vitrine</div>
+              <div style={statLabelStyle}>Status automatico da vitrine</div>
               <div style={{ fontWeight: 700 }}>
                 {product.inventory.available > 0 ? 'Com estoque para venda' : 'Sem estoque disponivel'}
               </div>
             </div>
             <div>
-              <div style={{ color: '#6b7280', fontSize: 12 }}>Custo rateado da compra</div>
+              <div style={statLabelStyle}>Custo rateado da compra</div>
               <div style={{ fontWeight: 700 }}>{currencyFormatter.format(product.pricing.allocatedCosts || 0)}</div>
             </div>
           </div>

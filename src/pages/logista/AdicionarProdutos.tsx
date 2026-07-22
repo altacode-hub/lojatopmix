@@ -11,6 +11,7 @@ import { buildInventoryProductRow, CATALOG_SYNC_PATH, upsertCachedStockProduct }
 import SharedProductEditorForm, { type ProductCategoryOption, type ProductVariationInput } from './components/SharedProductEditorForm'
 import { getProductPricingPreview } from './productPricing'
 import { useMediaQuery } from '../../hooks/useMediaQuery'
+import { logistaCardStyle, logistaTheme } from './logistaTheme'
 
 interface Product {
   id: string
@@ -90,6 +91,18 @@ const getErrorMessage = (error: unknown, fallback: string) => {
   }
 
   return fallback
+}
+
+const sectionCardStyle: React.CSSProperties = {
+  ...logistaCardStyle,
+  background: logistaTheme.colors.accentSoft,
+  border: `1px solid ${logistaTheme.colors.accentBorder}`,
+}
+
+const statLabelStyle: React.CSSProperties = {
+  fontSize: 12,
+  color: logistaTheme.colors.textMuted,
+  marginBottom: 4,
 }
 
 export default function AdicionarProdutos() {
@@ -826,11 +839,11 @@ export default function AdicionarProdutos() {
   const totalProfit = totalRevenue - totalCost
   
   if (loading) {
-    return <div>Carregando...</div>
+    return <div style={{ color: logistaTheme.colors.textMuted }}>Carregando...</div>
   }
   
   if (!purchase) {
-    return <div>Pedido não encontrado</div>
+    return <div style={{ color: logistaTheme.colors.errorText }}>Pedido não encontrado</div>
   }
   
   return (
@@ -838,7 +851,7 @@ export default function AdicionarProdutos() {
       <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: 16, marginBottom: 24 }}>
         <div style={{width:'-webkit-fill-available'}}>
           <h1 style={{ margin: 0, fontSize: 28, textAlign: 'left' }}>Adicionar Produto</h1>
-          <div style={{ color: '#6b7280', marginTop: 4, textAlign: 'left' }}>
+          <div style={{ color: logistaTheme.colors.textMuted, marginTop: 4, textAlign: 'left' }}>
             Pedido: {purchase.name} • Logística: R$ {custoPorPeca}/peça
           </div>
         </div>
@@ -848,8 +861,9 @@ export default function AdicionarProdutos() {
           style={{
             padding: '12px 20px',
             borderRadius: 12,
-            border: '1px solid #e5e7eb',
-            background: '#fff',
+            border: `1px solid ${logistaTheme.colors.border}`,
+            background: logistaTheme.colors.surface,
+            color: logistaTheme.colors.text,
             cursor: saving ? 'not-allowed' : 'pointer',
             opacity: saving ? 0.7 : 1,
             alignSelf: 'flex-start',
@@ -925,8 +939,9 @@ export default function AdicionarProdutos() {
           style={{
             padding: '12px 20px',
             borderRadius: 12,
-            border: '1px solid #e5e7eb',
-            background: '#fff',
+            border: `1px solid ${logistaTheme.colors.border}`,
+            background: logistaTheme.colors.surface,
+            color: logistaTheme.colors.text,
             cursor: saving ? 'not-allowed' : 'pointer',
             opacity: saving ? 0.7 : 1,
             alignSelf: 'flex-start',
@@ -943,8 +958,9 @@ export default function AdicionarProdutos() {
             style={{
               padding: '12px 20px',
               borderRadius: 12,
-              border: '1px solid #e5e7eb',
-              background: '#fff',
+              border: `1px solid ${logistaTheme.colors.border}`,
+              background: logistaTheme.colors.surface,
+              color: logistaTheme.colors.text,
               cursor: 'pointer',
               alignSelf: 'flex-start',
               fontSize: '14px',
@@ -962,8 +978,8 @@ export default function AdicionarProdutos() {
             padding: '11px',
             borderRadius: 12,
             border: 'none',
-            background: 'linear-gradient(135deg, #c084fc 0%, #8b5cf6 100%)',
-            color: '#fff',
+            background: logistaTheme.colors.accent,
+            color: logistaTheme.colors.surface,
             fontSize: 14,
             fontWeight: 600,
             cursor: (!productName.trim() || typeof unitCost !== 'number' || unitCost <= 0 || variations.length === 0) ? 'not-allowed' : 'pointer',
@@ -990,12 +1006,13 @@ export default function AdicionarProdutos() {
           
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {products.map((product) => (
-              <div key={product.id} style={{
-                background: '#faf5ff',
-                border: '1px solid #e9d5ff',
-                borderRadius: 16,
-                padding: isMobile ? 16 : 24,
-              }}>
+              <div
+                key={product.id}
+                style={{
+                  ...sectionCardStyle,
+                  padding: isMobile ? 16 : 24,
+                }}
+              >
                 {/* Product Header */}
                 <div style={{ 
                   display: 'flex', 
@@ -1018,8 +1035,9 @@ export default function AdicionarProdutos() {
                       style={{
                         padding: '8px 12px',
                         borderRadius: 10,
-                        border: '1px solid #e5e7eb',
-                        background: '#fff',
+                        border: `1px solid ${logistaTheme.colors.border}`,
+                        background: logistaTheme.colors.surface,
+                        color: logistaTheme.colors.text,
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
@@ -1034,9 +1052,9 @@ export default function AdicionarProdutos() {
                       style={{
                         padding: '8px 12px',
                         borderRadius: 10,
-                        border: '1px solid #fee2e2',
-                        background: '#fff',
-                        color: '#dc2626',
+                        border: `1px solid ${logistaTheme.colors.errorBorder}`,
+                        background: logistaTheme.colors.errorBackground,
+                        color: logistaTheme.colors.errorText,
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
@@ -1053,7 +1071,7 @@ export default function AdicionarProdutos() {
                 {product.supplierName && (
                   <div style={{ 
                     fontSize: 14, 
-                    color: '#6b7280', 
+                    color: logistaTheme.colors.textMuted, 
                     marginBottom: 16,
                     display: 'flex',
                     alignItems: 'center',
@@ -1071,25 +1089,25 @@ export default function AdicionarProdutos() {
                   marginBottom: 16
                 }}>
                   <div>
-                    <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 4 }}>Preço à vista</div>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: '#059669' }}>
+                    <div style={statLabelStyle}>Preço à vista</div>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: logistaTheme.colors.successText }}>
                       R$ {product.priceWithMargin.toFixed(2)}
                     </div>
                   </div>
                   <div>
-                    <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 4 }}>Preço no cartão</div>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: '#2563eb' }}>
+                    <div style={statLabelStyle}>Preço no cartão</div>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: logistaTheme.colors.accentDark }}>
                       R$ {product.salePrice.toFixed(2)}
                     </div>
                   </div>
                   <div>
-                    <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 4 }}>Total de peças</div>
+                    <div style={statLabelStyle}>Total de peças</div>
                     <div style={{ fontSize: 12, fontWeight: 700 }}>
                       {product.totalPieces}
                     </div>
                   </div>
                   <div>
-                    <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 4 }}>Margem</div>
+                    <div style={statLabelStyle}>Margem</div>
                     <div style={{ fontSize: 12, fontWeight: 700 }}>
                       R$ {product.grossMargin.toFixed(2)}
                     </div>
@@ -1098,12 +1116,12 @@ export default function AdicionarProdutos() {
                 
                 {/* Variations */}
                 <div style={{ marginBottom: 16 }}>
-                  <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 8 }}>Variações:</div>
+                  <div style={{ fontSize: 12, color: logistaTheme.colors.textMuted, marginBottom: 8 }}>Variações:</div>
                   <div style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: 8 }}>
                     {product.variations.map((v, i) => (
                       <div key={i} style={{
-                        background: '#fff',
-                        border: '1px solid #e5e7eb',
+                        background: logistaTheme.colors.surface,
+                        border: `1px solid ${logistaTheme.colors.border}`,
                         borderRadius: 8,
                         padding: '6px 12px',
                         fontSize: 14
@@ -1116,14 +1134,14 @@ export default function AdicionarProdutos() {
                 
                 {/* Total Revenue */}
                 <div style={{
-                  background: '#ecfdf5',
-                  border: '1px solid #10b981',
+                  background: logistaTheme.colors.successBackground,
+                  border: `1px solid ${logistaTheme.colors.successBorder}`,
                   borderRadius: 12,
                   padding: 16,
                   textAlign: 'center'
                 }}>
-                  <div style={{ fontSize: 14, color: '#059669', marginBottom: 4 }}>Receita Total</div>
-                  <div style={{ fontSize: 20, fontWeight: 700, color: '#059669' }}>
+                  <div style={{ fontSize: 14, color: logistaTheme.colors.successText, marginBottom: 4 }}>Receita Total</div>
+                  <div style={{ fontSize: 20, fontWeight: 700, color: logistaTheme.colors.successText }}>
                     R$ {(product.priceWithMargin * product.totalPieces).toFixed(2)}
                   </div>
                 </div>
@@ -1135,56 +1153,59 @@ export default function AdicionarProdutos() {
       
       {/* Summary */}
       {products.length > 0 && (
-        <div style={{
-          background: '#faf5ff',
-          border: '1px solid #e9d5ff',
-          borderRadius: 16,
-          padding: 20,
-        }}>
+        <div
+          style={{
+            ...sectionCardStyle,
+            padding: 20,
+          }}
+        >
           <h3 style={{ margin: '0 0 16px 0', fontSize: 18, display: 'flex', alignItems: 'center', gap: '8px' }}>
             <FiTrendingUp /> Resumo Total do Pedido
           </h3>
           
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }}>
             <div style={{
-              background: '#f3e8ff',
+              background: logistaTheme.colors.surface,
+              border: `1px solid ${logistaTheme.colors.accentBorder}`,
               borderRadius: 12,
               padding: 16,
               textAlign: 'center',
             }}>
-              <div style={{ fontSize: 24, fontWeight: 700, color: '#8b5cf6' }}>{totalProducts}</div>
-              <div style={{ color: '#6b7280', fontSize: 14 }}>Produtos</div>
+              <div style={{ fontSize: 24, fontWeight: 700, color: logistaTheme.colors.accentDark }}>{totalProducts}</div>
+              <div style={{ color: logistaTheme.colors.textMuted, fontSize: 14 }}>Produtos</div>
             </div>
             
             <div style={{
-              background: '#f3e8ff',
+              background: logistaTheme.colors.surface,
+              border: `1px solid ${logistaTheme.colors.accentBorder}`,
               borderRadius: 12,
               padding: 16,
               textAlign: 'center',
             }}>
-              <div style={{ fontSize: 24, fontWeight: 700, color: '#8b5cf6' }}>{totalPieces}</div>
-              <div style={{ color: '#6b7280', fontSize: 14 }}>Peças Totais</div>
+              <div style={{ fontSize: 24, fontWeight: 700, color: logistaTheme.colors.accentDark }}>{totalPieces}</div>
+              <div style={{ color: logistaTheme.colors.textMuted, fontSize: 14 }}>Peças Totais</div>
             </div>
             
             <div style={{
-              background: '#ecfdf5',
+              background: logistaTheme.colors.successBackground,
+              border: `1px solid ${logistaTheme.colors.successBorder}`,
               borderRadius: 12,
               padding: 16,
               textAlign: 'center',
             }}>
-              <div style={{ fontSize: 20, fontWeight: 700, color: '#059669' }}>R$ {totalRevenue.toFixed(2)}</div>
-              <div style={{ color: '#6b7280', fontSize: 14 }}>Receita Total</div>
+              <div style={{ fontSize: 20, fontWeight: 700, color: logistaTheme.colors.successText }}>R$ {totalRevenue.toFixed(2)}</div>
+              <div style={{ color: logistaTheme.colors.textMuted, fontSize: 14 }}>Receita Total</div>
             </div>
             
             <div style={{
-              background: '#fef3c7',
+              background: logistaTheme.colors.warningBackground,
               borderRadius: 12,
               padding: 16,
               textAlign: 'center',
-              border: '1px solid #fbbf24',
+              border: `1px solid ${logistaTheme.colors.warningBorder}`,
             }}>
-              <div style={{ fontSize: 20, fontWeight: 700, color: '#d97706' }}>R$ {totalProfit.toFixed(2)}</div>
-              <div style={{ color: '#6b7280', fontSize: 14 }}>Lucro Total</div>
+              <div style={{ fontSize: 20, fontWeight: 700, color: logistaTheme.colors.warningText }}>R$ {totalProfit.toFixed(2)}</div>
+              <div style={{ color: logistaTheme.colors.textMuted, fontSize: 14 }}>Lucro Total</div>
             </div>
           </div>
         </div>

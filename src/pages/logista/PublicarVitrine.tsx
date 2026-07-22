@@ -1,14 +1,15 @@
+import type { CSSProperties } from 'react'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { getDownloadURL, ref as storageRef, uploadBytes } from 'firebase/storage'
 import { get, ref, update } from 'firebase/database'
-import { FiCheckCircle, FiExternalLink, FiImage, FiLayers, FiUploadCloud } from 'react-icons/fi'
+import { FiCheckCircle, FiExternalLink, FiImage, FiLayers } from 'react-icons/fi'
 import FramedImage from '../../components/FramedImage'
-import { rtdb, storage } from '../../service/firebase'
+import { rtdb } from '../../service/firebase'
 import type { CatalogVariation, InternalProductRecord, ShowcaseRecord } from '../../types/catalog'
 import { getEffectiveVariationStock, hasEffectiveVariationStock, variationLabel } from '../../utils/catalog'
 import { CATALOG_SYNC_PATH, patchCachedStockProduct } from './stockCache'
 import { useMediaQuery } from '../../hooks/useMediaQuery'
+import { logistaCardStyle, logistaInputStyle, logistaTheme } from './logistaTheme'
 
 interface ShowcaseEditorProduct {
   id: string
@@ -30,12 +31,11 @@ interface ShowcaseEditorProduct {
   variations: Record<string, CatalogVariation>
 }
 
-const cardStyle: React.CSSProperties = {
-  background: '#fff',
-  border: '1px solid #e5e7eb',
-  borderRadius: 16,
-  padding: 20,
-  boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
+const cardStyle: CSSProperties = logistaCardStyle
+
+const stageLabelStyle: CSSProperties = {
+  color: logistaTheme.colors.textMuted,
+  fontSize: 13,
 }
 
 export default function PublicarVitrine() {
@@ -48,8 +48,7 @@ export default function PublicarVitrine() {
   const [products, setProducts] = useState<ShowcaseEditorProduct[]>([])
   const [loading, setLoading] = useState(true)
   const [savingId, setSavingId] = useState<string | null>(null)
-  const [uploadingId, setUploadingId] = useState<string | null>(null)
-
+  
   useEffect(() => {
     const loadProducts = async () => {
       if (!purchaseId) return
@@ -191,52 +190,40 @@ export default function PublicarVitrine() {
     }
   }
 
-  const handleImageUpload = async (productId: string, file: File | null) => {
-    if (!file) return
-
-    const safeName = file.name.replace(/\s+/g, '-').toLowerCase()
-    const filePath = `showcase/${productId}/${Date.now()}-${safeName}`
-    setUploadingId(productId)
-
-    try {
-      const imageRef = storageRef(storage, filePath)
-      const snapshot = await uploadBytes(imageRef, file)
-      const url = await getDownloadURL(snapshot.ref)
-      await saveShowcaseProduct(productId, {
-        image: url,
-        mainImageZoom: 1,
-        mainImageOffsetX: 0,
-        mainImageOffsetY: 0,
-      })
-    } catch (error) {
-      console.error('Erro ao enviar imagem para o Firebase Storage:', error)
-    } finally {
-      setUploadingId(null)
-    }
-  }
-
   if (loading) {
-    return <div style={{ padding: 24 }}>Carregando etapa de vitrine...</div>
+    return <div style={{ padding: 24, color: logistaTheme.colors.textMuted }}>Carregando etapa de vitrine...</div>
   }
 
   return (
     <div style={{ maxWidth: 1200, margin: '0 auto', padding: isMobile ? 16 : 24 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', marginBottom: 24 }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: isMobile ? 'stretch' : 'flex-start',
+          flexDirection: isMobile ? 'column' : 'row',
+          gap: 16,
+          flexWrap: 'wrap',
+          marginBottom: 24,
+        }}
+      >
         <div>
           <h1 style={{ margin: 0, fontSize: 30 }}>Produtos publicados na vitrine</h1>
-          <div style={{ color: '#6b7280', marginTop: 6 }}>
+          <div style={{ color: logistaTheme.colors.textMuted, marginTop: 6 }}>
             Pedido: {purchaseName || purchaseId} • Ajuste imagem e dados que o cliente vai ler na home.
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', width: isMobile ? '100%' : 'auto' }}>
           <button
             onClick={() => navigate(`/logista/pedido/${purchaseId}`)}
             style={{
               padding: '12px 16px',
               borderRadius: 12,
-              border: '1px solid #e5e7eb',
-              background: '#fff',
+              border: `1px solid ${logistaTheme.colors.border}`,
+              background: logistaTheme.colors.surface,
+              color: logistaTheme.colors.text,
               cursor: 'pointer',
+              width: isMobile ? '100%' : 'auto',
             }}
           >
             Voltar ao pedido
@@ -247,10 +234,11 @@ export default function PublicarVitrine() {
               padding: '12px 16px',
               borderRadius: 12,
               border: 'none',
-              background: 'linear-gradient(135deg, #c084fc 0%, #8b5cf6 100%)',
-              color: '#fff',
+              background: logistaTheme.colors.accent,
+              color: logistaTheme.colors.surface,
               cursor: 'pointer',
               fontWeight: 700,
+              width: isMobile ? '100%' : 'auto',
             }}
           >
             Ver home do cliente
@@ -259,26 +247,28 @@ export default function PublicarVitrine() {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12, marginBottom: 24 }}>
-        <div style={{ ...cardStyle, background: '#faf5ff', borderColor: '#e9d5ff' }}>
-          <div style={{ color: '#6b7280', fontSize: 13 }}>1. Pedido de compra</div>
-          <div style={{ fontSize: 16, fontWeight: 700, marginTop: 8 }}>Concluido</div>
+        <div style={{ ...cardStyle, background: logistaTheme.colors.accentSoft, borderColor: logistaTheme.colors.accentBorder }}>
+          <div style={stageLabelStyle}>1. Pedido de compra</div>
+          <div style={{ fontSize: 16, fontWeight: 700, marginTop: 8, color: logistaTheme.colors.accentDark }}>Concluido</div>
         </div>
-        <div style={{ ...cardStyle, background: '#faf5ff', borderColor: '#e9d5ff' }}>
-          <div style={{ color: '#6b7280', fontSize: 13 }}>2. Cadastro interno</div>
-          <div style={{ fontSize: 16, fontWeight: 700, marginTop: 8 }}>Produtos gravados</div>
+        <div style={{ ...cardStyle, background: logistaTheme.colors.accentSoft, borderColor: logistaTheme.colors.accentBorder }}>
+          <div style={stageLabelStyle}>2. Cadastro interno</div>
+          <div style={{ fontSize: 16, fontWeight: 700, marginTop: 8, color: logistaTheme.colors.accentDark }}>Produtos gravados</div>
         </div>
-        <div style={{ ...cardStyle, background: '#faf5ff', borderColor: '#e9d5ff' }}>
-          <div style={{ color: '#6b7280', fontSize: 13 }}>3. Estoque</div>
-          <div style={{ fontSize: 16, fontWeight: 700, marginTop: 8 }}>Indice atualizado</div>
+        <div style={{ ...cardStyle, background: logistaTheme.colors.accentSoft, borderColor: logistaTheme.colors.accentBorder }}>
+          <div style={stageLabelStyle}>3. Estoque</div>
+          <div style={{ fontSize: 16, fontWeight: 700, marginTop: 8, color: logistaTheme.colors.accentDark }}>Indice atualizado</div>
         </div>
-        <div style={{ ...cardStyle, background: '#ecfdf5', borderColor: '#10b981' }}>
-          <div style={{ color: '#065f46', fontSize: 13 }}>4. Vitrine</div>
-          <div style={{ fontSize: 16, fontWeight: 700, marginTop: 8 }}>{publishedCount} produto(s) pronto(s)</div>
+        <div style={{ ...cardStyle, background: logistaTheme.colors.successBackground, borderColor: logistaTheme.colors.successBorder }}>
+          <div style={{ color: logistaTheme.colors.successText, fontSize: 13 }}>4. Vitrine</div>
+          <div style={{ fontSize: 16, fontWeight: 700, marginTop: 8, color: logistaTheme.colors.successText }}>
+            {publishedCount} produto(s) pronto(s)
+          </div>
         </div>
       </div>
 
       {products.length === 0 ? (
-        <div style={{ ...cardStyle, textAlign: 'center', color: '#6b7280' }}>
+        <div style={{ ...cardStyle, textAlign: 'center', color: logistaTheme.colors.textMuted }}>
           Nenhum produto foi encontrado para publicar na vitrine deste pedido.
         </div>
       ) : (
@@ -287,7 +277,14 @@ export default function PublicarVitrine() {
             const variations = Object.values(product.variations || {})
 
             return (
-              <div key={product.id} style={{ ...cardStyle, background: '#faf5ff', borderColor: '#e9d5ff' }}>
+              <div
+                key={product.id}
+                style={{
+                  ...cardStyle,
+                  background: logistaTheme.colors.accentSoft,
+                  borderColor: logistaTheme.colors.accentBorder,
+                }}
+              >
                 <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '220px 1fr', gap: 20 }}>
                   <div>
                     <div
@@ -295,8 +292,8 @@ export default function PublicarVitrine() {
                         height: isMobile ? 220 : 260,
                         borderRadius: 16,
                         overflow: 'hidden',
-                        border: '1px solid #e5e7eb',
-                        background: '#fff',
+                        border: `1px solid ${logistaTheme.colors.border}`,
+                        background: logistaTheme.colors.surface,
                         position: 'relative',
                         marginBottom: 12,
                       }}
@@ -310,58 +307,51 @@ export default function PublicarVitrine() {
                           offsetY={Number(product.mainImageOffsetY || 0)}
                         />
                       ) : (
-                        <div style={{ color: '#6b7280', textAlign: 'center', padding: 16, position: 'absolute', inset: 0, display: 'grid', placeItems: 'center' }}>
+                        <div
+                          style={{
+                            color: logistaTheme.colors.textMuted,
+                            textAlign: 'center',
+                            padding: 16,
+                            position: 'absolute',
+                            inset: 0,
+                            display: 'grid',
+                            placeItems: 'center',
+                          }}
+                        >
                           <FiImage size={24} style={{ marginBottom: 8 }} />
                           <div>Envie uma foto para aparecer na home do cliente.</div>
                         </div>
                       )}
                     </div>
-
-                    <label
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: 8,
-                        padding: '12px 16px',
-                        borderRadius: 12,
-                        background: '#fff',
-                        border: '1px solid #e5e7eb',
-                        cursor: uploadingId === product.id ? 'not-allowed' : 'pointer',
-                        opacity: uploadingId === product.id ? 0.7 : 1,
-                        fontWeight: 600,
-                        width: '100%',
-                      }}
-                    >
-                      <FiUploadCloud />
-                      {uploadingId === product.id ? 'Enviando foto...' : 'Adicionar foto'}
-                      <input
-                        type="file"
-                        accept="image/*"
-                        style={{ display: 'none' }}
-                        disabled={uploadingId === product.id}
-                        onChange={(event) => {
-                          const file = event.target.files?.[0] || null
-                          void handleImageUpload(product.id, file)
-                          event.currentTarget.value = ''
-                        }}
-                      />
-                    </label>
                   </div>
 
                   <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', marginBottom: 12 }}>
                       <div>
                         <h2 style={{ margin: 0, fontSize: 24 }}>{product.name}</h2>
-                        <div style={{ color: '#6b7280', marginTop: 6 }}>
+                        <div style={{ color: logistaTheme.colors.textMuted, marginTop: 6 }}>
                           Categoria: {product.categoryName || categories[product.categoryId] || 'Sem categoria'} • Preco: R$ {product.price.toFixed(2)}
                         </div>
                       </div>
                       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                        <div style={{ padding: '8px 12px', borderRadius: 999, background: '#fff', border: '1px solid #e5e7eb' }}>
+                        <div
+                          style={{
+                            padding: '8px 12px',
+                            borderRadius: 999,
+                            background: logistaTheme.colors.surface,
+                            border: `1px solid ${logistaTheme.colors.border}`,
+                          }}
+                        >
                           Estoque disponivel: {product.availableStock}
                         </div>
-                        <div style={{ padding: '8px 12px', borderRadius: 999, background: '#fff', border: '1px solid #e5e7eb' }}>
+                        <div
+                          style={{
+                            padding: '8px 12px',
+                            borderRadius: 999,
+                            background: logistaTheme.colors.surface,
+                            border: `1px solid ${logistaTheme.colors.border}`,
+                          }}
+                        >
                           SKU: {product.id}
                         </div>
                       </div>
@@ -378,9 +368,7 @@ export default function PublicarVitrine() {
                         style={{
                           width: '100%',
                           boxSizing: 'border-box',
-                          padding: '12px 14px',
-                          borderRadius: 12,
-                          border: '1px solid #e5e7eb',
+                          ...logistaInputStyle,
                           resize: 'vertical',
                         }}
                       />
@@ -424,8 +412,8 @@ export default function PublicarVitrine() {
                             style={{
                               padding: '8px 12px',
                               borderRadius: 999,
-                              background: '#f8fafc',
-                              border: '1px solid #e5e7eb',
+                              background: logistaTheme.colors.surfaceAlt,
+                              border: `1px solid ${logistaTheme.colors.border}`,
                               fontSize: 14,
                             }}
                           >
@@ -436,7 +424,15 @@ export default function PublicarVitrine() {
                     </div>
 
                     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-                      <div style={{ color: '#6b7280', fontSize: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div
+                        style={{
+                          color: logistaTheme.colors.textMuted,
+                          fontSize: 14,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 8,
+                        }}
+                      >
                         <FiCheckCircle />
                         O cliente le apenas `showcase`, sem acessar custos, margens ou fornecedor.
                       </div>
@@ -446,8 +442,9 @@ export default function PublicarVitrine() {
                           style={{
                             padding: '10px 14px',
                             borderRadius: 12,
-                            border: '1px solid #e5e7eb',
-                            background: '#fff',
+                            border: `1px solid ${logistaTheme.colors.border}`,
+                            background: logistaTheme.colors.surface,
+                            color: logistaTheme.colors.text,
                             cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',
@@ -472,8 +469,8 @@ export default function PublicarVitrine() {
                             padding: '10px 16px',
                             borderRadius: 12,
                             border: 'none',
-                            background: 'linear-gradient(135deg, #c084fc 0%, #8b5cf6 100%)',
-                            color: '#fff',
+                            background: logistaTheme.colors.accent,
+                            color: logistaTheme.colors.surface,
                             cursor: savingId === product.id ? 'not-allowed' : 'pointer',
                             opacity: savingId === product.id ? 0.7 : 1,
                             fontWeight: 700,

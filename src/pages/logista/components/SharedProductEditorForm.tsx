@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react'
 import FramedImage from '../../../components/FramedImage'
 import {
   FiFolderPlus,
@@ -13,7 +14,8 @@ import {
   FiTrendingUp,
   FiUploadCloud,
 } from 'react-icons/fi'
-import type { ProductPricingPreview, NumericFormValue } from '../productPricing'
+import type { ProductPricingPreview, NumericFormValue, ProfitabilityTone } from '../productPricing'
+import { logistaCardStyle, logistaInputStyle, logistaTheme } from '../logistaTheme'
 
 export interface ProductCategoryOption {
   id: string
@@ -85,37 +87,71 @@ interface SharedProductEditorFormProps {
   onManageCategories?: () => void
 }
 
-const sectionCardStyle: React.CSSProperties = {
-  background: '#faf5ff',
-  border: '1px solid #e9d5ff',
-  borderRadius: 16,
-  padding: 20,
+const sectionCardStyle: CSSProperties = {
+  ...logistaCardStyle,
+  background: logistaTheme.colors.accentSoft,
+  border: `1px solid ${logistaTheme.colors.accentBorder}`,
   marginBottom: 20,
-  boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
 }
 
-const innerCardStyle: React.CSSProperties = {
-  border: '1px solid #e9d5ff',
-  borderRadius: 16,
+const innerCardStyle: CSSProperties = {
+  ...logistaCardStyle,
+  border: `1px solid ${logistaTheme.colors.accentBorder}`,
   padding: 20,
-  background: '#fff',
+  background: logistaTheme.colors.surface,
 }
 
-const inputStyle: React.CSSProperties = {
+const inputStyle: CSSProperties = {
+  ...logistaInputStyle,
   width: '100%',
-  padding: '12px 14px',
-  borderRadius: 10,
-  border: '1px solid #e5e7eb',
-  background: '#fff',
   boxSizing: 'border-box',
 }
 
-const labelStyle: React.CSSProperties = {
+const labelStyle: CSSProperties = {
   display: 'block',
   fontSize: 14,
   marginBottom: 6,
   fontWeight: 600,
   textAlign: 'left',
+}
+
+const previewCardStyles: Record<'warning' | 'accent' | 'success', CSSProperties> = {
+  warning: {
+    background: logistaTheme.colors.warningBackground,
+    border: `1px solid ${logistaTheme.colors.warningBorder}`,
+    borderRadius: 12,
+    padding: 16,
+  },
+  accent: {
+    background: logistaTheme.colors.surfaceAlt,
+    border: `1px solid ${logistaTheme.colors.borderStrong}`,
+    borderRadius: 12,
+    padding: 16,
+  },
+  success: {
+    background: logistaTheme.colors.successBackground,
+    border: `1px solid ${logistaTheme.colors.successBorder}`,
+    borderRadius: 12,
+    padding: 16,
+  },
+}
+
+const profitabilityToneStyles: Record<ProfitabilityTone, { background: string; border: string; color: string }> = {
+  success: {
+    background: logistaTheme.colors.successBackground,
+    border: logistaTheme.colors.successBorder,
+    color: logistaTheme.colors.successText,
+  },
+  warning: {
+    background: logistaTheme.colors.warningBackground,
+    border: logistaTheme.colors.warningBorder,
+    color: logistaTheme.colors.warningText,
+  },
+  error: {
+    background: logistaTheme.colors.errorBackground,
+    border: logistaTheme.colors.errorBorder,
+    color: logistaTheme.colors.errorText,
+  },
 }
 
 const currencyFormatter = new Intl.NumberFormat('pt-BR', {
@@ -150,10 +186,10 @@ const parseCurrencyInputValue = (rawValue: string): NumericFormValue => {
 const currencyInput = (
   value: NumericFormValue,
   onChange: (value: NumericFormValue) => void,
-  extraStyle?: React.CSSProperties,
+  extraStyle?: CSSProperties,
 ) => (
   <div style={{ position: 'relative' }}>
-    <span style={{ position: 'absolute', left: 12, top: 12, color: '#6b7280' }}>R$</span>
+    <span style={{ position: 'absolute', left: 12, top: 12, color: logistaTheme.colors.textMuted }}>R$</span>
     <input
       type="text"
       value={getCurrencyDisplayValue(value)}
@@ -171,7 +207,7 @@ const currencyInput = (
 const percentInput = (
   value: NumericFormValue,
   onChange: (value: NumericFormValue) => void,
-  extraStyle?: React.CSSProperties,
+  extraStyle?: CSSProperties,
 ) => (
   <div style={{ position: 'relative' }}>
     <input
@@ -186,7 +222,7 @@ const percentInput = (
         padding: '12px 40px 12px 14px',
       }}
     />
-    <span style={{ position: 'absolute', right: 12, top: 12, color: '#6b7280' }}>%</span>
+    <span style={{ position: 'absolute', right: 12, top: 12, color: logistaTheme.colors.textMuted }}>%</span>
   </div>
 )
 
@@ -256,7 +292,7 @@ export default function SharedProductEditorForm({
         <h2 style={{ margin: '0 0 8px 0', fontSize: 20, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }}>
           <FiImage /> Imagens do Produto
         </h2>
-        <p style={{ margin: '0 0 16px 0', color: '#6b7280', fontSize: 14, textAlign: 'center' }}>
+        <p style={{ margin: '0 0 16px 0', color: logistaTheme.colors.textMuted, fontSize: 14, textAlign: 'center' }}>
           Um produto pode ter varias imagens. A primeira imagem sera usada como principal.
         </p>
 
@@ -269,7 +305,9 @@ export default function SharedProductEditorForm({
               gap: 10,
               padding: '12px 16px',
               borderRadius: 12,
-              border: '1px solid #d1d5db',
+              border: `1px solid ${logistaTheme.colors.borderStrong}`,
+              background: logistaTheme.colors.surface,
+              color: logistaTheme.colors.text,
               cursor: uploadingImages ? 'not-allowed' : 'pointer',
               opacity: uploadingImages ? 0.7 : 1,
             }}
@@ -297,14 +335,14 @@ export default function SharedProductEditorForm({
               style={{
                 minHeight: 180,
                 borderRadius: 16,
-                border: '1px dashed #d1d5db',
-                background: '#f9fafb',
+                border: `1px dashed ${logistaTheme.colors.borderStrong}`,
+                background: logistaTheme.colors.surfaceAlt,
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: 10,
-                color: '#9ca3af',
+                color: logistaTheme.colors.textSoft,
               }}
             >
               <FiImage size={36} />
@@ -320,11 +358,11 @@ export default function SharedProductEditorForm({
                       width: 180,
                       borderRadius: 14,
                       overflow: 'hidden',
-                      border: '1px solid #e5e7eb',
-                      background: '#fff',
+                      border: `1px solid ${logistaTheme.colors.border}`,
+                      background: logistaTheme.colors.surface,
                     }}
                   >
-                    <div style={{ height: 180, background: '#f9fafb', position: 'relative', overflow: 'hidden' }}>
+                    <div style={{ height: 180, background: logistaTheme.colors.surfaceAlt, position: 'relative', overflow: 'hidden' }}>
                       {index === 0 ? (
                         <FramedImage
                           src={image}
@@ -342,7 +380,13 @@ export default function SharedProductEditorForm({
                       )}
                     </div>
                     <div style={{ padding: 12, display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center' }}>
-                      <span style={{ fontSize: 13, fontWeight: 600, color: index === 0 ? '#7c3aed' : '#4b5563' }}>
+                      <span
+                        style={{
+                          fontSize: 13,
+                          fontWeight: 600,
+                          color: index === 0 ? logistaTheme.colors.accentDark : logistaTheme.colors.textMuted,
+                        }}
+                      >
                         {index === 0 ? 'Imagem principal' : `Imagem ${index + 1}`}
                       </span>
                       <button
@@ -351,7 +395,7 @@ export default function SharedProductEditorForm({
                         style={{
                           border: 'none',
                           background: 'transparent',
-                          color: '#dc2626',
+                          color: logistaTheme.colors.errorText,
                           cursor: 'pointer',
                           display: 'flex',
                           alignItems: 'center',
@@ -365,9 +409,17 @@ export default function SharedProductEditorForm({
                   </div>
                 ))}
               </div>
-              <div style={{ border: '1px solid #e5e7eb', borderRadius: 16, padding: 16, background: '#fafafa', marginTop: 16 }}>
+              <div
+                style={{
+                  border: `1px solid ${logistaTheme.colors.border}`,
+                  borderRadius: 16,
+                  padding: 16,
+                  background: logistaTheme.colors.surfaceAlt,
+                  marginTop: 16,
+                }}
+              >
                 <div style={{ fontWeight: 700, marginBottom: 8, textAlign: 'left' }}>Imagem principal da vitrine</div>
-                <div style={{ color: '#6b7280', fontSize: 13, textAlign: 'left', marginBottom: 16 }}>
+                <div style={{ color: logistaTheme.colors.textMuted, fontSize: 13, textAlign: 'left', marginBottom: 16 }}>
                   Ajuste o enquadramento da primeira imagem para controlar como ela aparece na vitrine.
                 </div>
                 <div style={{ display: 'grid', gap: 12, marginTop: 16 }}>
@@ -478,9 +530,9 @@ export default function SharedProductEditorForm({
                 style={{
                   padding: '12px 16px',
                   borderRadius: 10,
-                  border: '1px solid #d8b4fe',
-                  background: '#fff',
-                  color: '#7c3aed',
+                  border: `1px solid ${logistaTheme.colors.accentBorder}`,
+                  background: logistaTheme.colors.surface,
+                  color: logistaTheme.colors.accentDark,
                   cursor: 'pointer',
                   fontWeight: 700,
                   display: 'inline-flex',
@@ -499,7 +551,7 @@ export default function SharedProductEditorForm({
       <div style={sectionCardStyle}>
         <div style={{ marginBottom: 24 }}>
           <h3 style={{ margin: '0 0 8px 0', fontSize: 18 }}>Variações do Produto</h3>
-          <p style={{ margin: '0 0 16px 0', color: '#6b7280', fontSize: 14 }}>
+          <p style={{ margin: '0 0 16px 0', color: logistaTheme.colors.textMuted, fontSize: 14 }}>
             Adicione variações de tamanho e cor (opcional)
           </p>
 
@@ -546,8 +598,9 @@ export default function SharedProductEditorForm({
                   style={{
                     padding: '10px 24px',
                     borderRadius: 10,
-                    border: '1px solid #e5e7eb',
-                    background: '#fff',
+                    border: `1px solid ${logistaTheme.colors.border}`,
+                    background: logistaTheme.colors.surface,
+                    color: logistaTheme.colors.text,
                     cursor: 'pointer',
                     fontWeight: 600,
                     fontSize: 14,
@@ -569,9 +622,9 @@ export default function SharedProductEditorForm({
                       alignItems: 'center',
                       gap: 8,
                       padding: '8px 12px',
-                      background: '#f3e8ff',
+                      background: logistaTheme.colors.accentSoft,
                       borderRadius: 8,
-                      color: '#7c3aed',
+                      color: logistaTheme.colors.accentDark,
                     }}
                   >
                     <span>
@@ -583,7 +636,7 @@ export default function SharedProductEditorForm({
                       style={{
                         border: 'none',
                         background: 'transparent',
-                        color: '#7c3aed',
+                        color: logistaTheme.colors.accentDark,
                         cursor: 'pointer',
                         fontSize: 16,
                       }}
@@ -603,13 +656,13 @@ export default function SharedProductEditorForm({
           <h3 style={{ margin: '0 0 8px 0', fontSize: 18, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }}>
             R$ Precificação
           </h3>
-          <p style={{ margin: '0 0 16px 0', color: '#6b7280', fontSize: 14 }}>
+          <p style={{ margin: '0 0 16px 0', color: logistaTheme.colors.textMuted, fontSize: 14 }}>
             Siga a sequência: custos base → percentuais → margem → preço final → preço promoção.
           </p>
 
           <div style={innerCardStyle}>
-            <div style={{ marginBottom: 16, paddingBottom: 16, borderBottom: '1px solid #e5e7eb' }}>
-              <h4 style={{ margin: '0 0 12px 0', fontSize: 14, color: '#6b7280', textAlign: 'left' }}>1. Custos Base</h4>
+            <div style={{ marginBottom: 16, paddingBottom: 16, borderBottom: `1px solid ${logistaTheme.colors.border}` }}>
+              <h4 style={{ margin: '0 0 12px 0', fontSize: 14, color: logistaTheme.colors.textMuted, textAlign: 'left' }}>1. Custos Base</h4>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
                 <div>
                   <label style={labelStyle}>Custo Unitário *</label>
@@ -630,8 +683,8 @@ export default function SharedProductEditorForm({
               </div>
             </div>
 
-            <div style={{ marginBottom: 16, paddingBottom: 16, borderBottom: '1px solid #e5e7eb' }}>
-              <h4 style={{ margin: '0 0 12px 0', fontSize: 14, color: '#6b7280', textAlign: 'left' }}>2. Percentuais Operacionais</h4>
+            <div style={{ marginBottom: 16, paddingBottom: 16, borderBottom: `1px solid ${logistaTheme.colors.border}` }}>
+              <h4 style={{ margin: '0 0 12px 0', fontSize: 14, color: logistaTheme.colors.textMuted, textAlign: 'left' }}>2. Percentuais Operacionais</h4>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
                 <div>
                   <label style={labelStyle}>Comissão do Vendedor (opcional)</label>
@@ -648,8 +701,8 @@ export default function SharedProductEditorForm({
               </div>
             </div>
 
-            <div style={{ marginBottom: 16, paddingBottom: 16, borderBottom: '1px solid #e5e7eb' }}>
-              <h4 style={{ margin: '0 0 12px 0', fontSize: 14, color: '#6b7280', textAlign: 'left' }}>3. Taxa Final</h4>
+            <div style={{ marginBottom: 16, paddingBottom: 16, borderBottom: `1px solid ${logistaTheme.colors.border}` }}>
+              <h4 style={{ margin: '0 0 12px 0', fontSize: 14, color: logistaTheme.colors.textMuted, textAlign: 'left' }}>3. Taxa Final</h4>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
                 <div>
                   <label style={labelStyle}>
@@ -657,13 +710,13 @@ export default function SharedProductEditorForm({
                       <FiCreditCard /> Taxa Cartão
                     </span>
                   </label>
-                  {percentInput(cardFee, onCardFeeChange, { background: '#faf5ff' })}
+                  {percentInput(cardFee, onCardFeeChange, { background: logistaTheme.colors.accentSoft })}
                 </div>
               </div>
             </div>
 
             <div>
-              <h4 style={{ margin: '0 0 12px 0', fontSize: 14, color: '#6b7280', textAlign: 'left' }}>4. Margem e Venda</h4>
+              <h4 style={{ margin: '0 0 12px 0', fontSize: 14, color: logistaTheme.colors.textMuted, textAlign: 'left' }}>4. Margem e Venda</h4>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
                 <div>
                   <label style={labelStyle}>Margem Bruta (R$)</label>
@@ -672,7 +725,7 @@ export default function SharedProductEditorForm({
                 <div>
                   <label style={labelStyle}>Preço Sugerido</label>
                   <div style={{ position: 'relative' }}>
-                    <span style={{ position: 'absolute', left: 12, top: 12, color: '#6b7280' }}>R$</span>
+                    <span style={{ position: 'absolute', left: 12, top: 12, color: logistaTheme.colors.textMuted }}>R$</span>
                     <input
                       type="text"
                       value={formatCurrencyNumber(pricingPreview.suggestedFinalPrice)}
@@ -680,8 +733,8 @@ export default function SharedProductEditorForm({
                       style={{
                         ...inputStyle,
                         padding: '12px 14px 12px 36px',
-                        background: '#f9fafb',
-                        color: '#2563eb',
+                        background: logistaTheme.colors.surfaceAlt,
+                        color: logistaTheme.colors.accentDark,
                         fontWeight: 700,
                       }}
                     />
@@ -698,7 +751,7 @@ export default function SharedProductEditorForm({
                 <div>
                   <label style={labelStyle}>Margem Real</label>
                   <div style={{ position: 'relative' }}>
-                    <span style={{ position: 'absolute', left: 12, top: 12, color: '#6b7280' }}>R$</span>
+                    <span style={{ position: 'absolute', left: 12, top: 12, color: logistaTheme.colors.textMuted }}>R$</span>
                     <input
                       type="text"
                       value={formatCurrencyNumber(pricingPreview.realMargin)}
@@ -706,8 +759,8 @@ export default function SharedProductEditorForm({
                       style={{
                         ...inputStyle,
                         padding: '12px 14px 12px 36px',
-                        background: '#f9fafb',
-                        color: pricingPreview.realMargin >= 0 ? '#059669' : '#dc2626',
+                        background: logistaTheme.colors.surfaceAlt,
+                        color: pricingPreview.realMargin >= 0 ? logistaTheme.colors.successText : logistaTheme.colors.errorText,
                         fontWeight: 700,
                       }}
                     />
@@ -723,16 +776,16 @@ export default function SharedProductEditorForm({
                       style={{
                         ...inputStyle,
                         padding: '12px 40px 12px 14px',
-                        background: '#f9fafb',
-                        color: pricingPreview.realMarginPercentage >= 0 ? '#059669' : '#dc2626',
+                        background: logistaTheme.colors.surfaceAlt,
+                        color: pricingPreview.realMarginPercentage >= 0 ? logistaTheme.colors.successText : logistaTheme.colors.errorText,
                         fontWeight: 700,
                       }}
                     />
-                    <span style={{ position: 'absolute', right: 12, top: 12, color: '#6b7280' }}>%</span>
+                    <span style={{ position: 'absolute', right: 12, top: 12, color: logistaTheme.colors.textMuted }}>%</span>
                   </div>
                 </div>
               </div>
-              <div style={{ marginTop: 10, color: '#6b7280', fontSize: 13, textAlign: 'left' }}>
+              <div style={{ marginTop: 10, color: logistaTheme.colors.textMuted, fontSize: 13, textAlign: 'left' }}>
                 Quando o preço promoção estiver zerado, ele assume automaticamente o mesmo valor do preço final.
               </div>
             </div>
@@ -749,8 +802,8 @@ export default function SharedProductEditorForm({
                 padding: '12px 18px',
                 borderRadius: 12,
                 border: 'none',
-                background: 'linear-gradient(135deg, #c084fc 0%, #8b5cf6 100%)',
-                color: '#fff',
+                background: logistaTheme.colors.accent,
+                color: logistaTheme.colors.surface,
                 cursor: saveButtonDisabled ? 'not-allowed' : 'pointer',
                 display: 'flex',
                 alignItems: 'center',
@@ -765,117 +818,125 @@ export default function SharedProductEditorForm({
           </div>
         )}
 
-        <div style={{ background: '#fff', border: '1px solid #e9d5ff', borderRadius: 16, padding: 20, marginBottom: 24 }}>
+        <div
+          style={{
+            background: logistaTheme.colors.surface,
+            border: `1px solid ${logistaTheme.colors.accentBorder}`,
+            borderRadius: 16,
+            padding: 20,
+            marginBottom: 24,
+          }}
+        >
           <h3 style={{ margin: '0 0 16px 0', fontSize: 18, display: 'flex', alignItems: 'center', gap: '8px' }}>
             <FiTrendingUp /> Preview da Precificação
           </h3>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <div style={{ fontSize: 14, color: '#6b7280', textAlign: 'left' }}>Estrutura de Custos e Precificação:</div>
+            <div style={{ fontSize: 14, color: logistaTheme.colors.textMuted, textAlign: 'left' }}>Estrutura de Custos e Precificação:</div>
 
-            <div style={{ background: '#fef3c7', border: '1px solid #fbbf24', borderRadius: 12, padding: 16 }}>
+            <div style={previewCardStyles.warning}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, fontWeight: 600 }}>
                 <FiPackage /> Custos Fixos Totais
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: 14 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#6b7280' }}>Custo unitário:</span>
+                  <span style={{ color: logistaTheme.colors.textMuted }}>Custo unitário:</span>
                   <span style={{ fontWeight: 600 }}>R$ {formatCurrencyNumber(pricingPreview.unitaryCost)}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#6b7280' }}>+ Logística:</span>
+                  <span style={{ color: logistaTheme.colors.textMuted }}>+ Logística:</span>
                   <span style={{ fontWeight: 600 }}>R$ {formatCurrencyNumber(pricingPreview.logisticsCost)}</span>
                 </div>
-                <div style={{ borderTop: '1px dashed #fbbf24', margin: '8px 0' }}></div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, color: '#d97706' }}>
+                <div style={{ borderTop: `1px dashed ${logistaTheme.colors.warningBorder}`, margin: '8px 0' }}></div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, color: logistaTheme.colors.warningText }}>
                   <span>= Custo Total Unitário:</span>
                   <span>R$ {formatCurrencyNumber(pricingPreview.baseCost)}</span>
                 </div>
               </div>
             </div>
 
-            <div style={{ background: '#dbeafe', border: '1px solid #3b82f6', borderRadius: 12, padding: 16 }}>
+            <div style={previewCardStyles.accent}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, fontWeight: 600 }}>
                 <FiDollarSign /> Aplicação da Margem
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: 14 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#6b7280' }}>Custo Base Total:</span>
+                  <span style={{ color: logistaTheme.colors.textMuted }}>Custo Base Total:</span>
                   <span style={{ fontWeight: 600 }}>R$ {formatCurrencyNumber(pricingPreview.baseCost)}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#6b7280' }}>+ Margem Bruta ({formatPercentNumber(pricingPreview.grossMarginPercentage)}%):</span>
+                  <span style={{ color: logistaTheme.colors.textMuted }}>+ Margem Bruta ({formatPercentNumber(pricingPreview.grossMarginPercentage)}%):</span>
                   <span style={{ fontWeight: 600 }}>R$ {formatCurrencyNumber(pricingPreview.marginValue)}</span>
                 </div>
-                <div style={{ borderTop: '1px dashed #3b82f6', margin: '8px 0' }}></div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, color: '#2563eb' }}>
+                <div style={{ borderTop: `1px dashed ${logistaTheme.colors.borderStrong}`, margin: '8px 0' }}></div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, color: logistaTheme.colors.accentDark }}>
                   <span>= Preço com Margem:</span>
                   <span>R$ {formatCurrencyNumber(pricingPreview.priceWithMargin)}</span>
                 </div>
               </div>
             </div>
 
-            <div style={{ background: '#fef3c7', border: '1px solid #fbbf24', borderRadius: 12, padding: 16 }}>
+            <div style={previewCardStyles.warning}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, fontWeight: 600 }}>
                 <FiPercent /> Percentuais Operacionais
               </div>
-              <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 12, textAlign: 'left' }}>
+              <div style={{ fontSize: 12, color: logistaTheme.colors.textMuted, marginBottom: 12, textAlign: 'left' }}>
                 Aplicados sobre o preço com margem calculado.
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: 14 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#6b7280' }}>Comissão:</span>
+                  <span style={{ color: logistaTheme.colors.textMuted }}>Comissão:</span>
                   <span style={{ fontWeight: 600 }}>R$ {formatCurrencyNumber(pricingPreview.commissionValue)}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#6b7280' }}>Impostos:</span>
+                  <span style={{ color: logistaTheme.colors.textMuted }}>Impostos:</span>
                   <span style={{ fontWeight: 600 }}>R$ {formatCurrencyNumber(pricingPreview.taxesValue)}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#6b7280' }}>Operacional:</span>
+                  <span style={{ color: logistaTheme.colors.textMuted }}>Operacional:</span>
                   <span style={{ fontWeight: 600 }}>R$ {formatCurrencyNumber(pricingPreview.operationalValue)}</span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, color: '#d97706' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, color: logistaTheme.colors.warningText }}>
                   <span>Total de Percentuais Embutidos:</span>
                   <span>R$ {formatCurrencyNumber(pricingPreview.totalOperationalPercentages)}</span>
                 </div>
               </div>
             </div>
 
-            <div style={{ background: '#fef3c7', border: '1px solid #fbbf24', borderRadius: 12, padding: 16 }}>
+            <div style={previewCardStyles.warning}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, fontWeight: 600 }}>
                 <FiCreditCard /> Taxa de Cartão
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: 14 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#6b7280' }}>Preço sugerido:</span>
+                  <span style={{ color: logistaTheme.colors.textMuted }}>Preço sugerido:</span>
                   <span style={{ fontWeight: 600 }}>R$ {formatCurrencyNumber(pricingPreview.suggestedFinalPrice)}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#6b7280' }}>Preço final informado:</span>
+                  <span style={{ color: logistaTheme.colors.textMuted }}>Preço final informado:</span>
                   <span style={{ fontWeight: 700 }}>R$ {formatCurrencyNumber(pricingPreview.chosenFinalPrice)}</span>
                 </div>
                 {pricingPreview.chosenPromotionPrice > 0 && (
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: '#6b7280' }}>Preço promoção:</span>
+                    <span style={{ color: logistaTheme.colors.textMuted }}>Preço promoção:</span>
                     <span style={{ fontWeight: 700 }}>R$ {formatCurrencyNumber(pricingPreview.chosenPromotionPrice)}</span>
                   </div>
                 )}
               </div>
             </div>
 
-            <div style={{ background: '#ecfdf5', border: '1px solid #10b981', borderRadius: 12, padding: 16 }}>
+            <div style={previewCardStyles.success}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, fontWeight: 600 }}>
                 <FiCheckCircle /> Lucro Real
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: 14 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#6b7280', display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <span style={{ color: logistaTheme.colors.textMuted, display: 'flex', alignItems: 'center', gap: 4 }}>
                     <FiTrendingUp /> Margem Real por Peça:
                   </span>
                   <span style={{ fontWeight: 600 }}>R$ {formatCurrencyNumber(pricingPreview.realMargin)}</span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, color: '#059669' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, color: logistaTheme.colors.successText }}>
                   <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                     <FiTarget /> Margem Real:
                   </span>
@@ -883,7 +944,7 @@ export default function SharedProductEditorForm({
                 </div>
                 {pricingPreview.chosenPromotionPrice > 0 && (
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: '#6b7280' }}>Margem com promoção:</span>
+                    <span style={{ color: logistaTheme.colors.textMuted }}>Margem com promoção:</span>
                     <span style={{ fontWeight: 600 }}>
                       R$ {formatCurrencyNumber(pricingPreview.promotionalRealMargin)} ({formatPercentNumber(pricingPreview.promotionalRealMarginPercentage)}%)
                     </span>
@@ -892,20 +953,30 @@ export default function SharedProductEditorForm({
               </div>
             </div>
 
-            <div style={{ background: '#faf5ff', border: '1px solid #a78bfa', borderRadius: 12, padding: 16 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, fontWeight: 600, color: '#7c3aed', justifyContent: 'center' }}>
+            <div style={{ ...previewCardStyles.accent, border: `1px solid ${logistaTheme.colors.accentBorder}` }}>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  marginBottom: 12,
+                  fontWeight: 600,
+                  color: logistaTheme.colors.accentDark,
+                  justifyContent: 'center',
+                }}
+              >
                 <FiTarget /> Valor de Revenda Ideal
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: 14 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#6b7280' }}>Preço sugerido:</span>
-                  <span style={{ fontWeight: 700, color: '#7c3aed', fontSize: 18 }}>
+                  <span style={{ color: logistaTheme.colors.textMuted }}>Preço sugerido:</span>
+                  <span style={{ fontWeight: 700, color: logistaTheme.colors.accentDark, fontSize: 18 }}>
                     R$ {formatCurrencyNumber(pricingPreview.suggestedFinalPrice)}
                   </span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#6b7280' }}>Preço final escolhido:</span>
-                  <span style={{ fontWeight: 700, color: '#7c3aed', fontSize: 18 }}>
+                  <span style={{ color: logistaTheme.colors.textMuted }}>Preço final escolhido:</span>
+                  <span style={{ fontWeight: 700, color: logistaTheme.colors.accentDark, fontSize: 18 }}>
                     R$ {formatCurrencyNumber(pricingPreview.chosenFinalPrice)}
                   </span>
                 </div>
@@ -913,37 +984,42 @@ export default function SharedProductEditorForm({
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
-              <div style={{ background: '#ecfdf5', border: '1px solid #10b981', borderRadius: 12, padding: 16, textAlign: 'center' }}>
-                <div style={{ fontSize: 14, color: '#6b7280', marginBottom: 8 }}>
+              <div style={{ ...previewCardStyles.success, textAlign: 'center' }}>
+                <div style={{ fontSize: 14, color: logistaTheme.colors.textMuted, marginBottom: 8 }}>
                   Projeção de Receita ({pricingPreview.projectedPieces} peças)
                 </div>
-                <div style={{ fontSize: 20, fontWeight: 700, color: '#059669' }}>R$ {formatCurrencyNumber(pricingPreview.projectedRevenue)}</div>
-                <div style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>Receita líquida total</div>
+                <div style={{ fontSize: 20, fontWeight: 700, color: logistaTheme.colors.successText }}>R$ {formatCurrencyNumber(pricingPreview.projectedRevenue)}</div>
+                <div style={{ fontSize: 12, color: logistaTheme.colors.textMuted, marginTop: 4 }}>Receita líquida total</div>
               </div>
-              <div style={{ background: '#fef3c7', border: '1px solid #fbbf24', borderRadius: 12, padding: 16, textAlign: 'center' }}>
-                <div style={{ fontSize: 14, color: '#6b7280', marginBottom: 8 }}>
+              <div style={{ ...previewCardStyles.warning, textAlign: 'center' }}>
+                <div style={{ fontSize: 14, color: logistaTheme.colors.textMuted, marginBottom: 8 }}>
                   Projeção de Lucro ({pricingPreview.projectedPieces} peças)
                 </div>
-                <div style={{ fontSize: 20, fontWeight: 700, color: '#d97706' }}>R$ {formatCurrencyNumber(pricingPreview.projectedProfit)}</div>
-                <div style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>Lucro líquido total</div>
+                <div style={{ fontSize: 20, fontWeight: 700, color: logistaTheme.colors.warningText }}>R$ {formatCurrencyNumber(pricingPreview.projectedProfit)}</div>
+                <div style={{ fontSize: 12, color: logistaTheme.colors.textMuted, marginTop: 4 }}>Lucro líquido total</div>
               </div>
             </div>
 
             <div style={{ textAlign: 'center' }}>
+              {(() => {
+                const profitabilityToneStyle = profitabilityToneStyles[pricingPreview.profitabilityTone]
+                return (
               <div
                 style={{
                   display: 'inline-block',
                   padding: '8px 24px',
                   borderRadius: 20,
-                  background: `${pricingPreview.profitabilityColor}10`,
-                  color: pricingPreview.profitabilityColor,
+                  background: profitabilityToneStyle.background,
+                  color: profitabilityToneStyle.color,
                   fontWeight: 700,
                   fontSize: 14,
-                  border: `1px solid ${pricingPreview.profitabilityColor}`,
+                  border: `1px solid ${profitabilityToneStyle.border}`,
                 }}
               >
                 {pricingPreview.profitabilityStatus}
               </div>
+                )
+              })()}
             </div>
           </div>
         </div>

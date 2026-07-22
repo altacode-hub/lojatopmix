@@ -9,17 +9,14 @@ import { rtdb, storage } from '../../service/firebase'
 import type { CatalogCategoryRecord } from '../../types/catalog'
 import { CATALOG_SYNC_PATH } from './stockCache'
 import { useMediaQuery } from '../../hooks/useMediaQuery'
+import { logistaCardStyle, logistaInputStyle, logistaTheme } from './logistaTheme'
 
 interface CategoryListItem extends CatalogCategoryRecord {
   id: string
 }
 
 const cardStyle: React.CSSProperties = {
-  background: '#fff',
-  border: '1px solid #e5e7eb',
-  borderRadius: 18,
-  padding: 20,
-  boxShadow: '0 1px 2px rgba(0, 0, 0, 0.04)',
+  ...logistaCardStyle,
 }
 
 export default function CategoriasLogista() {
@@ -238,7 +235,7 @@ export default function CategoriasLogista() {
               gap: 8,
               border: 'none',
               background: 'transparent',
-              color: '#7c3aed',
+              color: logistaTheme.colors.accentDark,
               cursor: 'pointer',
               fontWeight: 700,
               padding: 0,
@@ -249,20 +246,34 @@ export default function CategoriasLogista() {
             Voltar
           </button>
           <h1 style={{ margin: 0, fontSize: 30 }}>Categorias</h1>
-          <p style={{ margin: '8px 0 0', color: '#6b7280', maxWidth: 760 }}>
+          <p style={{ margin: '8px 0 0', color: logistaTheme.colors.textMuted, maxWidth: 760 }}>
             Cadastre as categorias em uma tela exclusiva, com imagem, para organizar a vitrine e facilitar a consulta dos produtos pelos clientes.
           </p>
         </div>
       </div>
 
       {error && (
-        <div style={{ ...cardStyle, borderColor: '#fecaca', background: '#fef2f2', color: '#991b1b' }}>
+        <div
+          style={{
+            ...cardStyle,
+            borderColor: logistaTheme.colors.errorBorder,
+            background: logistaTheme.colors.errorBackground,
+            color: logistaTheme.colors.errorText,
+          }}
+        >
           {error}
         </div>
       )}
 
       {successMessage && (
-        <div style={{ ...cardStyle, borderColor: '#bbf7d0', background: '#f0fdf4', color: '#166534' }}>
+        <div
+          style={{
+            ...cardStyle,
+            borderColor: logistaTheme.colors.successBorder,
+            background: logistaTheme.colors.successBackground,
+            color: logistaTheme.colors.successText,
+          }}
+        >
           {successMessage}
         </div>
       )}
@@ -273,7 +284,7 @@ export default function CategoriasLogista() {
             <FiFolderPlus />
             {editingCategoryId ? 'Editar categoria' : 'Nova categoria'}
           </div>
-          <div style={{ color: '#6b7280', fontSize: 14, marginBottom: 20, textAlign: 'left' }}>
+          <div style={{ color: logistaTheme.colors.textMuted, fontSize: 14, marginBottom: 20, textAlign: 'left' }}>
             Defina a imagem principal, ajuste o recorte da miniatura e escolha se a categoria fica visivel para o cliente.
           </div>
 
@@ -285,7 +296,7 @@ export default function CategoriasLogista() {
                 value={name}
                 onChange={(event) => setName(event.target.value)}
                 placeholder="Ex.: Vestidos"
-                style={{ width: '100%', padding: '12px 14px', borderRadius: 12, border: '1px solid #d1d5db', boxSizing: 'border-box' }}
+                style={{ ...logistaInputStyle, width: '100%', boxSizing: 'border-box' }}
               />
             </div>
 
@@ -297,7 +308,7 @@ export default function CategoriasLogista() {
                 value={order}
                 onChange={(event) => setOrder(event.target.value ? Number(event.target.value) : '')}
                 placeholder={String(nextSuggestedOrder)}
-                style={{ width: '100%', padding: '12px 14px', borderRadius: 12, border: '1px solid #d1d5db', boxSizing: 'border-box' }}
+                style={{ ...logistaInputStyle, width: '100%', boxSizing: 'border-box' }}
               />
             </div>
 
@@ -310,7 +321,9 @@ export default function CategoriasLogista() {
                   gap: 10,
                   padding: '12px 16px',
                   borderRadius: 12,
-                  border: '1px solid #d1d5db',
+                  border: `1px solid ${logistaTheme.colors.borderStrong}`,
+                  background: logistaTheme.colors.surface,
+                  color: logistaTheme.colors.text,
                   cursor: saving ? 'not-allowed' : 'pointer',
                   opacity: saving ? 0.7 : 1,
                   marginBottom: 12,
@@ -345,16 +358,16 @@ export default function CategoriasLogista() {
                 alignItems: 'flex-start',
                 gap: 12,
                 padding: 14,
-                border: '1px solid #e5e7eb',
+                border: `1px solid ${logistaTheme.colors.border}`,
                 borderRadius: 14,
-                background: hidden ? '#fff7ed' : '#f9fafb',
+                background: hidden ? logistaTheme.colors.warningBackground : logistaTheme.colors.surfaceAlt,
                 cursor: 'pointer',
               }}
             >
               <input type="checkbox" checked={hidden} onChange={(event) => setHidden(event.target.checked)} />
               <div style={{ textAlign: 'left' }}>
-                <div style={{ fontWeight: 700, color: '#111827' }}>Ocultar categoria da tela do cliente</div>
-                <div style={{ fontSize: 13, color: '#6b7280', marginTop: 4 }}>
+                <div style={{ fontWeight: 700, color: logistaTheme.colors.text }}>Ocultar categoria da tela do cliente</div>
+                <div style={{ fontSize: 13, color: logistaTheme.colors.textMuted, marginTop: 4 }}>
                   Quando ativado, a categoria nao aparece no filtro da home publica.
                 </div>
               </div>
@@ -370,8 +383,8 @@ export default function CategoriasLogista() {
                   padding: '12px 16px',
                   borderRadius: 12,
                   border: 'none',
-                  background: 'linear-gradient(135deg, #c084fc 0%, #8b5cf6 100%)',
-                  color: '#fff',
+                  background: logistaTheme.colors.accent,
+                  color: logistaTheme.colors.surface,
                   cursor: saving ? 'not-allowed' : 'pointer',
                   display: 'flex',
                   alignItems: 'center',
@@ -392,9 +405,9 @@ export default function CategoriasLogista() {
                   style={{
                     padding: '12px 16px',
                     borderRadius: 12,
-                    border: '1px solid #e5e7eb',
-                    background: '#fff',
-                    color: '#374151',
+                    border: `1px solid ${logistaTheme.colors.border}`,
+                    background: logistaTheme.colors.surface,
+                    color: logistaTheme.colors.text,
                     cursor: saving ? 'not-allowed' : 'pointer',
                     fontWeight: 700,
                     width: isMobile ? '100%' : 'auto',
@@ -409,22 +422,30 @@ export default function CategoriasLogista() {
 
         <div style={cardStyle}>
           <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>Categorias cadastradas</div>
-          <div style={{ color: '#6b7280', fontSize: 14, marginBottom: 20, textAlign: 'left' }}>
+          <div style={{ color: logistaTheme.colors.textMuted, fontSize: 14, marginBottom: 20, textAlign: 'left' }}>
             Essas categorias ficam disponiveis no cadastro de produtos e na selecao da vitrine do cliente.
           </div>
 
           {loading ? (
-            <div style={{ color: '#6b7280', textAlign: 'left' }}>Carregando categorias...</div>
+            <div style={{ color: logistaTheme.colors.textMuted, textAlign: 'left' }}>Carregando categorias...</div>
           ) : categories.length === 0 ? (
-            <div style={{ color: '#6b7280', textAlign: 'left' }}>Nenhuma categoria cadastrada ainda.</div>
+            <div style={{ color: logistaTheme.colors.textMuted, textAlign: 'left' }}>Nenhuma categoria cadastrada ainda.</div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 16 }}>
               {categories.map((category) => (
-                <div key={category.id} style={{ border: '1px solid #e5e7eb', borderRadius: 16, overflow: 'hidden', background: '#fff' }}>
+                <div
+                  key={category.id}
+                  style={{
+                    border: `1px solid ${logistaTheme.colors.border}`,
+                    borderRadius: 16,
+                    overflow: 'hidden',
+                    background: logistaTheme.colors.surface,
+                  }}
+                >
                   <div
                     style={{
                       height: 160,
-                      background: '#f8fafc',
+                      background: logistaTheme.colors.surfaceAlt,
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -442,8 +463,8 @@ export default function CategoriasLogista() {
                         style={{
                           width: 96,
                           height: 96,
-                          border: '1px solid #e5e7eb',
-                          background: '#fff',
+                          border: `1px solid ${logistaTheme.colors.border}`,
+                          background: logistaTheme.colors.surface,
                           flexShrink: 0,
                         }}
                       />
@@ -451,8 +472,8 @@ export default function CategoriasLogista() {
                       <CategoryRoundImage
                         alt={category.name}
                         label={category.name}
-                        style={{ width: 82, height: 82, background: '#ede9fe' }}
-                        fallbackStyle={{ color: '#7c3aed', background: '#ede9fe' }}
+                        style={{ width: 82, height: 82, background: logistaTheme.colors.accentSoft }}
+                        fallbackStyle={{ color: logistaTheme.colors.accentDark, background: logistaTheme.colors.accentSoft }}
                       />
                     )}
                   </div>
@@ -460,13 +481,22 @@ export default function CategoriasLogista() {
                     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
                       <div style={{ fontWeight: 700 }}>{category.name}</div>
                       {category.hidden && (
-                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: '#b45309', fontSize: 12, fontWeight: 700 }}>
+                        <div
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 6,
+                            color: logistaTheme.colors.warningText,
+                            fontSize: 12,
+                            fontWeight: 700,
+                          }}
+                        >
                           <FiEyeOff size={14} />
                           Oculta
                         </div>
                       )}
                     </div>
-                    <div style={{ color: '#6b7280', fontSize: 13, marginTop: 6 }}>Ordem: {category.order || 0}</div>
+                    <div style={{ color: logistaTheme.colors.textMuted, fontSize: 13, marginTop: 6 }}>Ordem: {category.order || 0}</div>
                     <button
                       type="button"
                       onClick={() => startEditing(category)}
@@ -474,9 +504,9 @@ export default function CategoriasLogista() {
                         marginTop: 12,
                         padding: '10px 12px',
                         borderRadius: 10,
-                        border: '1px solid #e5e7eb',
-                        background: '#fff',
-                        color: '#374151',
+                        border: `1px solid ${logistaTheme.colors.border}`,
+                        background: logistaTheme.colors.surface,
+                        color: logistaTheme.colors.text,
                         cursor: 'pointer',
                         display: 'inline-flex',
                         alignItems: 'center',

@@ -5,6 +5,7 @@ import { FiTrash2 } from 'react-icons/fi'
 import type { CatalogVariation, ProductPricing } from '../../../types/catalog'
 import { rtdb, storage } from '../../../service/firebase'
 import { CATALOG_SYNC_PATH, removeCachedStockProduct } from '../stockCache'
+import { logistaTheme } from '../logistaTheme'
 
 interface InventoryRecord {
   total?: number
@@ -285,9 +286,9 @@ export default function DeleteProductButton({
       style={{
         padding: '8px 12px',
         borderRadius: 10,
-        border: '1px solid #fee2e2',
-        background: '#fff',
-        color: '#dc2626',
+        border: `1px solid ${logistaTheme.colors.errorBorder}`,
+        background: logistaTheme.colors.errorBackground,
+        color: logistaTheme.colors.errorText,
         cursor: disabled || loading ? 'not-allowed' : 'pointer',
         display: 'flex',
         alignItems: 'center',

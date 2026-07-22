@@ -240,7 +240,7 @@ export default function ProductDetail() {
     <div
       style={{
         display: 'grid',
-        gridTemplateColumns: isMobile ? '1fr' : isTablet ? '90px minmax(0, 340px) minmax(340px, 1fr)' : '150px minmax(0, 540px) minmax(340px, 1fr)',
+        gridTemplateColumns: isMobile ? '1fr' : isTablet ? '90px minmax(0, 1fr) minmax(340px)' : '150px minmax(0, 540px) minmax(340px, 1fr)',
         gap: 18,
         alignItems: 'start',
       }}
@@ -260,7 +260,7 @@ export default function ProductDetail() {
           const imageStyle = isPrimaryImage
             ? {
                 ...thumbnailStyle,
-                transform: `translate(${Number(product.mainImageOffsetX || 0)}%, ${Number(product.mainImageOffsetY || 0)}%) scale(${Number(product.mainImageZoom || 1)})`,
+                //transform: `translate(${Number(product.mainImageOffsetX || 0)}%, ${Number(product.mainImageOffsetY || 0)}%) scale(${Number(product.mainImageZoom || 1)})`,
                 transformOrigin: 'center center',
               }
             : thumbnailStyle
@@ -309,7 +309,7 @@ export default function ProductDetail() {
                     height: '100%',
                     minHeight: isMobile ? 320 : 560,
                     objectFit: 'cover',
-                    transform: `translate(${Number(product.mainImageOffsetX || 0)}%, ${Number(product.mainImageOffsetY || 0)}%) scale(${Number(product.mainImageZoom || 1)})`,
+                    //transform: `translate(${Number(product.mainImageOffsetX || 0)}%, ${Number(product.mainImageOffsetY || 0)}%) scale(${Number(product.mainImageZoom || 1)})`,
                     transformOrigin: 'center center',
                     display: 'block',
                   }

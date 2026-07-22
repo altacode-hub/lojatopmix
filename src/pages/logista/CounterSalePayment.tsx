@@ -7,6 +7,8 @@ import { rtdb } from '../../service/firebase'
 import type { InternalProductRecord, ShowcaseRecord } from '../../types/catalog'
 import { variationLabel } from '../../utils/catalog'
 import { CATALOG_SYNC_PATH, patchCachedStockProduct } from './stockCache'
+import { useMediaQuery } from '../../hooks/useMediaQuery'
+import { logistaInputStyle, logistaTheme } from './logistaTheme'
 import { cardStyle, formatCurrency, hasVariationStock } from './vendas/helpers'
 import type { CounterSaleItem, SaleItemRecord, SaleRecord } from './vendas/types'
 
@@ -26,6 +28,7 @@ export default function CounterSalePayment() {
   const { user } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
+  const isMobile = useMediaQuery('(max-width: 768px)')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -291,13 +294,22 @@ export default function CounterSalePayment() {
 
   return (
     <div style={{ maxWidth: 1100, margin: '0 auto', display: 'grid', gap: 24 }}>
-      <section style={{ ...cardStyle, display: 'flex', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', alignItems: 'center' }}>
+      <section
+        style={{
+          ...cardStyle,
+          display: 'flex',
+          justifyContent: 'space-between',
+          gap: 16,
+          flexWrap: 'wrap',
+          alignItems: 'center',
+        }}
+      >
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
             <FiCreditCard size={18} />
             <h1 style={{ margin: 0, fontSize: 28 }}>Forma de pagamento</h1>
           </div>
-          <div style={{ color: '#64748b' }}>
+          <div style={{ color: logistaTheme.colors.textMuted }}>
             {reservedSale
               ? 'Conclua o pagamento para transformar a reserva em venda finalizada.'
               : 'Defina a forma de pagamento antes de concluir a venda no balcao.'}
@@ -312,9 +324,11 @@ export default function CounterSalePayment() {
             gap: 8,
             padding: '12px 16px',
             borderRadius: 12,
-            border: '1px solid #cbd5e1',
-            background: '#fff',
+            border: `1px solid ${logistaTheme.colors.borderStrong}`,
+            background: logistaTheme.colors.surface,
+            color: logistaTheme.colors.text,
             cursor: 'pointer',
+            width: isMobile ? '100%' : 'auto',
           }}
         >
           <FiArrowLeft size={16} />
@@ -324,24 +338,24 @@ export default function CounterSalePayment() {
 
       {!hasPaymentContext ? (
         <section style={cardStyle}>
-          <div style={{ color: '#64748b' }}>Nenhuma venda foi enviada para esta etapa. Volte para a tela de vendas e selecione os produtos novamente.</div>
+          <div style={{ color: logistaTheme.colors.textMuted }}>
+            Nenhuma venda foi enviada para esta etapa. Volte para a tela de vendas e selecione os produtos novamente.
+          </div>
         </section>
       ) : (
         <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', alignItems: 'flex-start' }}>
           <section style={{ ...cardStyle, display: 'grid', gap: 16, flex: '1 1 520px', minWidth: 0, maxWidth: '380px' }}>
             <div style={{ display: 'grid', gap: 8 }}>
               <label style={{ display: 'grid', gap: 6 }}>
-                <span style={{ fontSize: 14, color: '#334155' }}>Forma de pagamento</span>
+                <span style={{ fontSize: 14, color: logistaTheme.colors.text }}>Forma de pagamento</span>
                 <select
                   value={paymentMethod}
                   onChange={(event) => setPaymentMethod(event.target.value)}
                   style={{
+                    ...logistaInputStyle,
                     width: '100%',
                     maxWidth: '100%',
                     boxSizing: 'border-box',
-                    padding: '12px 14px',
-                    borderRadius: 12,
-                    border: '1px solid #cbd5e1',
                   }}
                 >
                   {paymentOptions.map((option) => (
@@ -353,53 +367,47 @@ export default function CounterSalePayment() {
               </label>
 
               <label style={{ display: 'grid', gap: 6 }}>
-                <span style={{ fontSize: 14, color: '#334155' }}>Nome do cliente</span>
+                <span style={{ fontSize: 14, color: logistaTheme.colors.text }}>Nome do cliente</span>
                 <input
                   value={customerName}
                   onChange={(event) => setCustomerName(event.target.value)}
                   placeholder="Opcional"
                   style={{
+                    ...logistaInputStyle,
                     width: '100%',
                     maxWidth: '100%',
                     boxSizing: 'border-box',
-                    padding: '12px 14px',
-                    borderRadius: 12,
-                    border: '1px solid #cbd5e1',
                   }}
                 />
               </label>
 
               <label style={{ display: 'grid', gap: 6 }}>
-                <span style={{ fontSize: 14, color: '#334155' }}>Telefone do cliente</span>
+                <span style={{ fontSize: 14, color: logistaTheme.colors.text }}>Telefone do cliente</span>
                 <input
                   value={customerPhone}
                   onChange={(event) => setCustomerPhone(event.target.value)}
                   placeholder="Opcional"
                   style={{
+                    ...logistaInputStyle,
                     width: '100%',
                     maxWidth: '100%',
                     boxSizing: 'border-box',
-                    padding: '12px 14px',
-                    borderRadius: 12,
-                    border: '1px solid #cbd5e1',
                   }}
                 />
               </label>
 
               <label style={{ display: 'grid', gap: 6 }}>
-                <span style={{ fontSize: 14, color: '#334155' }}>Observacoes</span>
+                <span style={{ fontSize: 14, color: logistaTheme.colors.text }}>Observacoes</span>
                 <textarea
                   value={notes}
                   onChange={(event) => setNotes(event.target.value)}
                   placeholder="Informacoes adicionais sobre a venda"
                   rows={4}
                   style={{
+                    ...logistaInputStyle,
                     width: '100%',
                     maxWidth: '100%',
                     boxSizing: 'border-box',
-                    padding: '12px 14px',
-                    borderRadius: 12,
-                    border: '1px solid #cbd5e1',
                     resize: 'vertical',
                   }}
                 />
@@ -410,9 +418,9 @@ export default function CounterSalePayment() {
               <div
                 style={{
                   borderRadius: 14,
-                  border: '1px solid #fdba74',
-                  background: '#fff7ed',
-                  color: '#9a3412',
+                  border: `1px solid ${logistaTheme.colors.warningBorder}`,
+                  background: logistaTheme.colors.warningBackground,
+                  color: logistaTheme.colors.warningText,
                   padding: '14px 16px',
                 }}
               >
@@ -432,10 +440,17 @@ export default function CounterSalePayment() {
                 ? reservedSale.items.map((item, index) => (
                     <div
                       key={`${reservedSale.saleId}-${index}`}
-                      style={{ border: '1px solid #e5e7eb', borderRadius: 14, padding: 14, display: 'grid', gap: 8 }}
+                      style={{
+                        border: `1px solid ${logistaTheme.colors.border}`,
+                        borderRadius: 14,
+                        padding: 14,
+                        display: 'grid',
+                        gap: 8,
+                        background: logistaTheme.colors.surface,
+                      }}
                     >
                       <div style={{ fontWeight: 700 }}>{item.productName}</div>
-                      <div style={{ color: '#64748b', fontSize: 14 }}>
+                      <div style={{ color: logistaTheme.colors.textMuted, fontSize: 14 }}>
                         {item.size || '-'} {item.color ? `• ${item.color}` : ''}
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
@@ -447,10 +462,17 @@ export default function CounterSalePayment() {
                 : selectedItems.map((item) => (
                     <div
                       key={item.id}
-                      style={{ border: '1px solid #e5e7eb', borderRadius: 14, padding: 14, display: 'grid', gap: 8 }}
+                      style={{
+                        border: `1px solid ${logistaTheme.colors.border}`,
+                        borderRadius: 14,
+                        padding: 14,
+                        display: 'grid',
+                        gap: 8,
+                        background: logistaTheme.colors.surface,
+                      }}
                     >
                       <div style={{ fontWeight: 700 }}>{item.productName}</div>
-                      <div style={{ color: '#64748b', fontSize: 14 }}>{variationLabel(item.variation)}</div>
+                      <div style={{ color: logistaTheme.colors.textMuted, fontSize: 14 }}>{variationLabel(item.variation)}</div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
                         <span>{item.qty} item(ns)</span>
                         <strong>{formatCurrency(item.qty * item.price)}</strong>
@@ -459,12 +481,12 @@ export default function CounterSalePayment() {
                   ))}
             </div>
 
-            <div style={{ marginTop: 18, paddingTop: 18, borderTop: '1px solid #e5e7eb' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, color: '#475569' }}>
+            <div style={{ marginTop: 18, paddingTop: 18, borderTop: `1px solid ${logistaTheme.colors.border}` }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, color: logistaTheme.colors.textMuted }}>
                 <span>Itens</span>
                 <strong>{totalItems}</strong>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 18, color: '#0f172a', fontSize: 18 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 18, color: logistaTheme.colors.text, fontSize: 18 }}>
                 <span>Total</span>
                 <strong>{formatCurrency(totalAmount)}</strong>
               </div>
@@ -479,8 +501,8 @@ export default function CounterSalePayment() {
                   padding: '14px 16px',
                   borderRadius: 14,
                   border: 'none',
-                  background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
-                  color: '#fff',
+                  background: logistaTheme.colors.accent,
+                  color: logistaTheme.colors.surface,
                   fontWeight: 800,
                   cursor: saving ? 'not-allowed' : 'pointer',
                   opacity: saving ? 0.7 : 1,

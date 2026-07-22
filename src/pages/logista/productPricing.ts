@@ -1,4 +1,5 @@
 export type NumericFormValue = number | ''
+export type ProfitabilityTone = 'success' | 'warning' | 'error'
 
 export interface ProductPricingFormValues {
   unitCost: NumericFormValue
@@ -39,7 +40,7 @@ export interface ProductPricingPreview {
   projectedRevenue: number
   projectedProfit: number
   profitabilityStatus: string
-  profitabilityColor: string
+  profitabilityTone: ProfitabilityTone
 }
 
 const toNumber = (value: NumericFormValue) => (typeof value === 'number' ? value : 0)
@@ -114,16 +115,16 @@ export const getProductPricingPreview = (
   const projectedProfit = realMarginData.realMargin * projectedPieces
 
   let profitabilityStatus = ''
-  let profitabilityColor = ''
+  let profitabilityTone: ProfitabilityTone = 'error'
   if (realMarginData.realMarginPercentage >= 40) {
     profitabilityStatus = 'Alta Rentabilidade'
-    profitabilityColor = '#059669'
+    profitabilityTone = 'success'
   } else if (realMarginData.realMarginPercentage >= 20) {
     profitabilityStatus = 'Rentabilidade Média'
-    profitabilityColor = '#d97706'
+    profitabilityTone = 'warning'
   } else {
     profitabilityStatus = 'Baixa Rentabilidade'
-    profitabilityColor = '#dc2626'
+    profitabilityTone = 'error'
   }
 
   return {
@@ -151,6 +152,6 @@ export const getProductPricingPreview = (
     projectedRevenue,
     projectedProfit,
     profitabilityStatus,
-    profitabilityColor,
+    profitabilityTone,
   }
 }
