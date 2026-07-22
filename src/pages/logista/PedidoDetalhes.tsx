@@ -9,6 +9,7 @@ import type { CatalogVariation, InternalProductRecord, ProductPricing, ShowcaseR
 import FramedImage from '../../components/FramedImage'
 import DeleteProductButton from './components/DeleteProductButton'
 import { getProductPricingPreview } from './productPricing'
+import { logistaCardStyle, logistaTheme } from './logistaTheme'
 
 interface InventoryRecord {
   total?: number
@@ -52,6 +53,18 @@ const currencyFormatter = new Intl.NumberFormat('pt-BR', {
   style: 'currency',
   currency: 'BRL',
 })
+
+const metricLabelStyle = {
+  fontSize: 14,
+  color: logistaTheme.colors.textMuted,
+  marginBottom: 4,
+} as const
+
+const summaryCardBaseStyle = {
+  borderRadius: 12,
+  padding: 10,
+  textAlign: 'center' as const,
+} as const
 
 const toNumber = (value: unknown) => {
   const numericValue = Number(value)
@@ -213,11 +226,11 @@ export default function PedidoDetalhes() {
   const totalProfit = productCards.reduce((sum, item) => sum + item.pricingPreview.projectedProfit, 0)
   
   if (loading) {
-    return <div style={{ padding: '24px' }}>Carregando...</div>
+    return <div style={{ padding: '24px', color: logistaTheme.colors.textMuted }}>Carregando...</div>
   }
   
   if (!purchase) {
-    return <div style={{ padding: '24px' }}>Pedido não encontrado</div>
+    return <div style={{ padding: '24px', color: logistaTheme.colors.errorText }}>Pedido não encontrado</div>
   }
   
   return (
@@ -229,28 +242,32 @@ export default function PedidoDetalhes() {
             style={{
               padding: '8px 16px',
               borderRadius: 8,
-              border: '1px solid #e5e7eb',
-              background: '#fff',
+              border: `1px solid ${logistaTheme.colors.border}`,
+              background: logistaTheme.colors.surface,
+              color: logistaTheme.colors.text,
               cursor: 'pointer',
-              marginTop: 4
+              marginTop: 4,
             }}
           >
             ← Voltar
           </button>
           <div>
             <h1 style={{ margin: 0, fontSize: 32 }}>{purchase.name}</h1>
-            <div style={{ color: '#6b7280', marginTop: 4 }}>
+            <div style={{ color: logistaTheme.colors.textMuted, marginTop: 4 }}>
               Detalhes do pedido e produtos
             </div>
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: isMobile ? 'stretch' : 'center', gap: 16, flexWrap: 'wrap', width: isMobile ? '100%' : 'auto' }}>
           <div style={{ textAlign: 'right' }}>
-            <div style={{ color: '#6b7280', fontSize: 14 }}>Status</div>
+            <div style={{ color: logistaTheme.colors.textMuted, fontSize: 14 }}>Status</div>
             <div style={{
               fontWeight: 700,
               fontSize: 16,
-              color: purchase.status === 'completed' ? '#059669' : '#d97706'
+              color:
+                purchase.status === 'completed'
+                  ? logistaTheme.colors.successText
+                  : logistaTheme.colors.warningText,
             }}>
               {purchase.status === 'completed' ? 'Concluído' : 'Rascunho'}
             </div>
@@ -261,11 +278,11 @@ export default function PedidoDetalhes() {
               style={{
                 padding: '10px 20px',
                 borderRadius: 12,
-                border: '1px solid #e5e7eb',
-                background: '#fff',
-                color: '#111827',
+              border: `1px solid ${logistaTheme.colors.border}`,
+              background: logistaTheme.colors.surface,
+              color: logistaTheme.colors.text,
                 fontWeight: 600,
-                cursor: 'pointer'
+              cursor: 'pointer',
               }}
             >
               Publicar na vitrine
@@ -277,10 +294,10 @@ export default function PedidoDetalhes() {
               padding: '10px 20px',
               borderRadius: 12,
               border: 'none',
-              background: 'linear-gradient(135deg, #c084fc 0%, #8b5cf6 100%)',
-              color: '#fff',
+              background: logistaTheme.colors.accent,
+              color: logistaTheme.colors.surface,
               fontWeight: 600,
-              cursor: 'pointer'
+              cursor: 'pointer',
             }}
           >
             + Adicionar Produto
@@ -289,39 +306,47 @@ export default function PedidoDetalhes() {
       </div>
       
       {/* Purchase Info */}
-      <div style={{
-        background: '#faf5ff',
-        border: '1px solid #e9d5ff',
-        borderRadius: 16,
-        padding: isMobile ? 16 : 24,
-        marginBottom: 24,
-        boxShadow: '0 1px 2px rgba(0,0,0,0.04)'
-      }}>
+      <div
+        style={{
+          ...logistaCardStyle,
+          background: logistaTheme.colors.accentSoft,
+          border: `1px solid ${logistaTheme.colors.accentBorder}`,
+          padding: isMobile ? 16 : 24,
+          marginBottom: 24,
+        }}
+      >
         <h2 style={{ margin: '0 0 16px 0', fontSize: 20 }}>Informações do Pedido</h2>
         
         <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, minmax(0, 1fr))' : 'repeat(4, minmax(0, 1fr))', gap: 16, marginBottom: 16 }}>
           <div>
-            <div style={{ fontSize: 14, color: '#6b7280', marginBottom: 4 }}>Total de Peças</div>
+            <div style={metricLabelStyle}>Total de Peças</div>
             <div style={{ fontWeight: 700, fontSize: 20 }}>{purchase.totalPieces}</div>
           </div>
           <div>
-            <div style={{ fontSize: 14, color: '#6b7280', marginBottom: 4 }}>Produtos</div>
+            <div style={metricLabelStyle}>Produtos</div>
             <div style={{ fontWeight: 700, fontSize: 20 }}>{totalProducts}</div>
           </div>
           <div>
-            <div style={{ fontSize: 14, color: '#6b7280', marginBottom: 4 }}>Logística Total</div>
+            <div style={metricLabelStyle}>Logística Total</div>
             <div style={{ fontWeight: 700, fontSize: 20 }}>
               R$ {((purchase.costs?.freight || 0) + (purchase.costs?.travel || 0) + (purchase.costs?.consultancy || 0) + (purchase.costs?.other || 0)).toFixed(2)}
             </div>
           </div>
           <div>
-            <div style={{ fontSize: 14, color: '#6b7280', marginBottom: 4 }}>Por Peça</div>
+            <div style={metricLabelStyle}>Por Peça</div>
             <div style={{ fontWeight: 700, fontSize: 20 }}>R$ {custoPorPeca}</div>
           </div>
         </div>
         
         {purchase.date && (
-          <div style={{ color: '#6b7280', fontSize: 14, borderTop: '1px solid #e5e7eb', paddingTop: 12 }}>
+          <div
+            style={{
+              color: logistaTheme.colors.textMuted,
+              fontSize: 14,
+              borderTop: `1px solid ${logistaTheme.colors.accentBorder}`,
+              paddingTop: 12,
+            }}
+          >
             Criado em {new Date(purchase.date).toLocaleDateString('pt-BR', {
               day: '2-digit',
               month: 'long',
@@ -342,7 +367,8 @@ export default function PedidoDetalhes() {
             fontWeight: 700,
             display: 'flex',
             alignItems: 'center',
-            gap: '8px'
+            gap: '8px',
+            color: logistaTheme.colors.text,
           }}>
             <FiPackage /> Produtos Adicionados ao Pedido ({products.length})
           </h2>
@@ -350,12 +376,15 @@ export default function PedidoDetalhes() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {productCards.map(({ product, variations, availableStock, pricingPreview }) => {
               return (
-                <div key={product.id} style={{
-                  background: '#faf5ff',
-                  border: '1px solid #e9d5ff',
-                  borderRadius: 16,
-                  padding: isMobile ? 16 : 24,
-                }}>
+                <div
+                  key={product.id}
+                  style={{
+                    ...logistaCardStyle,
+                    background: logistaTheme.colors.accentSoft,
+                    border: `1px solid ${logistaTheme.colors.accentBorder}`,
+                    padding: isMobile ? 16 : 24,
+                  }}
+                >
                   <div
                     style={{
                       display: 'grid',
@@ -371,8 +400,8 @@ export default function PedidoDetalhes() {
                           height: isMobile ? 180 : 140,
                           borderRadius: 16,
                           overflow: 'hidden',
-                          border: '1px solid #e5e7eb',
-                          background: '#fff',
+                          border: `1px solid ${logistaTheme.colors.border}`,
+                          background: logistaTheme.colors.surface,
                           position: 'relative',
                         }}
                       >
@@ -391,7 +420,7 @@ export default function PedidoDetalhes() {
                               inset: 0,
                               display: 'grid',
                               placeItems: 'center',
-                              color: '#6b7280',
+                              color: logistaTheme.colors.textMuted,
                               textAlign: 'center',
                               padding: 16,
                             }}
@@ -425,7 +454,7 @@ export default function PedidoDetalhes() {
                           {product.supplierName && (
                             <div style={{ 
                               fontSize: 14, 
-                              color: '#6b7280', 
+                              color: logistaTheme.colors.textMuted, 
                               marginTop: 6,
                               display: 'flex',
                               alignItems: 'center',
@@ -444,25 +473,25 @@ export default function PedidoDetalhes() {
                         marginBottom: 16
                       }}>
                         <div>
-                          <div style={{ fontSize: 14, color: '#6b7280', marginBottom: 4 }}>Preço com margem</div>
-                          <div style={{ fontSize: 18, fontWeight: 700, color: '#059669' }}>
+                          <div style={metricLabelStyle}>Preço com margem</div>
+                          <div style={{ fontSize: 18, fontWeight: 700, color: logistaTheme.colors.successText }}>
                             {currencyFormatter.format(pricingPreview.priceWithMargin)}
                           </div>
                         </div>
                         <div>
-                          <div style={{ fontSize: 14, color: '#6b7280', marginBottom: 4 }}>Preço final</div>
-                          <div style={{ fontSize: 18, fontWeight: 700, color: '#2563eb' }}>
+                          <div style={metricLabelStyle}>Preço final</div>
+                          <div style={{ fontSize: 18, fontWeight: 700, color: logistaTheme.colors.accentDark }}>
                             {currencyFormatter.format(pricingPreview.chosenFinalPrice)}
                           </div>
                         </div>
                         <div>
-                          <div style={{ fontSize: 14, color: '#6b7280', marginBottom: 4 }}>Estoque disponível</div>
+                          <div style={metricLabelStyle}>Estoque disponível</div>
                           <div style={{ fontSize: 18, fontWeight: 700 }}>
                             {availableStock}
                           </div>
                         </div>
                         <div>
-                          <div style={{ fontSize: 14, color: '#6b7280', marginBottom: 4 }}>Margem real</div>
+                          <div style={metricLabelStyle}>Margem real</div>
                           <div style={{ fontSize: 18, fontWeight: 700 }}>
                             {currencyFormatter.format(pricingPreview.realMargin)}
                           </div>
@@ -470,15 +499,15 @@ export default function PedidoDetalhes() {
                       </div>
                       
                       <div style={{ marginBottom: 16 }}>
-                        <div style={{ fontSize: 14, color: '#6b7280', marginBottom: 8 }}>Variações:</div>
+                        <div style={{ fontSize: 14, color: logistaTheme.colors.textMuted, marginBottom: 8 }}>Variações:</div>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center' }}>
                           {variations.map((variation, idx) => (
                             <div key={idx} style={{
-                              background: '#fff',
-                              border: '1px solid #e5e7eb',
+                              background: logistaTheme.colors.surface,
+                              border: `1px solid ${logistaTheme.colors.border}`,
                               borderRadius: 8,
                               padding: '6px 12px',
-                              fontSize: 14
+                              fontSize: 14,
                             }}>
                               {variation.size}
                               {variation.color ? ` • ${variation.color}` : ''}
@@ -490,14 +519,14 @@ export default function PedidoDetalhes() {
                       </div>
                       
                       <div style={{
-                        background: '#ecfdf5',
-                        border: '1px solid #10b981',
+                        background: logistaTheme.colors.successBackground,
+                        border: `1px solid ${logistaTheme.colors.successBorder}`,
                         borderRadius: 12,
                         padding: 16,
-                        textAlign: 'center'
+                        textAlign: 'center',
                       }}>
-                        <div style={{ fontSize: 14, color: '#059669', marginBottom: 4 }}>Receita Total</div>
-                        <div style={{ fontSize: 20, fontWeight: 700, color: '#059669' }}>
+                        <div style={{ fontSize: 14, color: logistaTheme.colors.successText, marginBottom: 4 }}>Receita Total</div>
+                        <div style={{ fontSize: 20, fontWeight: 700, color: logistaTheme.colors.successText }}>
                           {currencyFormatter.format(pricingPreview.projectedRevenue)}
                         </div>
                       </div>
@@ -525,10 +554,10 @@ export default function PedidoDetalhes() {
                               width:150,
 
                               border: 'none',
-                              background: 'linear-gradient(135deg, #c084fc 0%, #8b5cf6 100%)',
-                              color: '#fff',
+                              background: logistaTheme.colors.accent,
+                              color: logistaTheme.colors.surface,
                               fontWeight: 600,
-                              cursor: 'pointer'
+                              cursor: 'pointer',
                             }}
                           >
                             <FiEdit /> Editar
@@ -542,55 +571,56 @@ export default function PedidoDetalhes() {
           </div>
           
           {/* Summary */}
-          <div style={{
-            background: '#faf5ff',
-            border: '1px solid #e9d5ff',
-            borderRadius: 16,
-            padding: isMobile ? 16 : 24,
-            marginTop: 24
-          }}>
+          <div
+            style={{
+              ...logistaCardStyle,
+              background: logistaTheme.colors.accentSoft,
+              border: `1px solid ${logistaTheme.colors.accentBorder}`,
+              padding: isMobile ? 16 : 24,
+              marginTop: 24,
+            }}
+          >
             <h3 style={{ margin: '0 0 16px 0', fontSize: 20 }}>Resumo Total</h3>
             
-            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, minmax(0, 1fr))' : 'repeat(4, minmax(0, 1fr))', gap: 16 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140, 1fr)', gap: 16 }}>
               <div style={{
-                background: '#f3e8ff',
-                borderRadius: 12,
-                padding: 20,
-                textAlign: 'center'
+                ...summaryCardBaseStyle,
+                background: logistaTheme.colors.surface,
+                border: `1px solid ${logistaTheme.colors.accentBorder}`,
               }}>
-                <div style={{ fontSize: 28, fontWeight: 700, color: '#8b5cf6' }}>{totalProducts}</div>
-                <div style={{ color: '#6b7280', fontSize: 14 }}>Produtos</div>
+                <div style={{ fontSize: 28, fontWeight: 700, color: logistaTheme.colors.accentDark }}>{totalProducts}</div>
+                <div style={{ color: logistaTheme.colors.textMuted, fontSize: 14 }}>Produtos</div>
               </div>
               
               <div style={{
-                background: '#f3e8ff',
-                borderRadius: 12,
-                padding: 20,
-                textAlign: 'center'
+                ...summaryCardBaseStyle,
+                background: logistaTheme.colors.surface,
+                border: `1px solid ${logistaTheme.colors.accentBorder}`,
               }}>
-                <div style={{ fontSize: 28, fontWeight: 700, color: '#8b5cf6' }}>{totalAvailableStock}</div>
-                <div style={{ color: '#6b7280', fontSize: 14 }}>Estoque Disponível</div>
+                <div style={{ fontSize: 28, fontWeight: 700, color: logistaTheme.colors.accentDark }}>{totalAvailableStock}</div>
+                <div style={{ color: logistaTheme.colors.textMuted, fontSize: 14 }}>Estoque Disponível</div>
               </div>
               
               <div style={{
-                background: '#ecfdf5',
-                borderRadius: 12,
-                padding: 20,
-                textAlign: 'center'
+                ...summaryCardBaseStyle,
+                background: logistaTheme.colors.successBackground,
+                border: `1px solid ${logistaTheme.colors.successBorder}`,
               }}>
-                <div style={{ fontSize: 24, fontWeight: 700, color: '#059669' }}>{currencyFormatter.format(totalRevenue)}</div>
-                <div style={{ color: '#6b7280', fontSize: 14 }}>Receita Total</div>
+                <div style={{ fontSize: 24, fontWeight: 700, color: logistaTheme.colors.successText }}>
+                  {currencyFormatter.format(totalRevenue)}
+                </div>
+                <div style={{ color: logistaTheme.colors.textMuted, fontSize: 14 }}>Receita Total</div>
               </div>
               
               <div style={{
-                background: '#fef3c7',
-                borderRadius: 12,
-                padding: 20,
-                textAlign: 'center',
-                border: '1px solid #fbbf24'
+                ...summaryCardBaseStyle,
+                background: logistaTheme.colors.warningBackground,
+                border: `1px solid ${logistaTheme.colors.warningBorder}`,
               }}>
-                <div style={{ fontSize: 24, fontWeight: 700, color: '#d97706' }}>{currencyFormatter.format(totalProfit)}</div>
-                <div style={{ color: '#6b7280', fontSize: 14 }}>Lucro Pela Margem Real</div>
+                <div style={{ fontSize: 24, fontWeight: 700, color: logistaTheme.colors.warningText }}>
+                  {currencyFormatter.format(totalProfit)}
+                </div>
+                <div style={{ color: logistaTheme.colors.textMuted, fontSize: 14 }}>Lucro Pela Margem Real</div>
               </div>
             </div>
           </div>
@@ -598,7 +628,7 @@ export default function PedidoDetalhes() {
       )}
       
       {products.length === 0 && (
-        <div style={{ textAlign: 'center', padding: 48, color: '#6b7280' }}>
+        <div style={{ textAlign: 'center', padding: 48, color: logistaTheme.colors.textMuted }}>
           Nenhum produto adicionado a este pedido.
         </div>
       )}

@@ -15,6 +15,7 @@ import { getDateInputValue, getDateRange, hasVariationStock } from './vendas/hel
 import type { CounterSaleItem, ReservedSaleViewRecord, SaleItemRecord, SaleRecord, SaleableVariationRow } from './vendas/types'
 import { CATALOG_SYNC_PATH, patchCachedStockProduct } from './stockCache'
 import { useMediaQuery } from '../../hooks/useMediaQuery'
+import { logistaTheme } from './logistaTheme'
 
 export default function VendasLogista() {
   const { user } = useAuth()
@@ -34,39 +35,71 @@ export default function VendasLogista() {
   const [deliveringSaleId, setDeliveringSaleId] = useState<string | null>(null)
   const [cancellingReservationId, setCancellingReservationId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [warningMessage, setWarningMessage] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const lastCatalogSyncRef = useRef(0)
 
   const loadData = useCallback(async () => {
     try {
       setLoading(true)
-      const [productsSnapshot, showcaseSnapshot, salesSnapshot, cartReservationsSnapshot] = await Promise.all([
+      setError(null)
+      setWarningMessage(null)
+
+      const [productsResult, showcaseResult, salesResult, cartReservationsResult] = await Promise.allSettled([
         get(ref(rtdb, 'products')),
         get(ref(rtdb, 'showcase')),
         get(ref(rtdb, 'sales')),
         get(ref(rtdb, 'cartReservations')),
       ])
 
+      if (
+        productsResult.status === 'rejected' ||
+        showcaseResult.status === 'rejected' ||
+        salesResult.status === 'rejected'
+      ) {
+        let firstError: unknown = new Error('Nao foi possivel carregar as vendas do logista.')
+        if (productsResult.status === 'rejected') {
+          firstError = productsResult.reason
+        } else if (showcaseResult.status === 'rejected') {
+          firstError = showcaseResult.reason
+        } else if (salesResult.status === 'rejected') {
+          firstError = salesResult.reason
+        }
+
+        throw firstError
+      }
+
+      const productsSnapshot = productsResult.value
+      const showcaseSnapshot = showcaseResult.value
+      const salesSnapshot = salesResult.value
       const productsData = (productsSnapshot.exists() ? productsSnapshot.val() : {}) as Record<string, InternalProductRecord>
       const showcaseData = (showcaseSnapshot.exists() ? showcaseSnapshot.val() : {}) as Record<string, ShowcaseRecord>
       const salesData = (salesSnapshot.exists() ? salesSnapshot.val() : {}) as Record<string, SaleRecord>
-      const cartReservationsData = (cartReservationsSnapshot.exists() ? cartReservationsSnapshot.val() : {}) as Record<
-        string,
-        {
-          status?: string
-          updatedAt?: number
-          items?: Record<
+      const cartReservationsData =
+        cartReservationsResult.status === 'fulfilled'
+          ? ((cartReservationsResult.value.exists() ? cartReservationsResult.value.val() : {}) as Record<
             string,
             {
-              itemId?: string
-              productId?: string
-              variationKey?: string
-              quantity?: number
+              status?: string
               updatedAt?: number
-            } | null
-          >
-        }
-      >
+              items?: Record<
+                string,
+                {
+                  itemId?: string
+                  productId?: string
+                  variationKey?: string
+                  quantity?: number
+                  updatedAt?: number
+                } | null
+              >
+            }
+          >)
+          : {}
+
+      if (cartReservationsResult.status === 'rejected') {
+        console.warn('Nao foi possivel ler as reservas de carrinho para a tela de vendas:', cartReservationsResult.reason)
+        setWarningMessage('As reservas de carrinho nao puderam ser carregadas no momento, mas as demais vendas foram exibidas normalmente.')
+      }
 
       const nextCatalogRows = Object.keys(productsData)
         .flatMap((productId) => {
@@ -773,9 +806,9 @@ export default function VendasLogista() {
         <div
           style={{
             borderRadius: 14,
-            border: '1px solid #fdba74',
-            background: '#fff7ed',
-            color: '#9a3412',
+            border: `1px solid ${logistaTheme.colors.errorBorder}`,
+            background: logistaTheme.colors.errorBackground,
+            color: logistaTheme.colors.errorText,
             padding: '14px 16px',
           }}
         >
@@ -783,13 +816,27 @@ export default function VendasLogista() {
         </div>
       ) : null}
 
+      {warningMessage ? (
+        <div
+          style={{
+            borderRadius: 14,
+            border: `1px solid ${logistaTheme.colors.warningBorder}`,
+            background: logistaTheme.colors.warningBackground,
+            color: logistaTheme.colors.warningText,
+            padding: '14px 16px',
+          }}
+        >
+          {warningMessage}
+        </div>
+      ) : null}
+
       {successMessage ? (
         <div
           style={{
             borderRadius: 14,
-            border: '1px solid #86efac',
-            background: '#f0fdf4',
-            color: '#166534',
+            border: `1px solid ${logistaTheme.colors.successBorder}`,
+            background: logistaTheme.colors.successBackground,
+            color: logistaTheme.colors.successText,
             padding: '14px 16px',
           }}
         >

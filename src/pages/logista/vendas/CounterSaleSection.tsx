@@ -3,6 +3,7 @@ import { useMediaQuery } from '../../../hooks/useMediaQuery'
 import { variationLabel } from '../../../utils/catalog'
 import { cardStyle, formatCurrency } from './helpers'
 import type { CounterSaleItem, SaleableVariationRow } from './types'
+import { logistaInputStyle, logistaTheme } from '../logistaTheme'
 
 type CounterSaleSectionProps = {
   loading: boolean
@@ -47,21 +48,28 @@ export default function CounterSaleSection({
 
         <div style={{ display: 'grid', gap: 12 }}>
           <label style={{ display: 'grid', gap: 6 }}>
-            <span style={{ fontSize: 14, color: '#334155' }}>Buscar por codigo ou descricao</span>
+            <span style={{ fontSize: 14, color: logistaTheme.colors.text }}>Buscar por codigo ou descricao</span>
             <input
               value={search}
               onChange={(event) => onSearchChange(event.target.value)}
               placeholder="Ex.: SKU, nome, descricao, cor ou tamanho"
-              style={{ padding: '12px 14px', borderRadius: 12, border: '1px solid #cbd5e1' }}
+              style={logistaInputStyle}
             />
           </label>
         </div>
 
         <div style={{ marginTop: 20, display: 'grid', gap: 12 }}>
-          {loading ? <div style={{ color: '#6b7280' }}>Carregando catalogo...</div> : null}
+          {loading ? <div style={{ color: logistaTheme.colors.textMuted }}>Carregando catalogo...</div> : null}
 
           {!loading && filteredCatalog.length === 0 ? (
-            <div style={{ padding: 20, borderRadius: 14, background: '#f8fafc', color: '#64748b' }}>
+            <div
+              style={{
+                padding: 20,
+                borderRadius: 14,
+                background: logistaTheme.colors.surfaceAlt,
+                color: logistaTheme.colors.textMuted,
+              }}
+            >
               Nenhum item encontrado com esse codigo ou descricao.
             </div>
           ) : null}
@@ -70,7 +78,7 @@ export default function CounterSaleSection({
             <div
               key={row.id}
               style={{
-                border: '1px solid #e5e7eb',
+                border: `1px solid ${logistaTheme.colors.border}`,
                 borderRadius: 14,
                 padding: 16,
                 display: 'grid',
@@ -81,21 +89,32 @@ export default function CounterSaleSection({
             >
               <div>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 6 }}>
-                  <span style={{ fontWeight: 700, color: '#0f172a' }}>{row.productName}</span>
+                  <span style={{ fontWeight: 700, color: logistaTheme.colors.text }}>{row.productName}</span>
                   <span
                     style={{
                       padding: '2px 10px',
                       borderRadius: 999,
-                      background: '#f1f5f9',
-                      color: '#334155',
+                      background: logistaTheme.colors.accentSoft,
+                      color: logistaTheme.colors.accentDark,
                       fontSize: 12,
                     }}
                   >
                     Codigo: {row.productId}
                   </span>
                 </div>
-                <div style={{ color: '#475569', fontSize: 14 }}>{row.description || 'Sem descricao cadastrada.'}</div>
-                <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 10, color: '#334155', fontSize: 14 }}>
+                <div style={{ color: logistaTheme.colors.textMuted, fontSize: 14 }}>
+                  {row.description || 'Sem descricao cadastrada.'}
+                </div>
+                <div
+                  style={{
+                    display: 'flex',
+                    gap: 12,
+                    flexWrap: 'wrap',
+                    marginTop: 10,
+                    color: logistaTheme.colors.text,
+                    fontSize: 14,
+                  }}
+                >
                   <span>{variationLabel(row.variation)}</span>
                   <span>Disponivel: {row.variation.stock}</span>
                   <span>{formatCurrency(row.price)}</span>
@@ -108,8 +127,8 @@ export default function CounterSaleSection({
                   padding: '12px 14px',
                   borderRadius: 12,
                   border: 'none',
-                  background: 'linear-gradient(135deg, #c084fc 0%, #8b5cf6 100%)',
-                  color: '#fff',
+                  background: logistaTheme.colors.accent,
+                  color: logistaTheme.colors.surface,
                   fontWeight: 700,
                   cursor: 'pointer',
                 }}
@@ -128,24 +147,31 @@ export default function CounterSaleSection({
         </div>
 
         {selectedItems.length === 0 ? (
-          <div style={{ padding: 18, borderRadius: 14, background: '#f8fafc', color: '#64748b' }}>
+          <div
+            style={{
+              padding: 18,
+              borderRadius: 14,
+              background: logistaTheme.colors.surfaceAlt,
+              color: logistaTheme.colors.textMuted,
+            }}
+          >
             Adicione um ou mais itens para registrar a venda do atendimento no balcao.
           </div>
         ) : (
           <div style={{ display: 'grid', gap: 12 }}>
             {selectedItems.map((item) => (
-              <div key={item.id} style={{ border: '1px solid #e5e7eb', borderRadius: 14, padding: 14 }}>
+              <div key={item.id} style={{ border: `1px solid ${logistaTheme.colors.border}`, borderRadius: 14, padding: 14 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
                   <div>
                     <div style={{ fontWeight: 700 }}>{item.productName}</div>
-                    <div style={{ color: '#64748b', fontSize: 14 }}>{variationLabel(item.variation)}</div>
+                    <div style={{ color: logistaTheme.colors.textMuted, fontSize: 14 }}>{variationLabel(item.variation)}</div>
                   </div>
                   <button
                     onClick={() => onRemoveSelectedItem(item.id)}
                     style={{
                       border: 'none',
                       background: 'transparent',
-                      color: '#ef4444',
+                      color: logistaTheme.colors.errorText,
                       cursor: 'pointer',
                       padding: 0,
                     }}
@@ -162,7 +188,12 @@ export default function CounterSaleSection({
                     max={item.variation.stock}
                     value={item.qty}
                     onChange={(event) => onUpdateSelectedQty(item.id, Number(event.target.value))}
-                    style={{ width: isMobile ? '100%' : 88, maxWidth: isMobile ? '100%' : 88, padding: '10px 12px', borderRadius: 10, border: '1px solid #cbd5e1' }}
+                    style={{
+                      ...logistaInputStyle,
+                      width: isMobile ? '100%' : 88,
+                      maxWidth: isMobile ? '100%' : 88,
+                      padding: '10px 12px',
+                    }}
                   />
                   <div style={{ fontWeight: 700 }}>{formatCurrency(item.qty * item.price)}</div>
                 </div>
@@ -171,12 +202,27 @@ export default function CounterSaleSection({
           </div>
         )}
 
-        <div style={{ marginTop: 18, paddingTop: 18, borderTop: '1px solid #e5e7eb' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, color: '#475569' }}>
+        <div style={{ marginTop: 18, paddingTop: 18, borderTop: `1px solid ${logistaTheme.colors.border}` }}>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              marginBottom: 8,
+              color: logistaTheme.colors.textMuted,
+            }}
+          >
             <span>Itens</span>
             <strong>{selectedItems.reduce((sum, item) => sum + item.qty, 0)}</strong>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 18, color: '#0f172a', fontSize: 18 }}>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              marginBottom: 18,
+              color: logistaTheme.colors.text,
+              fontSize: 18,
+            }}
+          >
             <span>Total</span>
             <strong>{formatCurrency(selectedTotal)}</strong>
           </div>
@@ -188,9 +234,9 @@ export default function CounterSaleSection({
                 flex: '1 1 180px',
                 padding: '14px 16px',
                 borderRadius: 14,
-                border: '1px solid #f59e0b',
-                background: '#fff7ed',
-                color: '#b45309',
+                border: `1px solid ${logistaTheme.colors.warningBorder}`,
+                background: logistaTheme.colors.warningBackground,
+                color: logistaTheme.colors.warningText,
                 fontWeight: 800,
                 cursor: openingPayment || reservingProducts || selectedItems.length === 0 ? 'not-allowed' : 'pointer',
                 opacity: openingPayment || reservingProducts || selectedItems.length === 0 ? 0.7 : 1,
@@ -208,8 +254,8 @@ export default function CounterSaleSection({
                 padding: '14px 16px',
                 borderRadius: 14,
                 border: 'none',
-                background: '#0f766e',
-                color: '#fff',
+                background: logistaTheme.colors.accent,
+                color: logistaTheme.colors.surface,
                 fontWeight: 800,
                 cursor: openingPayment || reservingProducts || selectedItems.length === 0 ? 'not-allowed' : 'pointer',
                 opacity: openingPayment || reservingProducts || selectedItems.length === 0 ? 0.7 : 1,

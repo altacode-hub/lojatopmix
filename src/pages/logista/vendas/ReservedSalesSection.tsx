@@ -1,6 +1,7 @@
 import { FiBookmark } from 'react-icons/fi'
 import { cardStyle, formatCurrency, formatDateTime, getStatusMeta } from './helpers'
 import type { ReservedSaleViewRecord } from './types'
+import { logistaTheme } from '../logistaTheme'
 
 type ReservedSalesSectionProps = {
   reservedSales: ReservedSaleViewRecord[]
@@ -22,13 +23,20 @@ export default function ReservedSalesSection({
           <FiBookmark size={18} />
           <h2 style={{ margin: 0, fontSize: 24 }}>Vendas reservadas</h2>
         </div>
-        <div style={{ color: '#64748b' }}>
+        <div style={{ color: logistaTheme.colors.textMuted }}>
           Reservas de balcao e compras online aguardando entrega aparecem aqui para dar visao ampla ao logista.
         </div>
       </div>
 
       {reservedSales.length === 0 ? (
-        <div style={{ padding: 18, borderRadius: 14, background: '#f8fafc', color: '#64748b' }}>
+        <div
+          style={{
+            padding: 18,
+            borderRadius: 14,
+            background: logistaTheme.colors.surfaceAlt,
+            color: logistaTheme.colors.textMuted,
+          }}
+        >
           Nenhuma reserva de balcao ou compra online pendente no momento.
         </div>
       ) : (
@@ -56,7 +64,7 @@ export default function ReservedSalesSection({
               <div
                 key={sale.saleId}
                 style={{
-                  border: '1px solid #e5e7eb',
+                  border: `1px solid ${logistaTheme.colors.border}`,
                   borderRadius: 16,
                   padding: 16,
                   display: 'grid',
@@ -71,8 +79,8 @@ export default function ReservedSalesSection({
                         style={{
                           padding: '4px 10px',
                           borderRadius: 999,
-                          background: '#f1f5f9',
-                          color: '#334155',
+                          background: logistaTheme.colors.accentSoft,
+                          color: logistaTheme.colors.accentDark,
                           fontSize: 12,
                           fontWeight: 700,
                         }}
@@ -92,15 +100,15 @@ export default function ReservedSalesSection({
                         {statusMeta.label}
                       </span>
                     </div>
-                    <div style={{ marginTop: 6, color: '#64748b', fontSize: 14 }}>
+                    <div style={{ marginTop: 6, color: logistaTheme.colors.textMuted, fontSize: 14 }}>
                       {isOnlineSale ? 'Pedido' : isCartReservation ? 'Carrinho' : 'Codigo'}: {saleIdentifier} • {saleDateLabel}{' '}
                       {formatDateTime(sale.reservedAt || sale.createdAt)}
                     </div>
                   </div>
 
                   <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontWeight: 800, color: '#0f172a' }}>{formatCurrency(sale.totalAmount)}</div>
-                    <div style={{ color: '#64748b', fontSize: 14 }}>{sale.totalItems} item(ns)</div>
+                    <div style={{ fontWeight: 800, color: logistaTheme.colors.text }}>{formatCurrency(sale.totalAmount)}</div>
+                    <div style={{ color: logistaTheme.colors.textMuted, fontSize: 14 }}>{sale.totalItems} item(ns)</div>
                   </div>
                 </div>
 
@@ -114,7 +122,7 @@ export default function ReservedSalesSection({
                         gap: 12,
                         padding: '10px 12px',
                         borderRadius: 12,
-                        background: '#f8fafc',
+                        background: logistaTheme.colors.surfaceAlt,
                       }}
                     >
                       <span>
@@ -128,7 +136,7 @@ export default function ReservedSalesSection({
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
-                  <div style={{ color: '#475569', fontSize: 14 }}>{saleNote}</div>
+                  <div style={{ color: logistaTheme.colors.textMuted, fontSize: 14 }}>{saleNote}</div>
 
                   {canCancelReservation || canOpenPayment ? (
                     <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
@@ -139,9 +147,9 @@ export default function ReservedSalesSection({
                           style={{
                             padding: '12px 16px',
                             borderRadius: 12,
-                            border: '1px solid #fecaca',
-                            background: '#fff1f2',
-                            color: '#be123c',
+                            border: `1px solid ${logistaTheme.colors.errorBorder}`,
+                            background: logistaTheme.colors.errorBackground,
+                            color: logistaTheme.colors.errorText,
                             fontWeight: 700,
                             cursor: isCancelling ? 'not-allowed' : 'pointer',
                             opacity: isCancelling ? 0.7 : 1,
@@ -158,8 +166,8 @@ export default function ReservedSalesSection({
                             padding: '12px 16px',
                             borderRadius: 12,
                             border: 'none',
-                            background: '#0f766e',
-                            color: '#fff',
+                            background: logistaTheme.colors.accent,
+                            color: logistaTheme.colors.surface,
                             fontWeight: 700,
                             cursor: 'pointer',
                           }}

@@ -1,6 +1,7 @@
 import { FiCheckCircle, FiClock, FiPackage, FiShoppingCart } from 'react-icons/fi'
 import { cardStyle, formatCurrency, formatDateTime, getStatusMeta } from './helpers'
 import type { SaleRecord } from './types'
+import { logistaInputStyle, logistaTheme } from '../logistaTheme'
 
 type SalesHistorySectionProps = {
   periodStart: string
@@ -33,52 +34,65 @@ export default function SalesHistorySection({
 
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
           <label style={{ display: 'grid', gap: 6 }}>
-            <span style={{ fontSize: 13, color: '#475569' }}>Início</span>
+            <span style={{ fontSize: 13, color: logistaTheme.colors.textMuted }}>Início</span>
             <input
               type="date"
               value={periodStart}
               onChange={(event) => onPeriodStartChange(event.target.value)}
-              style={{ padding: '10px 12px', borderRadius: 10, border: '1px solid #cbd5e1' }}
+              style={{ ...logistaInputStyle, padding: '10px 12px' }}
             />
           </label>
           <label style={{ display: 'grid', gap: 6 }}>
-            <span style={{ fontSize: 13, color: '#475569' }}>Fim</span>
+            <span style={{ fontSize: 13, color: logistaTheme.colors.textMuted }}>Fim</span>
             <input
               type="date"
               value={periodEnd}
               onChange={(event) => onPeriodEndChange(event.target.value)}
-              style={{ padding: '10px 12px', borderRadius: 10, border: '1px solid #cbd5e1' }}
+              style={{ ...logistaInputStyle, padding: '10px 12px' }}
             />
           </label>
         </div>
       </div>
 
       <div style={{ display: 'grid', gap: 16, gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', marginBottom: 20 }}>
-        <div style={{ ...cardStyle, padding: 16 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#64748b' }}>
+        <div style={{ ...cardStyle, padding: 16, background: logistaTheme.colors.accentSoft, border: `1px solid ${logistaTheme.colors.accentBorder}` }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: logistaTheme.colors.textMuted }}>
             <FiShoppingCart />
             <span>Vendas</span>
           </div>
-          <div style={{ marginTop: 8, fontSize: 28, fontWeight: 800 }}>{historyStats.totalSales}</div>
+          <div style={{ marginTop: 8, fontSize: 28, fontWeight: 800, color: logistaTheme.colors.accentDark }}>
+            {historyStats.totalSales}
+          </div>
         </div>
-        <div style={{ ...cardStyle, padding: 16 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#64748b' }}>
+        <div style={{ ...cardStyle, padding: 16, background: logistaTheme.colors.successBackground, border: `1px solid ${logistaTheme.colors.successBorder}` }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: logistaTheme.colors.successText }}>
             <FiCheckCircle />
             <span>Faturamento</span>
           </div>
-          <div style={{ marginTop: 8, fontSize: 28, fontWeight: 800 }}>{formatCurrency(historyStats.totalRevenue)}</div>
+          <div style={{ marginTop: 8, fontSize: 28, fontWeight: 800, color: logistaTheme.colors.successText }}>
+            {formatCurrency(historyStats.totalRevenue)}
+          </div>
         </div>
-        <div style={{ ...cardStyle, padding: 16 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#64748b' }}>
+        <div style={{ ...cardStyle, padding: 16, background: logistaTheme.colors.warningBackground, border: `1px solid ${logistaTheme.colors.warningBorder}` }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: logistaTheme.colors.warningText }}>
             <FiClock />
             <span>Itens vendidos</span>
           </div>
-          <div style={{ marginTop: 8, fontSize: 28, fontWeight: 800 }}>{historyStats.totalItems}</div>
+          <div style={{ marginTop: 8, fontSize: 28, fontWeight: 800, color: logistaTheme.colors.warningText }}>
+            {historyStats.totalItems}
+          </div>
         </div>
       </div>
 
       {filteredSales.length === 0 ? (
-        <div style={{ padding: 18, borderRadius: 14, background: '#f8fafc', color: '#64748b' }}>
+        <div
+          style={{
+            padding: 18,
+            borderRadius: 14,
+            background: logistaTheme.colors.surfaceAlt,
+            color: logistaTheme.colors.textMuted,
+          }}
+        >
           Nenhuma venda encontrada no periodo selecionado.
         </div>
       ) : (
@@ -90,7 +104,7 @@ export default function SalesHistorySection({
               <div
                 key={sale.saleId}
                 style={{
-                  border: '1px solid #e5e7eb',
+                  border: `1px solid ${logistaTheme.colors.border}`,
                   borderRadius: 16,
                   padding: 16,
                   display: 'grid',
@@ -114,14 +128,16 @@ export default function SalesHistorySection({
                         {statusMeta.label}
                       </span>
                     </div>
-                    <div style={{ marginTop: 6, color: '#64748b', fontSize: 14 }}>
+                    <div style={{ marginTop: 6, color: logistaTheme.colors.textMuted, fontSize: 14 }}>
                       Codigo: {sale.saleId} • Criada em {formatDateTime(sale.createdAt)}
                     </div>
                   </div>
 
                   <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontWeight: 800, fontSize: 20 }}>{formatCurrency(sale.totalAmount)}</div>
-                    <div style={{ color: '#64748b', fontSize: 14 }}>{sale.totalItems} item(ns)</div>
+                    <div style={{ fontWeight: 800, fontSize: 20, color: logistaTheme.colors.text }}>
+                      {formatCurrency(sale.totalAmount)}
+                    </div>
+                    <div style={{ color: logistaTheme.colors.textMuted, fontSize: 14 }}>{sale.totalItems} item(ns)</div>
                   </div>
                 </div>
 
@@ -135,7 +151,7 @@ export default function SalesHistorySection({
                         gap: 12,
                         padding: '10px 12px',
                         borderRadius: 12,
-                        background: '#f8fafc',
+                        background: logistaTheme.colors.surfaceAlt,
                       }}
                     >
                       <span>
@@ -148,14 +164,24 @@ export default function SalesHistorySection({
                   ))}
                 </div>
 
-                <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', color: '#475569', fontSize: 14 }}>
+                <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', color: logistaTheme.colors.textMuted, fontSize: 14 }}>
                   {sale.customer?.name ? <span>Cliente: {sale.customer.name}</span> : null}
                   {sale.orderNsu ? <span>Pedido online: {sale.orderNsu}</span> : null}
                   {sale.deliveredAt ? <span>Entregue em {formatDateTime(sale.deliveredAt)}</span> : null}
                 </div>
 
                 {sale.alerts && sale.alerts.length > 0 ? (
-                  <div style={{ display: 'grid', gap: 6, color: '#9a3412', background: '#fff7ed', borderRadius: 12, padding: 12 }}>
+                  <div
+                    style={{
+                      display: 'grid',
+                      gap: 6,
+                      color: logistaTheme.colors.warningText,
+                      background: logistaTheme.colors.warningBackground,
+                      borderRadius: 12,
+                      padding: 12,
+                      border: `1px solid ${logistaTheme.colors.warningBorder}`,
+                    }}
+                  >
                     {sale.alerts.map((alert, index) => (
                       <div key={`${sale.saleId}-history-alert-${index}`}>{alert}</div>
                     ))}

@@ -2,6 +2,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { FiHome, FiPlusSquare, FiClock, FiTag, FiHelpCircle, FiLogOut, FiShoppingCart, FiPackage } from 'react-icons/fi'
 import { useMediaQuery } from '../../hooks/useMediaQuery'
+import { logistaTheme } from './logistaTheme'
 
 interface SidebarLogistaProps {
   isOpen: boolean
@@ -27,12 +28,27 @@ export default function SidebarLogista({ isOpen, onClose }: SidebarLogistaProps)
     }
   }
 
+  const getLinkStyle = (active: boolean) => ({
+    padding: '10px 12px',
+    borderRadius: 10,
+    textDecoration: 'none',
+    color: active ? logistaTheme.colors.accentDark : logistaTheme.colors.text,
+    background: active ? logistaTheme.colors.accentSoft : 'transparent',
+    border: active ? `1px solid ${logistaTheme.colors.accentBorder}` : '1px solid transparent',
+    display: 'flex',
+    alignItems: 'center',
+    gap: 10,
+    textAlign: 'left' as const,
+  })
+
   return (
     <aside
       style={{
         width: isMobile ? (isOpen ? 240 : 0) : 240,
-        background: '#fdf2f8',
-        borderRight: isMobile ? (isOpen ? '1px solid #f3e8ff' : 'none') : '1px solid #f3e8ff',
+        background: logistaTheme.colors.surfaceAlt,
+        borderRight: isMobile
+          ? (isOpen ? `1px solid ${logistaTheme.colors.accentBorder}` : 'none')
+          : `1px solid ${logistaTheme.colors.accentBorder}`,
         display: 'flex',
         flexDirection: 'column',
         padding: isMobile ? (isOpen ? 16 : 0) : 16,
@@ -46,25 +62,26 @@ export default function SidebarLogista({ isOpen, onClose }: SidebarLogistaProps)
         transition: 'all 0.3s ease',
       }}
     >
-      <div style={{ 
-        fontWeight: 700, 
-        fontSize: 18, 
-        marginBottom: 8, 
-        textAlign: 'left', 
-        display: isMobile && !isOpen ? 'none' : 'block'
-      }}>Top Mix Store</div>
-      <div style={{ 
-        color: '#6b7280', 
-        fontSize: 12, 
-        marginBottom: 16, 
+      <div style={{
+        fontWeight: 700,
+        fontSize: 18,
+        marginBottom: 8,
         textAlign: 'left',
-        display: isMobile && !isOpen ? 'none' : 'block'
+        display: isMobile && !isOpen ? 'none' : 'block',
+        color: logistaTheme.colors.accentDark,
+      }}>Top Mix Store</div>
+      <div style={{
+        color: logistaTheme.colors.textMuted,
+        fontSize: 12,
+        marginBottom: 16,
+        textAlign: 'left',
+        display: isMobile && !isOpen ? 'none' : 'block',
       }}>Área do Logista</div>
 
-      <nav style={{ 
-        display: 'flex', 
-        flexDirection: 'column', 
-        gap: 8, 
+      <nav style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 8,
         width: '100%',
         opacity: isMobile && !isOpen ? 0 : 1,
         pointerEvents: isMobile && !isOpen ? 'none' : 'auto',
@@ -72,18 +89,7 @@ export default function SidebarLogista({ isOpen, onClose }: SidebarLogistaProps)
         <Link
           to="/logista"
           onClick={handleLinkClick}
-          style={{
-            padding: '10px 12px',
-            borderRadius: 10,
-            textDecoration: 'none',
-            color: '#111827',
-            background: isActive('/logista') ? '#fae8ff' : 'transparent',
-            border: isActive('/logista') ? '1px solid #e9d5ff' : '1px solid transparent',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 10,
-            textAlign: 'left',
-          }}
+          style={getLinkStyle(isActive('/logista'))}
         >
           <FiHome size={18} />
           {(!isMobile || isOpen) && <span>Dashboard</span>}
@@ -91,18 +97,7 @@ export default function SidebarLogista({ isOpen, onClose }: SidebarLogistaProps)
         <Link
           to="/logista/vendas"
           onClick={handleLinkClick}
-          style={{
-            padding: '10px 12px',
-            borderRadius: 10,
-            textDecoration: 'none',
-            color: '#111827',
-            background: location.pathname.startsWith('/logista/vendas') ? '#fae8ff' : 'transparent',
-            border: location.pathname.startsWith('/logista/vendas') ? '1px solid #e9d5ff' : '1px solid transparent',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 10,
-            textAlign: 'left',
-          }}
+          style={getLinkStyle(location.pathname.startsWith('/logista/vendas'))}
         >
           <FiShoppingCart size={18} />
           {(!isMobile || isOpen) && <span>Vendas</span>}
@@ -110,18 +105,7 @@ export default function SidebarLogista({ isOpen, onClose }: SidebarLogistaProps)
         <Link
           to="/logista/novo-pedido"
           onClick={handleLinkClick}
-          style={{
-            padding: '10px 12px',
-            borderRadius: 10,
-            textDecoration: 'none',
-            color: '#111827',
-            background: isActive('/logista/novo-pedido') ? '#fae8ff' : 'transparent',
-            border: isActive('/logista/novo-pedido') ? '1px solid #e9d5ff' : '1px solid transparent',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 10,
-            textAlign: 'left',
-          }}
+          style={getLinkStyle(isActive('/logista/novo-pedido'))}
         >
           <FiPlusSquare size={18} />
           {(!isMobile || isOpen) && <span>Novo Pedido</span>}
@@ -129,18 +113,7 @@ export default function SidebarLogista({ isOpen, onClose }: SidebarLogistaProps)
         <Link
           to="/logista/estoque"
           onClick={handleLinkClick}
-          style={{
-            padding: '10px 12px',
-            borderRadius: 10,
-            textDecoration: 'none',
-            color: '#111827',
-            background: location.pathname.startsWith('/logista/estoque') ? '#fae8ff' : 'transparent',
-            border: location.pathname.startsWith('/logista/estoque') ? '1px solid #e9d5ff' : '1px solid transparent',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 10,
-            textAlign: 'left',
-          }}
+          style={getLinkStyle(location.pathname.startsWith('/logista/estoque'))}
         >
           <FiPackage size={18} />
           {(!isMobile || isOpen) && <span>Estoque</span>}
@@ -149,8 +122,8 @@ export default function SidebarLogista({ isOpen, onClose }: SidebarLogistaProps)
           style={{
             padding: '10px 12px',
             borderRadius: 10,
-            color: '#6b7280',
-            border: '1px dashed #f3e8ff',
+            color: logistaTheme.colors.textMuted,
+            border: `1px dashed ${logistaTheme.colors.accentBorder}`,
             display: 'flex',
             alignItems: 'center',
             gap: 10,
@@ -164,18 +137,7 @@ export default function SidebarLogista({ isOpen, onClose }: SidebarLogistaProps)
         <Link
           to="/logista/categorias"
           onClick={handleLinkClick}
-          style={{
-            padding: '10px 12px',
-            borderRadius: 10,
-            textDecoration: 'none',
-            color: '#111827',
-            background: location.pathname.startsWith('/logista/categorias') ? '#fae8ff' : 'transparent',
-            border: location.pathname.startsWith('/logista/categorias') ? '1px solid #e9d5ff' : '1px solid transparent',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 10,
-            textAlign: 'left',
-          }}
+          style={getLinkStyle(location.pathname.startsWith('/logista/categorias'))}
         >
           <FiTag size={18} />
           {(!isMobile || isOpen) && <span>Categorias</span>}
@@ -184,8 +146,8 @@ export default function SidebarLogista({ isOpen, onClose }: SidebarLogistaProps)
           style={{
             padding: '10px 12px',
             borderRadius: 10,
-            color: '#6b7280',
-            border: '1px dashed #f3e8ff',
+            color: logistaTheme.colors.textMuted,
+            border: `1px dashed ${logistaTheme.colors.accentBorder}`,
             display: 'flex',
             alignItems: 'center',
             gap: 10,
@@ -198,15 +160,15 @@ export default function SidebarLogista({ isOpen, onClose }: SidebarLogistaProps)
         </div>
       </nav>
 
-      <div style={{ 
-        marginTop: 'auto', 
-        width: '100%', 
+      <div style={{
+        marginTop: 'auto',
+        width: '100%',
         textAlign: 'left',
         opacity: isMobile && !isOpen ? 0 : 1,
         pointerEvents: isMobile && !isOpen ? 'none' : 'auto',
       }}>
-        <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 6 }}>Logado como:</div>
-        <div style={{ fontSize: 14, marginBottom: 8, wordBreak: 'break-all' }}>
+        <div style={{ fontSize: 12, color: logistaTheme.colors.textMuted, marginBottom: 6 }}>Logado como:</div>
+        <div style={{ fontSize: 14, marginBottom: 8, wordBreak: 'break-all', color: logistaTheme.colors.text }}>
           {user?.phoneNumber || user?.uid}
         </div>
         <button
@@ -215,8 +177,9 @@ export default function SidebarLogista({ isOpen, onClose }: SidebarLogistaProps)
             width: '100%',
             padding: '10px 12px',
             borderRadius: 10,
-            border: '1px solid #e5e7eb',
-            background: '#fff',
+            border: `1px solid ${logistaTheme.colors.border}`,
+            background: logistaTheme.colors.surface,
+            color: logistaTheme.colors.text,
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',

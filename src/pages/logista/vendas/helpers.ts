@@ -1,14 +1,9 @@
 import type { CSSProperties } from 'react'
 import type { CatalogVariation } from '../../../types/catalog'
 import type { ReservedSaleViewRecord, SaleRecord } from './types'
+import { logistaCardStyle, logistaTheme } from '../logistaTheme'
 
-export const cardStyle: CSSProperties = {
-  background: '#fff',
-  border: '1px solid #e5e7eb',
-  borderRadius: 18,
-  padding: 20,
-  boxShadow: '0 10px 30px rgba(15, 23, 42, 0.04)',
-}
+export const cardStyle: CSSProperties = logistaCardStyle
 
 export const formatCurrency = (value: number) =>
   new Intl.NumberFormat('pt-BR', {
@@ -54,24 +49,48 @@ export const hasVariationStock = (variations: Record<string, CatalogVariation> |
 
 export const getStatusMeta = (sale: SaleRecord | ReservedSaleViewRecord) => {
   if (sale.paymentStatus === 'cancelled' || sale.fulfillmentStatus === 'cancelled' || sale.stockStatus === 'released') {
-    return { label: 'Cancelada', color: '#b91c1c', background: '#fef2f2' }
+    return {
+      label: 'Cancelada',
+      color: logistaTheme.colors.errorText,
+      background: logistaTheme.colors.errorBackground,
+    }
   }
 
   if (sale.fulfillmentStatus === 'delivered') {
-    return { label: 'Entregue', color: '#059669', background: '#ecfdf5' }
+    return {
+      label: 'Entregue',
+      color: logistaTheme.colors.successText,
+      background: logistaTheme.colors.successBackground,
+    }
   }
 
   if (sale.fulfillmentStatus === 'reserved' || sale.stockStatus === 'reserved') {
-    return { label: 'Reservada', color: '#b45309', background: '#fffbeb' }
+    return {
+      label: 'Reservada',
+      color: logistaTheme.colors.warningText,
+      background: logistaTheme.colors.warningBackground,
+    }
   }
 
   if (sale.fulfillmentStatus === 'pending_review' || sale.stockStatus === 'attention') {
-    return { label: 'Requer atenção', color: '#c2410c', background: '#fff7ed' }
+    return {
+      label: 'Requer atenção',
+      color: logistaTheme.colors.warningText,
+      background: logistaTheme.colors.warningBackground,
+    }
   }
 
   if (sale.channel === 'online') {
-    return { label: 'Aguardando entrega', color: '#7c3aed', background: '#f5f3ff' }
+    return {
+      label: 'Aguardando entrega',
+      color: logistaTheme.colors.accentDark,
+      background: logistaTheme.colors.accentSoft,
+    }
   }
 
-  return { label: 'Concluída', color: '#0f766e', background: '#ecfeff' }
+  return {
+    label: 'Concluída',
+    color: logistaTheme.colors.successText,
+    background: logistaTheme.colors.successBackground,
+  }
 }

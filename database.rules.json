@@ -78,6 +78,7 @@
       ".write": false
     },
     "cartReservations": {
+      ".read": "auth != null && root.child('loja/arealogista/' + auth.uid).val() === true",
       "$cartId": {
         ".read": "auth != null",
         "status": {
