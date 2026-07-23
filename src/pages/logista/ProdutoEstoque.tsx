@@ -29,6 +29,7 @@ interface ProductEditorState {
   createdAt: number
   purchaseId?: string
   name: string
+  groupCode: string | null
   description: string
   shortDescription: string
   supplierName: string
@@ -194,6 +195,7 @@ export default function ProdutoEstoque() {
           createdAt: Number(productData.createdAt || Date.now()),
           purchaseId: showcaseData?.purchaseId,
           name: showcaseData?.name || productData.name || '',
+          groupCode: productData.groupCode || null,
           description: productData.description || '',
           shortDescription: showcaseData?.shortDescription || productData.description || '',
           supplierName: productData.supplierName || '',
@@ -386,6 +388,7 @@ export default function ProdutoEstoque() {
       name: trimmedName,
       description: trimmedDescription,
       supplierName: product.supplierName.trim(),
+      groupCode: product.groupCode || null,
       categoryId: product.categoryId,
       active: product.active,
       createdAt: product.createdAt,
@@ -409,6 +412,7 @@ export default function ProdutoEstoque() {
     const nextShowcaseRecord: ShowcaseRecord = {
       purchaseId: product.purchaseId,
       name: trimmedName,
+      groupCode: product.groupCode || null,
       image: product.images[0] || '',
       images: product.images,
       mainImageZoom: product.mainImageZoom,
@@ -456,6 +460,7 @@ export default function ProdutoEstoque() {
                 realMargin: pricingPreview.realMargin,
                 realMarginPercentage: pricingPreview.realMarginPercentage,
               },
+              groupCode: product.groupCode || null,
               inventory: nextInventory,
             }
           : current,
@@ -662,6 +667,7 @@ export default function ProdutoEstoque() {
         categories={categories}
         sizes={sizes}
         productName={product.name}
+        groupCode={product.groupCode || null}
         onProductNameChange={(value) => updateField('name', value)}
         supplierName={product.supplierName}
         onSupplierNameChange={(value) => updateField('supplierName', value)}

@@ -32,6 +32,7 @@ interface SharedProductEditorFormProps {
   categories: ProductCategoryOption[]
   sizes: string[]
   productName: string
+  groupCode: string | null
   onProductNameChange: (value: string) => void
   supplierName: string
   onSupplierNameChange: (value: string) => void

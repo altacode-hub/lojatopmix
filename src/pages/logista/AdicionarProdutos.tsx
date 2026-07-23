@@ -46,6 +46,7 @@ interface Product {
 interface ProductFormDraft {
   editingProductId: string | null
   productName: string
+  groupCode: string
   productDescription: string
   supplierName: string
   categoryId: string
@@ -120,6 +121,7 @@ export default function AdicionarProdutos() {
   
   // Current form state
   const [productName, setProductName] = useState('')
+  const [groupCode, setGroupCode] = useState('')
   const [productDescription, setProductDescription] = useState('')
   const [supplierName, setSupplierName] = useState('')
   const [categoryId, setCategoryId] = useState('')
@@ -200,6 +202,7 @@ export default function AdicionarProdutos() {
   const applyFormDraft = useCallback((draft: ProductFormDraft) => {
     setEditingProductId(draft.editingProductId)
     setProductName(draft.productName)
+    setGroupCode(draft.groupCode)
     setProductDescription(draft.productDescription)
     setSupplierName(draft.supplierName)
     setCategoryId(draft.categoryId)
@@ -373,6 +376,7 @@ export default function AdicionarProdutos() {
     const formDraft: ProductFormDraft = {
       editingProductId,
       productName,
+      groupCode,
       productDescription,
       supplierName,
       categoryId,
@@ -434,6 +438,7 @@ export default function AdicionarProdutos() {
     purchaseId,
     editingProductId,
     productName,
+    groupCode,
     productDescription,
     supplierName,
     categoryId,
@@ -570,6 +575,7 @@ export default function AdicionarProdutos() {
           return {
             ...product,
             name: productName,
+            
             description: productDescription,
             supplierName,
             categoryId,
@@ -668,6 +674,7 @@ export default function AdicionarProdutos() {
   const cancelEdit = () => {
     setEditingProductId(null)
     setProductName('')
+    setGroupCode('')
     setProductDescription('')
     setSupplierName('')
     setCategoryId('')
@@ -884,6 +891,7 @@ export default function AdicionarProdutos() {
         categories={categories}
         sizes={sizes}
         productName={productName}
+        groupCode={groupCode}
         onProductNameChange={setProductName}
         supplierName={supplierName}
         onSupplierNameChange={setSupplierName}
