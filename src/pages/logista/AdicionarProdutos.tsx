@@ -20,6 +20,7 @@ interface Product {
   supplierName: string
   categoryId: string
   groupCode?: string | null
+  purchaseId: string
   images: string[]
   mainImageZoom: number
   mainImageOffsetX: number
@@ -47,6 +48,7 @@ interface ProductFormDraft {
   editingProductId: string | null
   productName: string
   groupCode: string
+  purchaseId: string
   productDescription: string
   supplierName: string
   categoryId: string
@@ -303,6 +305,7 @@ export default function AdicionarProdutos() {
                 supplierName: productData.supplierName || '',
                 categoryId: productData.categoryId || '',
                 groupCode: productData.groupCode ?? null,
+                purchaseId: purchaseId,
                 images: productData.images || (productData.image ? [productData.image] : []),
                 mainImageZoom: Number(productData.mainImageZoom || 1),
                 mainImageOffsetX: Number(productData.mainImageOffsetX || 0),
@@ -377,6 +380,7 @@ export default function AdicionarProdutos() {
       editingProductId,
       productName,
       groupCode,
+      purchaseId,
       productDescription,
       supplierName,
       categoryId,
@@ -561,7 +565,7 @@ export default function AdicionarProdutos() {
   
   const addProduct = () => {
     if (!productName.trim() || typeof unitCost !== 'number' || unitCost <= 0 || variations.length === 0) return
-    
+    if (!purchaseId) return
     const tempPackaging = typeof packaging === 'number' ? packaging : 0
     const tempGifts = typeof gifts === 'number' ? gifts : 0
     const tempAccessories = typeof accessories === 'number' ? accessories : 0
@@ -614,6 +618,7 @@ export default function AdicionarProdutos() {
         supplierName,
         categoryId,
         groupCode: null,
+        purchaseId: purchaseId,
         images: productImages,
         mainImageZoom,
         mainImageOffsetX,
@@ -741,6 +746,7 @@ export default function AdicionarProdutos() {
           supplierName: product.supplierName,
           categoryId: product.categoryId,
           groupCode: product.groupCode ?? null,
+          purchaseId: purchaseId,
           active: true,
           createdAt: now,
           updatedAt: now,

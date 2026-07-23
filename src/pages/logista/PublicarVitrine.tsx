@@ -269,7 +269,7 @@ export default function PublicarVitrine() {
         <div>
           <h1 style={{ margin: 0, fontSize: 30 }}>Produtos publicados na vitrine</h1>
           <div style={{ color: logistaTheme.colors.textMuted, marginTop: 6 }}>
-            Pedido: {purchaseName || purchaseId} • Ajuste imagem e dados que o cliente vai ler na home.
+            Pedido: {purchaseName || purchaseId} • Selecione os produtos que o cliente vai ver na home.
           </div>
         </div>
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', width: isMobile ? '100%' : 'auto' }}>
@@ -325,6 +325,8 @@ export default function PublicarVitrine() {
           </div>
         </div>
       </div>
+
+      
 
       {products.length === 0 ? (
         <div style={{ ...cardStyle, textAlign: 'center', color: logistaTheme.colors.textMuted }}>

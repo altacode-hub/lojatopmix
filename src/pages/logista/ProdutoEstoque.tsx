@@ -27,7 +27,7 @@ interface InventoryRecord {
 
 interface ProductEditorState {
   createdAt: number
-  purchaseId?: string
+  purchaseId: string
   name: string
   groupCode: string | null
   description: string
@@ -130,6 +130,7 @@ export default function ProdutoEstoque() {
 
   const [categories, setCategories] = useState<CategoryOption[]>([])
   const [product, setProduct] = useState<ProductEditorState | null>(null)
+  const [purchase, setPurchase] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [uploadingImages, setUploadingImages] = useState(false)
@@ -190,12 +191,15 @@ export default function ProdutoEstoque() {
         const allocatedCosts = Number(pricing.allocatedCosts || 0)
         const finalPrice = Number(pricing.finalPrice ?? showcaseData?.price ?? pricing.salePrice ?? 0)
         const promotionPrice = Number(pricing.promotionPrice ?? showcaseData?.promotionPrice ?? 0)
+        
+        setPurchase(productData.purchaseId);
+        console.log(productData.purchaseId)
 
         setProduct({
           createdAt: Number(productData.createdAt || Date.now()),
-          purchaseId: showcaseData?.purchaseId,
           name: showcaseData?.name || productData.name || '',
           groupCode: productData.groupCode || null,
+          purchaseId: productData.purchaseId,
           description: productData.description || '',
           shortDescription: showcaseData?.shortDescription || productData.description || '',
           supplierName: productData.supplierName || '',
@@ -389,6 +393,7 @@ export default function ProdutoEstoque() {
       description: trimmedDescription,
       supplierName: product.supplierName.trim(),
       groupCode: product.groupCode || null,
+      purchaseId: product.purchaseId,
       categoryId: product.categoryId,
       active: product.active,
       createdAt: product.createdAt,
@@ -573,6 +578,27 @@ export default function ProdutoEstoque() {
           >
             <FiExternalLink size={16} />
             Ver produto publico
+          </button>
+          <button
+            disabled={!purchase}
+            type="button"
+            onClick={() => navigate(`/logista/pedido/${purchase}`)}
+            style={{
+              padding: '12px 16px',
+              borderRadius: 12,
+              border: `1px solid ${logistaTheme.colors.border}`,
+              background: logistaTheme.colors.surface,
+              color: logistaTheme.colors.text,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              justifyContent: 'center',
+              width: isMobile ? '100%' : 'auto',
+            }}
+          >
+            <FiExternalLink size={16} />
+            Ver pedido
           </button>
           <button
             type="button"

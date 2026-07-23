@@ -43,6 +43,7 @@ export interface InternalProductRecord {
   supplierName?: string
   categoryId: string
   groupCode?: string | null
+  purchaseId: string
   active: boolean
   createdAt: number
   updatedAt: number
