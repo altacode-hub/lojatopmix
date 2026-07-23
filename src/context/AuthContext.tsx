@@ -93,7 +93,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
 
     const handleLogistaValue = (snapshot: DataSnapshot) => {
-      setIsLogista(Boolean(snapshot.val()))
+      // Mantem o front alinhado com as regras do RTDB, que exigem boolean true.
+      setIsLogista(snapshot.val() === true)
       roleResolved = true
       completeProfileLoading()
     }

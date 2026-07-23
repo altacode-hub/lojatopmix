@@ -17,6 +17,7 @@ interface ShowcaseEditorProduct {
   description: string
   categoryId: string
   categoryName: string
+  groupCode: string
   price: number
   image: string
   mainImageZoom: number
@@ -38,6 +39,27 @@ const stageLabelStyle: CSSProperties = {
   fontSize: 13,
 }
 
+const GROUP_CODE_LENGTH = 5
+const GROUP_CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+
+const normalizeGroupCode = (value: string) =>
+  value
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, '')
+    .slice(0, GROUP_CODE_LENGTH)
+
+const buildRandomGroupCode = () =>
+  Array.from({ length: GROUP_CODE_LENGTH }, () => GROUP_CODE_CHARS[Math.floor(Math.random() * GROUP_CODE_CHARS.length)]).join('')
+
+const collectUsedGroupCodes = (items: Array<{ groupCode?: string | null }>) =>
+  Array.from(
+    new Set(
+      items
+        .map((item) => normalizeGroupCode(item.groupCode || ''))
+        .filter(Boolean),
+    ),
+  )
+
 export default function PublicarVitrine() {
   const { purchaseId } = useParams<{ purchaseId: string }>()
   const navigate = useNavigate()
@@ -46,6 +68,7 @@ export default function PublicarVitrine() {
   const [purchaseName, setPurchaseName] = useState('')
   const [categories, setCategories] = useState<Record<string, string>>({})
   const [products, setProducts] = useState<ShowcaseEditorProduct[]>([])
+  const [usedGroupCodes, setUsedGroupCodes] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [savingId, setSavingId] = useState<string | null>(null)
   
@@ -54,12 +77,14 @@ export default function PublicarVitrine() {
       if (!purchaseId) return
 
       try {
-        const [purchaseSnap, itemsSnap, categoriesSnap] = await Promise.all([
+        const [purchaseSnap, itemsSnap, categoriesSnap, showcaseSnap] = await Promise.all([
           get(ref(rtdb, `purchases/${purchaseId}`)),
           get(ref(rtdb, `purchaseItems/${purchaseId}`)),
           get(ref(rtdb, 'categories')),
+          get(ref(rtdb, 'showcase')),
         ])
         const categoryMap: Record<string, string> = {}
+        const showcaseMap = showcaseSnap.exists() ? (showcaseSnap.val() as Record<string, ShowcaseRecord>) : {}
 
         if (purchaseSnap.exists()) {
           setPurchaseName(purchaseSnap.val().name || '')
@@ -99,6 +124,7 @@ export default function PublicarVitrine() {
               description: product.description || '',
               categoryId: showcase?.categoryId || product.categoryId || '',
               categoryName: categoryMap[showcase?.categoryId || product.categoryId || ''] || 'Sem categoria',
+              groupCode: normalizeGroupCode(showcase?.groupCode || product.groupCode || ''),
               price: Number(showcase?.price ?? product.pricing?.salePrice ?? 0),
               image: showcase?.image || product.image || '',
               mainImageZoom: Number(showcase?.mainImageZoom ?? product.mainImageZoom ?? 1),
@@ -115,7 +141,9 @@ export default function PublicarVitrine() {
           })
         )
 
-        setProducts(rows.filter(Boolean) as ShowcaseEditorProduct[])
+        const nextProducts = rows.filter(Boolean) as ShowcaseEditorProduct[]
+        setProducts(nextProducts)
+        setUsedGroupCodes(collectUsedGroupCodes([...Object.values(showcaseMap), ...nextProducts]))
       } catch (error) {
         console.error('Erro ao carregar produtos da vitrine:', error)
       } finally {
@@ -137,17 +165,45 @@ export default function PublicarVitrine() {
     )
   }
 
+  const generateUniqueGroupCode = (currentProductId: string) => {
+    const currentProduct = products.find((product) => product.id === currentProductId)
+    const reservedCodes = new Set(
+      usedGroupCodes.filter((code) => code !== normalizeGroupCode(currentProduct?.groupCode || ''))
+    )
+
+    for (let attempt = 0; attempt < 50; attempt += 1) {
+      const code = buildRandomGroupCode()
+      if (!reservedCodes.has(code)) {
+        return code
+      }
+    }
+
+    return ''
+  }
+
+  const handleGenerateGroupCode = (productId: string) => {
+    const nextCode = generateUniqueGroupCode(productId)
+    if (!nextCode) {
+      window.alert('Nao foi possivel gerar um novo codigo agora. Tente novamente.')
+      return
+    }
+
+    updateLocalProduct(productId, { groupCode: nextCode })
+  }
+
   const saveShowcaseProduct = async (productId: string, changes: Partial<ShowcaseEditorProduct>) => {
     const product = products.find((item) => item.id === productId)
     if (!product) return
 
-    const nextProduct = { ...product, ...changes }
+    const normalizedGroupCode = normalizeGroupCode(changes.groupCode ?? product.groupCode ?? '')
+    const nextProduct = { ...product, ...changes, groupCode: normalizedGroupCode }
     const now = Date.now()
     setSavingId(productId)
 
     try {
       await update(ref(rtdb), {
         [`showcase/${productId}/name`]: nextProduct.name,
+        [`showcase/${productId}/groupCode`]: normalizedGroupCode || null,
         [`showcase/${productId}/image`]: nextProduct.image || '',
         [`showcase/${productId}/mainImageZoom`]: nextProduct.mainImageZoom,
         [`showcase/${productId}/mainImageOffsetX`]: nextProduct.mainImageOffsetX,
@@ -160,6 +216,7 @@ export default function PublicarVitrine() {
         [`showcase/${productId}/featured`]: nextProduct.featured,
         [`showcase/${productId}/promotion`]: nextProduct.promotion,
         [`showcase/${productId}/updatedAt`]: now,
+        [`products/${productId}/groupCode`]: normalizedGroupCode || null,
         [`products/${productId}/image`]: nextProduct.image || '',
         [`products/${productId}/mainImageZoom`]: nextProduct.mainImageZoom,
         [`products/${productId}/mainImageOffsetX`]: nextProduct.mainImageOffsetX,
@@ -169,7 +226,9 @@ export default function PublicarVitrine() {
         [`${CATALOG_SYNC_PATH}/source`]: 'publicar_vitrine',
       })
 
-      updateLocalProduct(productId, changes)
+      const nextProducts = products.map((item) => (item.id === productId ? nextProduct : item))
+      setProducts(nextProducts)
+      setUsedGroupCodes(collectUsedGroupCodes(nextProducts))
       patchCachedStockProduct(
         productId,
         {
@@ -374,6 +433,50 @@ export default function PublicarVitrine() {
                       />
                     </div>
 
+                    <div style={{ ...cardStyle, padding: 16, marginBottom: 16 }}>
+                      <label style={{ display: 'block', fontWeight: 700, marginBottom: 6, textAlign: 'left' }}>
+                        Codigo de agrupamento
+                      </label>
+                      <div style={{ color: logistaTheme.colors.textMuted, fontSize: 13, marginBottom: 12, textAlign: 'left' }}>
+                        Use o mesmo codigo em produtos do mesmo conjunto para o cliente trocar entre cores ou modelos no detalhe.
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'minmax(0, 220px) auto', gap: 10 }}>
+                        <input
+                          type="text"
+                          value={product.groupCode}
+                          onChange={(event) => updateLocalProduct(product.id, { groupCode: normalizeGroupCode(event.target.value) })}
+                          placeholder="Ex.: A1B2C"
+                          maxLength={GROUP_CODE_LENGTH}
+                          style={{
+                            ...logistaInputStyle,
+                            width: '100%',
+                            boxSizing: 'border-box',
+                            textTransform: 'uppercase',
+                            letterSpacing: 2,
+                            fontWeight: 700,
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleGenerateGroupCode(product.id)}
+                          style={{
+                            padding: '12px 16px',
+                            borderRadius: 12,
+                            border: `1px solid ${logistaTheme.colors.border}`,
+                            background: logistaTheme.colors.surface,
+                            color: logistaTheme.colors.text,
+                            cursor: 'pointer',
+                            fontWeight: 700,
+                          }}
+                        >
+                          Gerar codigo
+                        </button>
+                      </div>
+                      <div style={{ color: logistaTheme.colors.textMuted, fontSize: 12, marginTop: 8, textAlign: 'left' }}>
+                        O codigo deve ter 5 caracteres com letras e numeros.
+                      </div>
+                    </div>
+
                     <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 16 }}>
                       <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <input
@@ -458,6 +561,7 @@ export default function PublicarVitrine() {
                           onClick={() =>
                             void saveShowcaseProduct(product.id, {
                               shortDescription: product.shortDescription,
+                              groupCode: product.groupCode,
                               available: product.available,
                               featured: product.featured,
                               promotion: product.promotion,

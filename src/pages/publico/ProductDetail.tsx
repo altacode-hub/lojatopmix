@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { onValue, ref } from 'firebase/database'
+import FramedImage from '../../components/FramedImage'
 import { useCart } from '../../context/CartContext'
 import { rtdb } from '../../service/firebase'
 import type { ShowcaseRecord } from '../../types/catalog'
@@ -28,6 +29,7 @@ export default function ProductDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { add } = useCart()
+  const [showcaseProducts, setShowcaseProducts] = useState<Record<string, ShowcaseRecord>>({})
   const [product, setProduct] = useState<(({ id: string } & ShowcaseRecord) | null)>(null)
   const [loading, setLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
@@ -57,6 +59,7 @@ export default function ProductDetail() {
       showcaseRef,
       (snapshot) => {
         const showcaseData = snapshot.exists() ? (snapshot.val() as Record<string, ShowcaseRecord>) : {}
+        setShowcaseProducts(showcaseData)
         const productData = showcaseData[id] ? ({ id, ...showcaseData[id] } as { id: string } & ShowcaseRecord) : null
         setProduct(productData)
         setLoading(false)
@@ -96,6 +99,27 @@ export default function ProductDetail() {
 
     return Array.from(new Set(mergedImages))
   }, [product])
+
+  const relatedGroupedProducts = useMemo(() => {
+    if (!product?.groupCode) return []
+
+    return Object.entries(showcaseProducts)
+      .filter(([_, showcaseProduct]) => {
+        //if (productId === product.id) return false
+        if (!showcaseProduct.available) return false
+        return showcaseProduct.groupCode === product.groupCode
+      })
+      .map(([productId, showcaseProduct]) => ({
+        id: productId,
+        name: showcaseProduct.name,
+        image: showcaseProduct.image || showcaseProduct.images?.[0] || '',
+        mainImageZoom: Number(showcaseProduct.mainImageZoom ?? 1),
+        mainImageOffsetX: Number(showcaseProduct.mainImageOffsetX ?? 0),
+        mainImageOffsetY: Number(showcaseProduct.mainImageOffsetY ?? 0),
+        shortDescription: showcaseProduct.shortDescription || '',
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
+  }, [product, showcaseProducts])
 
   useEffect(() => {
     if (galleryImages.length === 0) {
@@ -348,7 +372,7 @@ export default function ProductDetail() {
           padding: isMobile ? 20 : 24,
           display: 'flex',
           flexDirection: 'column',
-          gap: 18,
+          gap: 8,
         }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'flex-start' }}>
@@ -469,10 +493,89 @@ export default function ProductDetail() {
         </div>
 
         <div>
-          <div style={{ marginBottom: 10, color: '#7c746d', fontSize: 14, fontWeight: 600, textAlign: 'left' }}>
-            Cor / Tamanho
+          <div style={{ marginTop: 10, color: '#7c746d', fontSize: 13, fontWeight: 600, textAlign: 'left' }}>
+            Cor: {variations.reduce((acc:any, variation) => {
+              acc = <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {variation.color}
+                    </span>
+              return acc
+            }, '')}
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        </div>
+        
+        {relatedGroupedProducts.length > 0 ? (
+          <div style={{ display: 'grid', gap: 10 }}>
+            <div style={{ 
+              display: 'flex',
+              gap: 8,
+              overflowX: 'auto',
+              paddingBottom: 8,
+              scrollbarWidth: 'thin',
+              boxSizing: 'border-box',
+            }}>
+              {relatedGroupedProducts.map((relatedProduct) => {
+                const isSelected = product.id === relatedProduct.id
+                return (
+                  <div 
+                    key={relatedProduct.id}  
+                    onClick={() => navigate(`/produto/${relatedProduct.id}`)}
+                      style={{
+                      background: 'transparent',
+                      border: isSelected ? '2px solid #b58516' : '1px solid #d6d3d1',
+                      boxShadow: isSelected ? '0 0 0 3px rgba(181, 133, 22, 0.15)' : 'none',
+                      borderRadius: 8,
+                      padding: isSelected ? '0' : '1px',
+                      display: 'flex',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {relatedProduct.image ? (
+                      <span
+                        aria-hidden="true"
+                        style={{
+                          borderRadius: 8,
+                          aspectRatio: '1 / 1',
+                          position: 'relative',
+                          overflow: 'hidden',
+                          width: '100%',
+                          height: 72,
+                        }}
+                      > 
+                        <FramedImage
+                          src={relatedProduct.image}
+                          alt={relatedProduct.name}
+                          zoom={relatedProduct.mainImageZoom}
+                          offsetX={relatedProduct.mainImageOffsetX}
+                          offsetY={relatedProduct.mainImageOffsetY}
+                        />
+                      </span>
+                    ) : null}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        ) : null}
+
+        <div>
+          <div style={{ color: '#7c746d', fontSize: 13, fontWeight: 600, textAlign: 'left' }}>
+            <label
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr auto',
+                alignItems: 'center',
+                gap: 12,
+              }}
+            >
+              <span>
+                Tamanho
+              </span>
+              <span>
+                Disponível
+              </span>
+            </label>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column'}}>
             {variations.map((variation) => {
               const isSelected = variationKey === variation.key
               const soldOut = variation.stock <= 0
@@ -510,7 +613,7 @@ export default function ProductDetail() {
                       style={{ accentColor: '#b58516', margin: 0 }}
                     />
                     <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {variationLabel(variation)}
+                      {variation.size}
                     </span>
                   </span>
                   <span

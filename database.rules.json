@@ -26,6 +26,9 @@
       ".read": true,
       "$productId": {
         ".write": "auth != null && root.child('loja/arealogista/' + auth.uid).val() === true",
+        "groupCode": {
+          ".validate": "newData.val() === null || (newData.isString() && newData.val().matches(/^[A-Z0-9]{5}$/))"
+        },
         "variations": {
           "$variationKey": {
             ".write": "auth != null && (root.child('loja/arealogista/' + auth.uid).val() === true || (data.exists() && newData.exists() && newData.child('size').val() === data.child('size').val() && newData.child('color').val() === data.child('color').val() && newData.child('stock').val() === data.child('stock').val() && newData.child('cartReserved').isNumber()))"
@@ -37,6 +40,9 @@
       ".read": "auth != null && root.child('loja/arealogista/' + auth.uid).val() === true",
       "$productId": {
         ".write": "auth != null && root.child('loja/arealogista/' + auth.uid).val() === true",
+        "groupCode": {
+          ".validate": "newData.val() === null || (newData.isString() && newData.val().matches(/^[A-Z0-9]{5}$/))"
+        },
         "variations": {
           "$variationKey": {
             "cartReserved": {

@@ -32,7 +32,7 @@ export interface ProductPricing {
   cardFee: number
   salePrice: number
   finalPrice?: number
-  promotionPrice?: number
+  promotionPrice?: number | null
   realMargin?: number
   realMarginPercentage?: number
 }
@@ -42,6 +42,7 @@ export interface InternalProductRecord {
   description: string
   supplierName?: string
   categoryId: string
+  groupCode?: string | null
   active: boolean
   createdAt: number
   updatedAt: number
@@ -57,13 +58,14 @@ export interface InternalProductRecord {
 export interface ShowcaseRecord {
   purchaseId?: string
   name: string
+  groupCode?: string | null
   image?: string
   images?: string[]
   mainImageZoom?: number
   mainImageOffsetX?: number
   mainImageOffsetY?: number
   price: number
-  promotionPrice?: number
+  promotionPrice?: number | null
   categoryId: string
   shortDescription: string
   available: boolean

@@ -19,6 +19,7 @@ interface Product {
   description: string
   supplierName: string
   categoryId: string
+  groupCode?: string | null
   images: string[]
   mainImageZoom: number
   mainImageOffsetX: number
@@ -298,6 +299,7 @@ export default function AdicionarProdutos() {
                 description: productData.description || '',
                 supplierName: productData.supplierName || '',
                 categoryId: productData.categoryId || '',
+                groupCode: productData.groupCode ?? null,
                 images: productData.images || (productData.image ? [productData.image] : []),
                 mainImageZoom: Number(productData.mainImageZoom || 1),
                 mainImageOffsetX: Number(productData.mainImageOffsetX || 0),
@@ -605,6 +607,7 @@ export default function AdicionarProdutos() {
         description: productDescription,
         supplierName,
         categoryId,
+        groupCode: null,
         images: productImages,
         mainImageZoom,
         mainImageOffsetX,
@@ -730,6 +733,7 @@ export default function AdicionarProdutos() {
           description: product.description,
           supplierName: product.supplierName,
           categoryId: product.categoryId,
+          groupCode: product.groupCode ?? null,
           active: true,
           createdAt: now,
           updatedAt: now,
@@ -771,13 +775,14 @@ export default function AdicionarProdutos() {
         const nextShowcaseRecord: ShowcaseRecord = {
           purchaseId,
           name: product.name,
+          groupCode: product.groupCode ?? null,
           image: product.images[0] || '',
           images: product.images,
           mainImageZoom: product.mainImageZoom,
           mainImageOffsetX: product.mainImageOffsetX,
           mainImageOffsetY: product.mainImageOffsetY,
           price: product.finalPrice,
-          promotionPrice: product.promotionPrice || undefined,
+          promotionPrice: product.promotionPrice > 0 ? product.promotionPrice : null,
           categoryId: product.categoryId,
           shortDescription: product.description.substring(0, 100),
           available: true,
