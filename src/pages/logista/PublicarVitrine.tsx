@@ -20,6 +20,7 @@ interface ShowcaseEditorProduct {
   groupCode: string
   price: number
   image: string
+  images: string[]
   mainImageZoom: number
   mainImageOffsetX: number
   mainImageOffsetY: number
@@ -31,6 +32,11 @@ interface ShowcaseEditorProduct {
   shortDescription: string
   variations: Record<string, CatalogVariation>
 }
+
+type ShowcaseEditableState = Pick<
+  ShowcaseEditorProduct,
+  'shortDescription' | 'groupCode' | 'available' | 'featured' | 'promotion'
+>
 
 const cardStyle: CSSProperties = logistaCardStyle
 
@@ -60,6 +66,26 @@ const collectUsedGroupCodes = (items: Array<{ groupCode?: string | null }>) =>
     ),
   )
 
+const buildEditableState = (product: ShowcaseEditorProduct): ShowcaseEditableState => ({
+  shortDescription: product.shortDescription,
+  groupCode: normalizeGroupCode(product.groupCode || ''),
+  available: Boolean(product.available),
+  featured: Boolean(product.featured),
+  promotion: Boolean(product.promotion),
+})
+
+const isEditableStateEqual = (current: ShowcaseEditableState, saved?: ShowcaseEditableState) => {
+  if (!saved) return false
+
+  return (
+    current.shortDescription === saved.shortDescription &&
+    current.groupCode === saved.groupCode &&
+    current.available === saved.available &&
+    current.featured === saved.featured &&
+    current.promotion === saved.promotion
+  )
+}
+
 export default function PublicarVitrine() {
   const { purchaseId } = useParams<{ purchaseId: string }>()
   const navigate = useNavigate()
@@ -68,6 +94,7 @@ export default function PublicarVitrine() {
   const [purchaseName, setPurchaseName] = useState('')
   const [categories, setCategories] = useState<Record<string, string>>({})
   const [products, setProducts] = useState<ShowcaseEditorProduct[]>([])
+  const [savedEditableStateById, setSavedEditableStateById] = useState<Record<string, ShowcaseEditableState>>({})
   const [usedGroupCodes, setUsedGroupCodes] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [savingId, setSavingId] = useState<string | null>(null)
@@ -117,6 +144,13 @@ export default function PublicarVitrine() {
             const showcase = showcaseSnap.exists() ? (showcaseSnap.val() as ShowcaseRecord) : null
             const inventory = inventorySnap.exists() ? inventorySnap.val() : null
             const cartReserved = Number(inventory?.cartReserved || 0)
+            const images = Array.from(
+              new Set(
+                [showcase?.images, product.images, showcase?.image, product.image]
+                  .flatMap((value) => (Array.isArray(value) ? value : value ? [value] : []))
+                  .filter(Boolean),
+              ),
+            ) as string[]
 
             return {
               id: productId,
@@ -126,7 +160,8 @@ export default function PublicarVitrine() {
               categoryName: categoryMap[showcase?.categoryId || product.categoryId || ''] || 'Sem categoria',
               groupCode: normalizeGroupCode(showcase?.groupCode || product.groupCode || ''),
               price: Number(showcase?.price ?? product.pricing?.salePrice ?? 0),
-              image: showcase?.image || product.image || '',
+              image: showcase?.image || product.image || images[0] || '',
+              images,
               mainImageZoom: Number(showcase?.mainImageZoom ?? product.mainImageZoom ?? 1),
               mainImageOffsetX: Number(showcase?.mainImageOffsetX ?? product.mainImageOffsetX ?? 0),
               mainImageOffsetY: Number(showcase?.mainImageOffsetY ?? product.mainImageOffsetY ?? 0),
@@ -143,6 +178,12 @@ export default function PublicarVitrine() {
 
         const nextProducts = rows.filter(Boolean) as ShowcaseEditorProduct[]
         setProducts(nextProducts)
+        setSavedEditableStateById(
+          nextProducts.reduce<Record<string, ShowcaseEditableState>>((acc, product) => {
+            acc[product.id] = buildEditableState(product)
+            return acc
+          }, {}),
+        )
         setUsedGroupCodes(collectUsedGroupCodes([...Object.values(showcaseMap), ...nextProducts]))
       } catch (error) {
         console.error('Erro ao carregar produtos da vitrine:', error)
@@ -158,6 +199,36 @@ export default function PublicarVitrine() {
     () => products.filter((product) => product.available && product.stock).length,
     [products]
   )
+
+  const publishedShowcaseGroups = useMemo(() => {
+    const grouped = new Map<string, ShowcaseEditorProduct[]>()
+
+    products
+      .filter((product) => product.available && product.stock)
+      .forEach((product) => {
+        const groupKey = product.groupCode || `__single__${product.id}`
+        const current = grouped.get(groupKey) || []
+        current.push(product)
+        grouped.set(groupKey, current)
+      })
+
+    return Array.from(grouped.values())
+  }, [products])
+
+  const dirtyProductIds = useMemo(
+    () =>
+      new Set(
+        products
+          .filter((product) => !isEditableStateEqual(buildEditableState(product), savedEditableStateById[product.id]))
+          .map((product) => product.id),
+      ),
+    [products, savedEditableStateById],
+  )
+
+  const openInNewTab = (path: string) => {
+    const url = new URL(path, window.location.origin).toString()
+    window.open(url, '_blank', 'noopener,noreferrer')
+  }
 
   const updateLocalProduct = (productId: string, changes: Partial<ShowcaseEditorProduct>) => {
     setProducts((current) =>
@@ -228,6 +299,10 @@ export default function PublicarVitrine() {
 
       const nextProducts = products.map((item) => (item.id === productId ? nextProduct : item))
       setProducts(nextProducts)
+      setSavedEditableStateById((current) => ({
+        ...current,
+        [productId]: buildEditableState(nextProduct),
+      }))
       setUsedGroupCodes(collectUsedGroupCodes(nextProducts))
       patchCachedStockProduct(
         productId,
@@ -288,7 +363,7 @@ export default function PublicarVitrine() {
             Voltar ao pedido
           </button>
           <button
-            onClick={() => navigate('/')}
+            onClick={() => openInNewTab('/')}
             style={{
               padding: '12px 16px',
               borderRadius: 12,
@@ -326,6 +401,69 @@ export default function PublicarVitrine() {
         </div>
       </div>
 
+      {publishedShowcaseGroups.length > 0 && (
+        <div
+          style={{
+            ...cardStyle,
+            marginBottom: 24,
+            background: logistaTheme.colors.surface,
+          }}
+        >
+          <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 16 }}>Previa da vitrine</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {publishedShowcaseGroups.map((group, groupIndex) => (
+              <div
+                key={group[0]?.groupCode || `group-${groupIndex}`}
+                style={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: 10,
+                  padding: 12,
+                  borderRadius: 16,
+                  background: logistaTheme.colors.surfaceAlt,
+                  border: `1px solid ${logistaTheme.colors.border}`,
+                }}
+              >
+                {group.map((product) => {
+                  const previewImage = product.images[0] || product.image
+
+                  return (
+                    <div
+                      key={product.id}
+                      style={{
+                        width: 72,
+                        height: 72,
+                        borderRadius: 12,
+                        overflow: 'hidden',
+                        position: 'relative',
+                        background: logistaTheme.colors.surface,
+                        border: `1px solid ${logistaTheme.colors.border}`,
+                      }}
+                    >
+                      <FramedImage
+                        src={previewImage}
+                        alt={product.name}
+                        zoom={Number(product.mainImageZoom || 1)}
+                        offsetX={Number(product.mainImageOffsetX || 0)}
+                        offsetY={Number(product.mainImageOffsetY || 0)}
+                        fallback={
+                          <div style={{ display: 'grid', placeItems: 'center', width: '100%', height: '100%' }}>
+                            <FiImage size={18} color={logistaTheme.colors.textMuted} />
+                          </div>
+                        }
+                        fallbackStyle={{
+                          position: 'absolute',
+                          inset: 0,
+                        }}
+                      />
+                    </div>
+                  )
+                })}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
       
 
       {products.length === 0 ? (
@@ -336,6 +474,7 @@ export default function PublicarVitrine() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {products.map((product) => {
             const variations = Object.values(product.variations || {})
+            const hasPendingChanges = dirtyProductIds.has(product.id)
 
             return (
               <div
@@ -543,7 +682,7 @@ export default function PublicarVitrine() {
                       </div>
                       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
                         <button
-                          onClick={() => navigate(`/produto/${product.id}`)}
+                          onClick={() => openInNewTab(`/produto/${product.id}`)}
                           style={{
                             padding: '10px 14px',
                             borderRadius: 12,
@@ -570,15 +709,15 @@ export default function PublicarVitrine() {
                               stock: product.availableStock > 0,
                             })
                           }
-                          disabled={savingId === product.id}
+                          disabled={savingId === product.id || !hasPendingChanges}
                           style={{
                             padding: '10px 16px',
                             borderRadius: 12,
                             border: 'none',
                             background: logistaTheme.colors.accent,
                             color: logistaTheme.colors.surface,
-                            cursor: savingId === product.id ? 'not-allowed' : 'pointer',
-                            opacity: savingId === product.id ? 0.7 : 1,
+                            cursor: savingId === product.id || !hasPendingChanges ? 'not-allowed' : 'pointer',
+                            opacity: savingId === product.id || !hasPendingChanges ? 0.7 : 1,
                             fontWeight: 700,
                           }}
                         >

@@ -65,7 +65,6 @@ export default function PublicHeader({
               width: isMobile ? 78 : 110,
               objectFit: 'contain',
               borderRadius: 8,
-              background: '#f1f5f9',
             }}
             onError={(event) => {
               event.currentTarget.style.display = 'none'
