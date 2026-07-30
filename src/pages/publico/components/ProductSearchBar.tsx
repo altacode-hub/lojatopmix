@@ -23,7 +23,6 @@ export default function ProductSearchBar({ value, onChange }: ProductSearchBarPr
             background: '#f1f5f9',
             border: '1px solid #e2e8f0',
             borderRadius: 999,
-            padding: '12px 12px',
           }}
         >
           <div
@@ -31,6 +30,7 @@ export default function ProductSearchBar({ value, onChange }: ProductSearchBarPr
               display: 'flex',
               color: '#64748b',
               alignItems: 'center',
+              padding: '12px 3px 12px 12px',
             }}
           >
             <FiSearch size={15} />
@@ -48,6 +48,7 @@ export default function ProductSearchBar({ value, onChange }: ProductSearchBarPr
               fontSize: 14,
               color: '#0f172a',
               width: '100%',
+              padding: '12px 0px',
             }}
           />
         </div>
