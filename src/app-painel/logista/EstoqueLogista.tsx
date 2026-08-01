@@ -398,7 +398,7 @@ export default function EstoqueLogista() {
             <button
               key={product.id}
               type="button"
-              onClick={() => navigate(`/logista/estoque/${product.id}`)}
+              onClick={() => navigate(`/estoque/${product.id}`)}
               style={{
                 ...cardStyle,
                 cursor: 'pointer',

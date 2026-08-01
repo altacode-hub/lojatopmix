@@ -87,33 +87,33 @@ export default function SidebarLogista({ isOpen, onClose }: SidebarLogistaProps)
         pointerEvents: isMobile && !isOpen ? 'none' : 'auto',
       }}>
         <Link
-          to="/logista"
+          to="/"
           onClick={handleLinkClick}
-          style={getLinkStyle(isActive('/logista'))}
+          style={getLinkStyle(isActive('/'))}
         >
           <FiHome size={18} />
           {(!isMobile || isOpen) && <span>Dashboard</span>}
         </Link>
         <Link
-          to="/logista/vendas"
+          to="/vendas"
           onClick={handleLinkClick}
-          style={getLinkStyle(location.pathname.startsWith('/logista/vendas'))}
+          style={getLinkStyle(location.pathname.startsWith('/vendas'))}
         >
           <FiShoppingCart size={18} />
           {(!isMobile || isOpen) && <span>Vendas</span>}
         </Link>
         <Link
-          to="/logista/novo-pedido"
+          to="/novo-pedido"
           onClick={handleLinkClick}
-          style={getLinkStyle(isActive('/logista/novo-pedido'))}
+          style={getLinkStyle(isActive('/novo-pedido'))}
         >
           <FiPlusSquare size={18} />
           {(!isMobile || isOpen) && <span>Novo Pedido</span>}
         </Link>
         <Link
-          to="/logista/estoque"
+          to="/estoque"
           onClick={handleLinkClick}
-          style={getLinkStyle(location.pathname.startsWith('/logista/estoque'))}
+          style={getLinkStyle(location.pathname.startsWith('/estoque'))}
         >
           <FiPackage size={18} />
           {(!isMobile || isOpen) && <span>Estoque</span>}
@@ -135,9 +135,9 @@ export default function SidebarLogista({ isOpen, onClose }: SidebarLogistaProps)
           {(!isMobile || isOpen) && <span>Histórico</span>}
         </div>
         <Link
-          to="/logista/categorias"
+          to="/categorias"
           onClick={handleLinkClick}
-          style={getLinkStyle(location.pathname.startsWith('/logista/categorias'))}
+          style={getLinkStyle(location.pathname.startsWith('/categorias'))}
         >
           <FiTag size={18} />
           {(!isMobile || isOpen) && <span>Categorias</span>}

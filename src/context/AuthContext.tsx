@@ -3,7 +3,7 @@ import { auth, rtdb, setupRecaptcha } from '../service/firebase'
 import type { ConfirmationResult } from 'firebase/auth'
 import { onAuthStateChanged, signInWithPhoneNumber, signInAnonymously as fbSignInAnonymously, signOut as fbSignOut } from 'firebase/auth'
 import { off, onValue, ref, set, type DataSnapshot } from 'firebase/database'
-import type { ClienteProfileDraft } from '../pages/cliente/clientStorage'
+import type { ClienteProfileDraft } from '../app-cliente/cliente/clientStorage'
 
 const normalizeClienteProfile = (
   profile: Partial<ClienteProfileDraft> | null | undefined,
@@ -18,7 +18,7 @@ const normalizeClienteProfile = (
 type AuthContextType = {
   user: { uid: string; phoneNumber: string | null } | null
   loading: boolean
-  isLogista: boolean
+  isLogista: boolean | undefined
   isCliente: boolean
   profileLoading: boolean
   clientProfile: ClienteProfileDraft | null
@@ -31,7 +31,7 @@ type AuthContextType = {
 const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
-  isLogista: false,
+  isLogista: undefined,
   isCliente: false,
   profileLoading: true,
   clientProfile: null,
@@ -52,7 +52,7 @@ const AuthContext = createContext<AuthContextType>({
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<AuthContextType['user']>(null)
   const [loading, setLoading] = useState(true)
-  const [isLogista, setIsLogista] = useState(false)
+  const [isLogista, setIsLogista] = useState<boolean | undefined>(undefined)
   const [profileLoading, setProfileLoading] = useState(true)
   const [clientProfile, setClientProfile] = useState<ClienteProfileDraft | null>(null)
   const recaptchaRef = useRef<ReturnType<typeof setupRecaptcha> | null>(null)
@@ -65,36 +65,57 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (!u) {
         setIsLogista(false)
         setClientProfile(null)
-        setProfileLoading(false)
       }
-      setLoading(false)
+      setTimeout(() => setLoading(false), 1500)
     })
     return () => unsub()
   }, [])
 
   useEffect(() => {
-    if (!user) {
-      setIsLogista(false)
-      setClientProfile(null)
-      setProfileLoading(false)
-      return
-    }
+    if (!user) return
 
-    setProfileLoading(true)
     const logistaRef = ref(rtdb, `loja/arealogista/${user.uid}`)
     const clienteProfileRef = ref(rtdb, `clientes/${user.uid}/perfil`)
     let roleResolved = false
     let clienteProfileResolved = false
 
+    console.log('[AuthContext] 🔍 Consultando perfil do RTDB', {
+      uid: user.uid,
+      phone: user.phoneNumber,
+      logistaPath: `loja/arealogista/${user.uid}`,
+      clienteProfilePath: `clientes/${user.uid}/perfil`,
+    })
+
     const completeProfileLoading = () => {
       if (roleResolved && clienteProfileResolved) {
         setProfileLoading(false)
+        console.log('[AuthContext] ✅ Perfil carregado completamente', {
+          isLogistaFinal: roleResolved,
+          hasClientProfile: clienteProfileResolved,
+        })
       }
     }
 
     const handleLogistaValue = (snapshot: DataSnapshot) => {
-      // Mantem o front alinhado com as regras do RTDB, que exigem boolean true.
-      setIsLogista(snapshot.val() === true)
+      const val = snapshot.val()
+      const logista = val === true
+      console.log('[AuthContext] 🔑 Resposta RTDB (loja/arealogista/' + user.uid + ')', {
+        valorBruto: val,
+        tipoDoValor: typeof val,
+        snapshotExists: snapshot.exists(),
+        isLogistaResultado: logista,
+      })
+      setIsLogista(logista)
+      roleResolved = true
+      completeProfileLoading()
+    }
+
+    const handleLogistaError = (err: unknown) => {
+      console.error('[AuthContext] ❌ ERRO ao ler loja/arealogista/' + user.uid, {
+        mensagem: err instanceof Error ? err.message : String(err),
+        detalhes: err,
+      })
+      setIsLogista(false)
       roleResolved = true
       completeProfileLoading()
     }
@@ -103,22 +124,23 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const profile = snapshot.exists()
         ? normalizeClienteProfile(snapshot.val() as Partial<ClienteProfileDraft>, user.phoneNumber)
         : normalizeClienteProfile(null, user.phoneNumber)
+      console.log('[AuthContext] 👤 Perfil do cliente carregado', {
+        snapshotExists: snapshot.exists(),
+        profile,
+      })
       setClientProfile(profile)
       clienteProfileResolved = true
       completeProfileLoading()
     }
 
-    const handleProfileReadError = () => {
+    const handleProfileReadError = (err: unknown) => {
+      console.error('[AuthContext] ❌ ERRO ao ler clientes/' + user.uid + '/perfil', err)
       setClientProfile(normalizeClienteProfile(null, user.phoneNumber))
       clienteProfileResolved = true
       completeProfileLoading()
     }
 
-    onValue(logistaRef, handleLogistaValue, () => {
-      setIsLogista(false)
-      roleResolved = true
-      completeProfileLoading()
-    })
+    onValue(logistaRef, handleLogistaValue, handleLogistaError)
     onValue(clienteProfileRef, handleClienteProfileValue, handleProfileReadError)
 
     return () => {

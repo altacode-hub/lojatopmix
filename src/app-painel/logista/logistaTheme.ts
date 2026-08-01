@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react'
-import { siteTheme } from '../siteTheme'
+import { siteTheme } from '../../app-cliente/siteTheme'
 
 export const logistaTheme = {
   colors: {

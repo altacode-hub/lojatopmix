@@ -21,5 +21,5 @@ export const logistaRoutes = [
   { path: 'novo-pedido/:purchaseId/produtos', element: <AdicionarProdutos /> },
   { path: 'pedido/:purchaseId/vitrine', element: <PublicarVitrine /> },
   { path: 'pedido/:purchaseId', element: <PedidoDetalhes /> },
-  { path: '*', element: <Navigate to="/logista" replace /> },
+  { path: '*', element: <Navigate to="/" replace /> },
 ]

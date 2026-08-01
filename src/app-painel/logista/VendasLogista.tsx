@@ -364,7 +364,7 @@ export default function VendasLogista() {
     setSuccessMessage(null)
     setOpeningPayment(true)
 
-    navigate('/logista/vendas/pagamento', {
+    navigate('/vendas/pagamento', {
       state: { selectedItems },
     })
   }
@@ -542,7 +542,7 @@ export default function VendasLogista() {
       return
     }
 
-    navigate('/logista/vendas/pagamento', {
+    navigate('/vendas/pagamento', {
       state: { reservedSale: sale },
     })
   }

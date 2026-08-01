@@ -276,7 +276,7 @@ export default function CounterSalePayment() {
         )
       })
 
-      navigate('/logista/vendas', {
+      navigate('/vendas', {
         replace: true,
         state: {
           successMessage: reservedSale
@@ -317,7 +317,7 @@ export default function CounterSalePayment() {
         </div>
 
         <button
-          onClick={() => navigate('/logista/vendas')}
+          onClick={() => navigate('/vendas')}
           style={{
             display: 'inline-flex',
             alignItems: 'center',

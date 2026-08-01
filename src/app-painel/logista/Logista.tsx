@@ -63,7 +63,7 @@ export default function Logista() {
         </div>
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
           <Link
-            to="/logista/vendas"
+            to="/vendas"
             style={{
               padding: '12px 20px',
               borderRadius: 12,
@@ -77,7 +77,7 @@ export default function Logista() {
             Ver Vendas
           </Link>
           <Link
-            to="/logista/novo-pedido"
+            to="/novo-pedido"
             style={{
               padding: '12px 20px',
               borderRadius: 12,
@@ -123,7 +123,7 @@ export default function Logista() {
               return (
                 <div 
                   key={purchase.id}
-                  onClick={() => navigate(`/logista/pedido/${purchase.id}`)}
+                  onClick={() => navigate(`/pedido/${purchase.id}`)}
                   style={{
                     background: logistaTheme.colors.surface,
                     border: `1px solid ${logistaTheme.colors.border}`,

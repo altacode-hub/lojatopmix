@@ -488,7 +488,7 @@ export default function ProdutoEstoque() {
       <div style={{ maxWidth: 920, margin: '0 auto', display: 'grid', gap: 16 }}>
         <button
           type="button"
-          onClick={() => navigate('/logista/estoque')}
+          onClick={() => navigate('/estoque')}
           style={{
             width: 'fit-content',
             display: 'flex',
@@ -534,7 +534,7 @@ export default function ProdutoEstoque() {
         <div>
           <button
             type="button"
-            onClick={() => navigate('/logista/estoque')}
+            onClick={() => navigate('/estoque')}
             style={{
               width: 'fit-content',
               display: 'flex',
@@ -582,7 +582,7 @@ export default function ProdutoEstoque() {
           <button
             disabled={!purchase}
             type="button"
-            onClick={() => navigate(`/logista/pedido/${purchase}`)}
+            onClick={() => navigate(`/pedido/${purchase}`)}
             style={{
               padding: '12px 16px',
               borderRadius: 12,
@@ -750,7 +750,7 @@ export default function ProdutoEstoque() {
         onSave={handleSave}
         saveButtonLabel={saving ? 'Salvando...' : 'Salvar produto'}
         saveButtonDisabled={saving}
-        onManageCategories={() => navigate('/logista/categorias')}
+        onManageCategories={() => navigate('/categorias')}
       />
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 20 }}>

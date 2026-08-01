@@ -8,32 +8,62 @@
     "rules": "firestore.rules",
     "indexes": "firestore.indexes.json"
   },
-  "hosting": {
-    "public": "dist",
-    "ignore": [
-      "firebase.json",
-      "**/.*",
-      "**/node_modules/**"
-    ],
-    "rewrites": [
-      {
-        "source": "/api/createCheckout",
-        "function": "createCheckout"
-      },
-      {
-        "source": "/api/paymentStatus",
-        "function": "paymentStatus"
-      },
-      {
-        "source": "/api/infinitePayWebhook",
-        "function": "infinitePayWebhook"
-      },
-      {
-        "source": "**",
-        "destination": "/index.html"
-      }
-    ]
-  },
+  "hosting": [
+    {
+      "target": "cliente",
+      "public": "dist/cliente",
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**"
+      ],
+      "rewrites": [
+        {
+          "source": "/api/createCheckout",
+          "function": "createCheckout"
+        },
+        {
+          "source": "/api/paymentStatus",
+          "function": "paymentStatus"
+        },
+        {
+          "source": "/api/infinitePayWebhook",
+          "function": "infinitePayWebhook"
+        },
+        {
+          "source": "**",
+          "destination": "/index.html"
+        }
+      ]
+    },
+    {
+      "target": "painel",
+      "public": "dist/painel",
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**"
+      ],
+      "rewrites": [
+        {
+          "source": "/api/createCheckout",
+          "function": "createCheckout"
+        },
+        {
+          "source": "/api/paymentStatus",
+          "function": "paymentStatus"
+        },
+        {
+          "source": "/api/infinitePayWebhook",
+          "function": "infinitePayWebhook"
+        },
+        {
+          "source": "**",
+          "destination": "/index.html"
+        }
+      ]
+    }
+  ],
   "emulators": {
     "auth": {
       "port": 9099

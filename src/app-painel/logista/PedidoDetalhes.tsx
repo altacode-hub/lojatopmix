@@ -238,7 +238,7 @@ export default function PedidoDetalhes() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap', marginBottom: 24 }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap' }}>
           <button
-            onClick={() => navigate('/logista')}
+            onClick={() => navigate('/')}
             style={{
               padding: '8px 16px',
               borderRadius: 8,
@@ -274,7 +274,7 @@ export default function PedidoDetalhes() {
           </div>
           {purchase.status === 'completed' && (
             <button
-              onClick={() => navigate(`/logista/pedido/${purchaseId}/vitrine`)}
+              onClick={() => navigate(`/pedido/${purchaseId}/vitrine`)}
               style={{
                 padding: '10px 20px',
                 borderRadius: 12,
@@ -289,7 +289,7 @@ export default function PedidoDetalhes() {
             </button>
           )}
           <button
-            onClick={() => navigate(`/logista/novo-pedido/${purchaseId}/produtos`)}
+            onClick={() => navigate(`/novo-pedido/${purchaseId}/produtos`)}
             style={{
               padding: '10px 20px',
               borderRadius: 12,
@@ -542,7 +542,7 @@ export default function PedidoDetalhes() {
                           />
                           <button
                             type="button"
-                            onClick={() => navigate(`/logista/estoque/${product.id}`)}
+                            onClick={() => navigate(`/estoque/${product.id}`)}
                             style={{
                               padding: '8px 12px',
                               borderRadius: 10,

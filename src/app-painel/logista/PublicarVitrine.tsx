@@ -349,7 +349,7 @@ export default function PublicarVitrine() {
         </div>
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', width: isMobile ? '100%' : 'auto' }}>
           <button
-            onClick={() => navigate(`/logista/pedido/${purchaseId}`)}
+            onClick={() => navigate(`/pedido/${purchaseId}`)}
             style={{
               padding: '12px 16px',
               borderRadius: 12,

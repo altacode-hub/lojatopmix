@@ -841,7 +841,7 @@ export default function AdicionarProdutos() {
         window.localStorage.removeItem(getFormDraftStorageKey(purchaseId))
       }
       
-      navigate(`/logista/pedido/${purchaseId}/vitrine`)
+      navigate(`/pedido/${purchaseId}/vitrine`)
     } catch (error) {
       console.error('Error finalizing purchase:', error)
       alert(getErrorMessage(error, 'Nao foi possivel finalizar o pedido.'))
@@ -947,7 +947,7 @@ export default function AdicionarProdutos() {
         promotionPrice={promotionPrice}
         onPromotionPriceChange={setPromotionPrice}
         pricingPreview={pricingPreview}
-        onManageCategories={() => navigate('/logista/categorias')}
+        onManageCategories={() => navigate('/categorias')}
       />
 
       {/* Add Product Button */}

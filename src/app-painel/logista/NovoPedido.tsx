@@ -65,7 +65,7 @@ export default function NovoPedido() {
         uid: user.uid,
       }
       await set(purchaseRef, data)
-      navigate(`/logista/novo-pedido/${purchaseId}/produtos`, { replace: true })
+      navigate(`/novo-pedido/${purchaseId}/produtos`, { replace: true })
     } catch (error) {
       setErro(getErrorMessage(error, 'Erro ao salvar pedido'))
     } finally {
@@ -200,7 +200,7 @@ export default function NovoPedido() {
 
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 20 }}>
           <button
-            onClick={() => navigate('/logista')}
+            onClick={() => navigate('/')}
             style={{
               padding: '12px 16px',
               borderRadius: 8,

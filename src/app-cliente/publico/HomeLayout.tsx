@@ -32,7 +32,7 @@ export default function HomeLayout() {
         infoActive={location.pathname === '/politicaPrivacidade'}
         cartActive={location.pathname.startsWith('/cliente/carrinho')}
         cartHref={user ? '/cliente/carrinho' : '/login'}
-        accountHref={user ? (isLogista ? '/logista' : '/cliente') : '/login'}
+        accountHref={user ? (isLogista ? 'https://paineltopmix.web.app' : '/cliente') : '/login'}
         accountPrimaryLabel={user ? (isLogista ? 'Área Logista' : 'Minha conta') : ''}
         accountSecondaryLabel={user ? user.phoneNumber || 'Usuário' : 'login ou cadastre-se'}
       />

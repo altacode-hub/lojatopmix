@@ -1,5 +1,17 @@
 {
   "projects": {
     "default": "lojatopmix"
+  },
+  "targets": {
+    "lojatopmix": {
+      "hosting": {
+        "cliente": [
+          "lojatopmix"
+        ],
+        "painel": [
+          "paineltopmix"
+        ]
+      }
+    }
   }
 }

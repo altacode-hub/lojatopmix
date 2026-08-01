@@ -1,0 +1,20 @@
+# Desenvolvimento
+    npm run dev              # Cliente (lojatopmix) em http://localhost:5173
+    npm run dev:painel       # Painel (paineltopmix) em http://localhost:5174
+
+# Build (produção)
+    npm run build            # Builda os DOIS apps
+    npm run build:cliente    # Builda só o cliente  → dist/cliente/
+    npm run build:painel     # Builda só o painel   → dist/painel/
+
+Confirmar os targets locais (se necessário)
+    firebase target:apply hosting cliente lojatopmix
+    firebase target:apply hosting painel paineltopmix
+
+Deploy
+# Deploya os dois sites + functions de uma vez
+    firebase deploy
+
+# Ou deploya apenas os hosts
+    firebase deploy --only hosting:cliente   # → lojatopmix.web.app
+    firebase deploy --only hosting:painel    # → paineltopmix.web.app
