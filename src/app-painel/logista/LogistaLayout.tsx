@@ -68,7 +68,7 @@ export default function LogistaLayout() {
 
       <main style={{
         flex: 1,
-        padding: isMobile ? '64px 16px 16px 16px' : 24,
+        padding: isMobile ? '64px 0px 0px 0px' : 0,
         color: logistaTheme.colors.text,
       }}>
         <Outlet />

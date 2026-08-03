@@ -3,7 +3,7 @@ import { get, onValue, push, ref, update } from 'firebase/database'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { rtdb } from '../../service/firebase'
-import type { CatalogVariation, InternalProductRecord, ShowcaseRecord } from '../../types/catalog'
+import type { InternalProductRecord, ShowcaseRecord } from '../../types/catalog'
 import { getEffectiveVariationStock, variationLabel } from '../../utils/catalog'
 import { releaseCartItem } from '../../utils/cartReservations'
 import CounterSaleSection from './vendas/CounterSaleSection'
@@ -13,9 +13,17 @@ import SalesHeader from './vendas/SalesHeader'
 import SalesHistorySection from './vendas/SalesHistorySection'
 import { getDateInputValue, getDateRange, hasVariationStock } from './vendas/helpers'
 import type { CounterSaleItem, ReservedSaleViewRecord, SaleItemRecord, SaleRecord, SaleableVariationRow } from './vendas/types'
-import { CATALOG_SYNC_PATH, patchCachedStockProduct } from './stockCache'
+import {
+  CATALOG_SYNC_PATH,
+  buildCounterSaleCatalogRows,
+  patchCachedStockProduct,
+  readCounterSaleCatalogCache,
+  writeCounterSaleCatalogCache,
+} from './stockCache'
 import { useMediaQuery } from '../../hooks/useMediaQuery'
 import { logistaTheme } from './logistaTheme'
+
+const MIN_SEARCH_LENGTH = 3
 
 export default function VendasLogista() {
   const { user } = useAuth()
@@ -30,6 +38,9 @@ export default function VendasLogista() {
   const [periodStart, setPeriodStart] = useState(getDateInputValue(0))
   const [periodEnd, setPeriodEnd] = useState(getDateInputValue(0))
   const [loading, setLoading] = useState(true)
+  const [syncingCatalog, setSyncingCatalog] = useState(false)
+  const [catalogSyncedAt, setCatalogSyncedAt] = useState<number>(0)
+  const [catalogSource, setCatalogSource] = useState<'local' | 'remote'>('local')
   const [openingPayment, setOpeningPayment] = useState(false)
   const [reservingProducts, setReservingProducts] = useState(false)
   const [deliveringSaleId, setDeliveringSaleId] = useState<string | null>(null)
@@ -39,45 +50,33 @@ export default function VendasLogista() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const lastCatalogSyncRef = useRef(0)
 
-  const loadData = useCallback(async () => {
-    try {
-      setLoading(true)
-      setError(null)
-      setWarningMessage(null)
+  const setCatalogFromRows = (rows: SaleableVariationRow[], syncedAt: number, remoteUpdatedAt: number, source: 'local' | 'remote') => {
+    setCatalogRows(rows)
+    setCatalogSyncedAt(syncedAt)
+    setCatalogSource(source)
+    lastCatalogSyncRef.current = remoteUpdatedAt
+  }
 
-      const [productsResult, showcaseResult, salesResult, cartReservationsResult] = await Promise.allSettled([
-        get(ref(rtdb, 'products')),
-        get(ref(rtdb, 'showcase')),
-        get(ref(rtdb, 'sales')),
-        get(ref(rtdb, 'cartReservations')),
-      ])
+  const loadSalesAndReservations = useCallback(async () => {
+    const [salesResult, cartReservationsResult] = await Promise.allSettled([
+      get(ref(rtdb, 'sales')),
+      get(ref(rtdb, 'cartReservations')),
+    ])
 
-      if (
-        productsResult.status === 'rejected' ||
-        showcaseResult.status === 'rejected' ||
-        salesResult.status === 'rejected'
-      ) {
-        let firstError: unknown = new Error('Nao foi possivel carregar as vendas do logista.')
-        if (productsResult.status === 'rejected') {
-          firstError = productsResult.reason
-        } else if (showcaseResult.status === 'rejected') {
-          firstError = showcaseResult.reason
-        } else if (salesResult.status === 'rejected') {
-          firstError = salesResult.reason
-        }
+    if (salesResult.status === 'rejected') {
+      throw salesResult.reason
+    }
 
-        throw firstError
-      }
+    const [productsForReservationsResult, showcaseForReservationsResult] = await Promise.allSettled([
+      get(ref(rtdb, 'products')),
+      get(ref(rtdb, 'showcase')),
+    ])
 
-      const productsSnapshot = productsResult.value
-      const showcaseSnapshot = showcaseResult.value
-      const salesSnapshot = salesResult.value
-      const productsData = (productsSnapshot.exists() ? productsSnapshot.val() : {}) as Record<string, InternalProductRecord>
-      const showcaseData = (showcaseSnapshot.exists() ? showcaseSnapshot.val() : {}) as Record<string, ShowcaseRecord>
-      const salesData = (salesSnapshot.exists() ? salesSnapshot.val() : {}) as Record<string, SaleRecord>
-      const cartReservationsData =
-        cartReservationsResult.status === 'fulfilled'
-          ? ((cartReservationsResult.value.exists() ? cartReservationsResult.value.val() : {}) as Record<
+    const salesSnapshot = salesResult.value
+    const salesData = (salesSnapshot.exists() ? salesSnapshot.val() : {}) as Record<string, SaleRecord>
+    const cartReservationsData =
+      cartReservationsResult.status === 'fulfilled'
+        ? ((cartReservationsResult.value.exists() ? cartReservationsResult.value.val() : {}) as Record<
             string,
             {
               status?: string
@@ -94,142 +93,210 @@ export default function VendasLogista() {
               >
             }
           >)
-          : {}
+        : {}
 
-      if (cartReservationsResult.status === 'rejected') {
-        console.warn('Nao foi possivel ler as reservas de carrinho para a tela de vendas:', cartReservationsResult.reason)
-        setWarningMessage('As reservas de carrinho nao puderam ser carregadas no momento, mas as demais vendas foram exibidas normalmente.')
-      }
+    const productsForReservations =
+      productsForReservationsResult.status === 'fulfilled' && productsForReservationsResult.value.exists()
+        ? (productsForReservationsResult.value.val() as Record<string, InternalProductRecord>)
+        : {}
+    const showcaseForReservations =
+      showcaseForReservationsResult.status === 'fulfilled' && showcaseForReservationsResult.value.exists()
+        ? (showcaseForReservationsResult.value.val() as Record<string, ShowcaseRecord>)
+        : {}
 
-      const nextCatalogRows = Object.keys(productsData)
-        .flatMap((productId) => {
-          const product = productsData[productId]
-          const showcase = showcaseData[productId]
-          const variations = (showcase?.variations || product?.variations || {}) as Record<string, CatalogVariation>
-          const unitPrice = Number(showcase?.price ?? product?.pricing?.salePrice ?? 0)
+    if (cartReservationsResult.status === 'rejected') {
+      console.warn(
+        'Nao foi possivel ler as reservas de carrinho para a tela de vendas:',
+        (cartReservationsResult as PromiseRejectedResult).reason,
+      )
+      setWarningMessage(
+        'As reservas de carrinho nao puderam ser carregadas no momento, mas as demais vendas foram exibidas normalmente.',
+      )
+    } else if (productsForReservationsResult.status === 'rejected' || showcaseForReservationsResult.status === 'rejected') {
+      console.warn('Dados de produto/shop em falta para detalhar reservas de carrinho.')
+    }
 
-          return Object.entries(variations)
-            .map(([variationKey, variation]) => {
-              const effectiveStock = getEffectiveVariationStock(variation)
+    const nextSales = Object.entries(salesData)
+      .map(([saleId, sale]) => ({
+        ...sale,
+        saleId: sale.saleId || saleId,
+        items: Array.isArray(sale.items) ? sale.items : [],
+        totalAmount: Number(sale.totalAmount || 0),
+        totalItems: Number(sale.totalItems || 0),
+        createdAt: Number(sale.createdAt || 0),
+      }))
+      .sort((a, b) => Number(b.createdAt || 0) - Number(a.createdAt || 0))
 
-              return {
-                id: `${productId}:${variationKey}`,
-                productId,
-                productName: showcase?.name || product?.name || productId,
+    const nextCartReservedSales = Object.entries(cartReservationsData)
+      .flatMap(([cartId, reservation]) => {
+        if (!reservation || reservation.status !== 'active') {
+          return []
+        }
+
+        const reservedItems = Object.entries(reservation.items || {})
+          .flatMap(([itemId, item]) => {
+            if (!item?.productId || !item.variationKey || !item.quantity) {
+              return []
+            }
+
+            const product = productsForReservations[item.productId]
+            const showcase = showcaseForReservations[item.productId]
+            const showcaseVariation = showcase?.variations?.[item.variationKey]
+            const productVariation = product?.variations?.[item.variationKey]
+            const variation = showcaseVariation || productVariation
+            const unitPrice = Number(showcase?.price ?? product?.pricing?.salePrice ?? 0)
+
+            return [
+              {
+                reservationItemId: item.itemId || itemId,
+                productId: item.productId,
+                variationKey: item.variationKey,
+                productName: showcase?.name || product?.name || item.productId,
                 description: product?.description || showcase?.shortDescription || '',
-                price: unitPrice,
-                variationKey,
-                variation: {
-                  ...variation,
-                  stock: effectiveStock,
-                },
-                searchText: [
-                  productId,
-                  showcase?.name,
-                  product?.name,
-                  product?.description,
-                  variation.size,
-                  variation.color,
-                ]
-                  .filter(Boolean)
-                  .join(' ')
-                  .toLowerCase(),
-              }
-            })
-            .filter((row) => row.variation.stock > 0)
-        })
-        .sort((a, b) => a.productName.localeCompare(b.productName, 'pt-BR'))
+                quantity: Number(item.quantity || 0),
+                unitPrice,
+                lineTotal: Number(item.quantity || 0) * unitPrice,
+                size: variation?.size || null,
+                color: variation?.color || null,
+                updatedAt: Number(item.updatedAt || reservation.updatedAt || 0),
+              } satisfies SaleItemRecord & { updatedAt: number },
+            ]
+          })
+          .filter((item) => item.quantity > 0)
 
-      const nextSales = Object.entries(salesData)
-        .map(([saleId, sale]) => ({
-          ...sale,
-          saleId: sale.saleId || saleId,
-          items: Array.isArray(sale.items) ? sale.items : [],
-          totalAmount: Number(sale.totalAmount || 0),
-          totalItems: Number(sale.totalItems || 0),
-          createdAt: Number(sale.createdAt || 0),
-        }))
-        .sort((a, b) => Number(b.createdAt || 0) - Number(a.createdAt || 0))
+        if (reservedItems.length === 0) {
+          return []
+        }
 
-      const nextCartReservedSales = Object.entries(cartReservationsData)
-        .flatMap(([cartId, reservation]) => {
-          if (!reservation || reservation.status !== 'active') {
-            return []
-          }
+        const updatedAt = Math.max(
+          Number(reservation.updatedAt || 0),
+          ...reservedItems.map((item) => Number(item.updatedAt || 0)),
+        )
 
-          const reservedItems = Object.entries(reservation.items || {})
-            .flatMap(([itemId, item]) => {
-              if (!item?.productId || !item.variationKey || !item.quantity) {
-                return []
-              }
+        return [
+          {
+            saleId: `cart:${cartId}`,
+            cartId,
+            sourceType: 'cart',
+            channel: 'carrinho',
+            paymentStatus: 'pending',
+            paymentMethod: null,
+            fulfillmentStatus: 'reserved',
+            stockStatus: 'reserved',
+            totalAmount: reservedItems.reduce((sum, item) => sum + item.lineTotal, 0),
+            totalItems: reservedItems.reduce((sum, item) => sum + item.quantity, 0),
+            items: reservedItems.map(({ updatedAt: _updatedAt, ...item }) => item),
+            customer: null,
+            notes: 'Produtos reservados no carrinho do cliente.',
+            createdAt: updatedAt,
+            reservedAt: updatedAt,
+            updatedAt,
+          } satisfies ReservedSaleViewRecord,
+        ]
+      })
+      .sort((a, b) => Number(b.updatedAt || b.createdAt || 0) - Number(a.updatedAt || a.createdAt || 0))
 
-              const product = productsData[item.productId]
-              const showcase = showcaseData[item.productId]
-              const showcaseVariation = showcase?.variations?.[item.variationKey]
-              const productVariation = product?.variations?.[item.variationKey]
-              const variation = showcaseVariation || productVariation
-              const unitPrice = Number(showcase?.price ?? product?.pricing?.salePrice ?? 0)
+    setSales(nextSales)
+    setCartReservedSales(nextCartReservedSales)
+  }, [])
 
-              return [
-                {
-                  reservationItemId: item.itemId || itemId,
-                  productId: item.productId,
-                  variationKey: item.variationKey,
-                  productName: showcase?.name || product?.name || item.productId,
-                  description: product?.description || showcase?.shortDescription || '',
-                  quantity: Number(item.quantity || 0),
-                  unitPrice,
-                  lineTotal: Number(item.quantity || 0) * unitPrice,
-                  size: variation?.size || null,
-                  color: variation?.color || null,
-                  updatedAt: Number(item.updatedAt || reservation.updatedAt || 0),
-                } satisfies SaleItemRecord & { updatedAt: number },
-              ]
-            })
-            .filter((item) => item.quantity > 0)
+  const loadCounterSaleCatalogFromRemote = useCallback(async () => {
+    const [productsResult, showcaseResult, syncResult] = await Promise.allSettled([
+      get(ref(rtdb, 'products')),
+      get(ref(rtdb, 'showcase')),
+      get(ref(rtdb, `${CATALOG_SYNC_PATH}/updatedAt`)),
+    ])
 
-          if (reservedItems.length === 0) {
-            return []
-          }
+    if (productsResult.status === 'rejected') {
+      throw (productsResult as PromiseRejectedResult).reason
+    }
 
-          const updatedAt = Math.max(
-            Number(reservation.updatedAt || 0),
-            ...reservedItems.map((item) => Number(item.updatedAt || 0)),
-          )
+    if (showcaseResult.status === 'rejected') {
+      throw (showcaseResult as PromiseRejectedResult).reason
+    }
 
-          return [
-            {
-              saleId: `cart:${cartId}`,
-              cartId,
-              sourceType: 'cart',
-              channel: 'carrinho',
-              paymentStatus: 'pending',
-              paymentMethod: null,
-              fulfillmentStatus: 'reserved',
-              stockStatus: 'reserved',
-              totalAmount: reservedItems.reduce((sum, item) => sum + item.lineTotal, 0),
-              totalItems: reservedItems.reduce((sum, item) => sum + item.quantity, 0),
-              items: reservedItems.map(({ updatedAt: _updatedAt, ...item }) => item),
-              customer: null,
-              notes: 'Produtos reservados no carrinho do cliente.',
-              createdAt: updatedAt,
-              reservedAt: updatedAt,
-              updatedAt,
-            } satisfies ReservedSaleViewRecord,
-          ]
-        })
-        .sort((a, b) => Number(b.updatedAt || b.createdAt || 0) - Number(a.updatedAt || a.createdAt || 0))
+    const remoteUpdatedAt = syncResult.status === 'fulfilled' ? Number(syncResult.value.val() || 0) : 0
+    const productsData = productsResult.value.exists()
+      ? (productsResult.value.val() as Record<string, InternalProductRecord>)
+      : {}
+    const showcaseData = showcaseResult.value.exists()
+      ? (showcaseResult.value.val() as Record<string, ShowcaseRecord>)
+      : {}
 
-      setCatalogRows(nextCatalogRows)
-      setSales(nextSales)
-      setCartReservedSales(nextCartReservedSales)
-    } catch (loadError) {
-      console.error('Erro ao carregar vendas do logista:', loadError)
-      setError('Nao foi possivel carregar os dados de vendas e estoque.')
-    } finally {
-      setLoading(false)
+    const nextCatalogRows = buildCounterSaleCatalogRows(productsData, showcaseData, getEffectiveVariationStock)
+    const syncedAt = Date.now()
+
+    writeCounterSaleCatalogCache({
+      syncedAt,
+      remoteUpdatedAt,
+      rows: nextCatalogRows,
+    })
+
+    return {
+      rows: nextCatalogRows,
+      syncedAt,
+      remoteUpdatedAt,
     }
   }, [])
+
+  const loadCounterSaleCatalog = useCallback(async (forceRemote = false) => {
+    const localCache = !forceRemote ? readCounterSaleCatalogCache() : null
+    if (localCache && localCache.rows.length > 0) {
+      setCatalogFromRows(localCache.rows, localCache.syncedAt, localCache.remoteUpdatedAt, 'local')
+      return
+    }
+
+    try {
+      const remotePayload = await loadCounterSaleCatalogFromRemote()
+      setCatalogFromRows(remotePayload.rows, remotePayload.syncedAt, remotePayload.remoteUpdatedAt, 'remote')
+    } catch (remoteError) {
+      console.error('Erro ao carregar catalogo remoto da venda no balcao:', remoteError)
+      if (localCache) {
+        setCatalogFromRows(localCache.rows, localCache.syncedAt, localCache.remoteUpdatedAt, 'local')
+        setWarningMessage(
+          'A sincronizacao remota falhou. O catalogo de venda no balcao foi restaurado a partir do cache local.',
+        )
+      } else {
+        throw remoteError
+      }
+    }
+  }, [loadCounterSaleCatalogFromRemote])
+
+  const loadData = useCallback(
+    async (options?: { forceRemote?: boolean }) => {
+      const forceRemote = Boolean(options?.forceRemote)
+      try {
+        setLoading(true)
+        setError(null)
+        setWarningMessage(null)
+
+        await Promise.all([loadCounterSaleCatalog(forceRemote), loadSalesAndReservations()])
+      } catch (loadError) {
+        console.error('Erro ao carregar vendas do logista:', loadError)
+        setError('Nao foi possivel carregar os dados de vendas e estoque.')
+      } finally {
+        setLoading(false)
+      }
+    },
+    [loadCounterSaleCatalog, loadSalesAndReservations],
+  )
+
+  const handleSyncCatalog = useCallback(async () => {
+    try {
+      setSyncingCatalog(true)
+      setError(null)
+      setWarningMessage(null)
+
+      const remotePayload = await loadCounterSaleCatalogFromRemote()
+      setCatalogFromRows(remotePayload.rows, remotePayload.syncedAt, remotePayload.remoteUpdatedAt, 'remote')
+      setSuccessMessage('Catalogo sincronizado com o banco de dados online.')
+    } catch (syncError) {
+      console.error('Erro ao sincronizar catalogo:', syncError)
+      setError(syncError instanceof Error ? syncError.message : 'Nao foi possivel sincronizar o catalogo com o banco online.')
+    } finally {
+      setSyncingCatalog(false)
+    }
+  }, [loadCounterSaleCatalogFromRemote])
 
   useEffect(() => {
     void loadData()
@@ -244,11 +311,12 @@ export default function VendasLogista() {
       }
 
       lastCatalogSyncRef.current = nextUpdatedAt
-      void loadData()
+      void loadCounterSaleCatalog(true)
+      void loadSalesAndReservations()
     })
 
     return () => unsubscribe()
-  }, [loadData])
+  }, [loadCounterSaleCatalog, loadSalesAndReservations])
 
   useEffect(() => {
     const navigationState = location.state as { successMessage?: string } | null
@@ -262,13 +330,22 @@ export default function VendasLogista() {
   }, [location.pathname, location.state, navigate])
 
   const filteredCatalog = useMemo(() => {
-    const normalizedSearch = search.trim().toLowerCase()
+    const normalizedSearch = search.trim()
 
-    if (!normalizedSearch) {
-      return catalogRows.slice(0, 24)
+    if (normalizedSearch.length < MIN_SEARCH_LENGTH) {
+      return []
     }
 
-    return catalogRows.filter((row) => row.searchText.includes(normalizedSearch)).slice(0, 24)
+    const searchTokens = normalizedSearch
+      .split(/\s+/)
+      .map((token) => token.toLowerCase())
+      .filter(Boolean)
+
+    return catalogRows
+      .filter((row) =>
+        searchTokens.every((token) => row.searchText.includes(token)),
+      )
+      .slice(0, 24)
   }, [catalogRows, search])
 
   const selectedTotal = useMemo(
@@ -802,6 +879,8 @@ export default function VendasLogista() {
     <div style={{ maxWidth: 1320, margin: '0 auto', padding: isMobile ? 16 : 24, display: 'grid', gap: 24 }}>
       <SalesHeader pendingDeliveriesCount={pendingDeliveries.length} totalSalesInPeriod={historyStats.totalSales} />
 
+      <style>{`@keyframes spin { from { transform: rotate(0deg);} to { transform: rotate(360deg);}}`}</style>
+
       {error ? (
         <div
           style={{
@@ -846,7 +925,12 @@ export default function VendasLogista() {
 
       <CounterSaleSection
         loading={loading}
+        syncingCatalog={syncingCatalog}
         search={search}
+        minSearchLength={MIN_SEARCH_LENGTH}
+        catalogCount={catalogRows.length}
+        catalogSource={catalogSource}
+        catalogSyncedAt={catalogSyncedAt}
         filteredCatalog={filteredCatalog}
         selectedItems={selectedItems}
         selectedTotal={selectedTotal}
@@ -859,6 +943,9 @@ export default function VendasLogista() {
         onFinalizeCounterSale={openPaymentForSelectedItems}
         onReserveProducts={() => {
           void reserveCounterSale()
+        }}
+        onSyncCatalog={() => {
+          void handleSyncCatalog()
         }}
       />
 

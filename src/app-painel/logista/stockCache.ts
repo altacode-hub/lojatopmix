@@ -1,4 +1,5 @@
 import type { CatalogVariation, InternalProductRecord, ShowcaseRecord } from '../../types/catalog'
+import type { SaleableVariationRow } from './vendas/types'
 
 export interface InventoryRecord {
   total?: number
@@ -219,4 +220,103 @@ export const removeCachedStockProduct = (productId: string, remoteUpdatedAt: num
     remoteUpdatedAt,
     rows: nextRows,
   })
+}
+
+export interface CounterSaleCatalogCache {
+  version: number
+  syncedAt: number
+  remoteUpdatedAt: number
+  rows: SaleableVariationRow[]
+}
+
+const COUNTER_SALE_CATALOG_CACHE_KEY = 'logista-counter-sale-catalog-v1'
+const COUNTER_SALE_CATALOG_CACHE_VERSION = 1
+
+const buildCounterSaleSearchText = (
+  productId: string,
+  showcaseName: string | null | undefined,
+  productName: string | null | undefined,
+  description: string | null | undefined,
+  variation: CatalogVariation,
+) =>
+  normalizeText(
+    [productId, showcaseName, productName, description, variation?.size, variation?.color].filter(Boolean).join(' '),
+  )
+
+export const buildCounterSaleCatalogRows = (
+  productsData: Record<string, InternalProductRecord>,
+  showcaseData: Record<string, ShowcaseRecord>,
+  getEffectiveVariationStock: (variation: CatalogVariation) => number,
+): SaleableVariationRow[] =>
+  Object.keys(productsData)
+    .flatMap((productId) => {
+      const product = productsData[productId]
+      const showcase = showcaseData[productId]
+      const variations = (showcase?.variations || product?.variations || {}) as Record<string, CatalogVariation>
+      const unitPrice = Number(showcase?.price ?? product?.pricing?.salePrice ?? 0)
+
+      return Object.entries(variations)
+        .map(([variationKey, variation]) => {
+          const effectiveStock = getEffectiveVariationStock(variation)
+          return {
+            id: `${productId}:${variationKey}`,
+            productId,
+            productName: showcase?.name || product?.name || productId,
+            description: product?.description || showcase?.shortDescription || '',
+            price: unitPrice,
+            variationKey,
+            variation: {
+              ...variation,
+              stock: effectiveStock,
+            },
+            searchText: buildCounterSaleSearchText(
+              productId,
+              showcase?.name,
+              product?.name,
+              product?.description || showcase?.shortDescription,
+              variation,
+            ),
+          } satisfies SaleableVariationRow
+        })
+        .filter((row) => row.variation.stock > 0)
+    })
+    .sort((a, b) => a.productName.localeCompare(b.productName, 'pt-BR'))
+
+export const readCounterSaleCatalogCache = () => {
+  if (typeof window === 'undefined') return null
+
+  try {
+    const rawCache = window.localStorage.getItem(COUNTER_SALE_CATALOG_CACHE_KEY)
+    if (!rawCache) return null
+
+    const parsedCache = JSON.parse(rawCache) as Partial<CounterSaleCatalogCache>
+    if (parsedCache.version !== COUNTER_SALE_CATALOG_CACHE_VERSION || !Array.isArray(parsedCache.rows)) {
+      window.localStorage.removeItem(COUNTER_SALE_CATALOG_CACHE_KEY)
+      return null
+    }
+
+    return {
+      version: COUNTER_SALE_CATALOG_CACHE_VERSION,
+      syncedAt: Number(parsedCache.syncedAt || 0),
+      remoteUpdatedAt: Number(parsedCache.remoteUpdatedAt || 0),
+      rows: parsedCache.rows,
+    } satisfies CounterSaleCatalogCache
+  } catch (error) {
+    console.error('Erro ao ler cache local do catalogo de venda no balcao:', error)
+    window.localStorage.removeItem(COUNTER_SALE_CATALOG_CACHE_KEY)
+    return null
+  }
+}
+
+export const writeCounterSaleCatalogCache = (
+  payload: Omit<CounterSaleCatalogCache, 'version'>,
+) => {
+  if (typeof window === 'undefined') return
+
+  const cachePayload: CounterSaleCatalogCache = {
+    version: COUNTER_SALE_CATALOG_CACHE_VERSION,
+    ...payload,
+  }
+
+  window.localStorage.setItem(COUNTER_SALE_CATALOG_CACHE_KEY, JSON.stringify(cachePayload))
 }

@@ -8,7 +8,7 @@ type SalesHeaderProps = {
 
 export default function SalesHeader({ pendingDeliveriesCount, totalSalesInPeriod }: SalesHeaderProps) {
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+    <div style={{ display: 'flex', justifyContent: 'center', gap: 16, flexWrap: 'wrap' }}>
       <div>
         <h1 style={{ margin: 0, fontSize: 32 }}>Vendas</h1>
         <div style={{ color: logistaTheme.colors.textMuted, marginTop: 6 }}>
