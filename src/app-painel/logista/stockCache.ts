@@ -229,8 +229,8 @@ export interface CounterSaleCatalogCache {
   rows: SaleableVariationRow[]
 }
 
-const COUNTER_SALE_CATALOG_CACHE_KEY = 'logista-counter-sale-catalog-v1'
-const COUNTER_SALE_CATALOG_CACHE_VERSION = 1
+const COUNTER_SALE_CATALOG_CACHE_KEY = 'logista-counter-sale-catalog-v2'
+const COUNTER_SALE_CATALOG_CACHE_VERSION = 2
 
 const buildCounterSaleSearchText = (
   productId: string,
@@ -254,6 +254,10 @@ export const buildCounterSaleCatalogRows = (
       const showcase = showcaseData[productId]
       const variations = (showcase?.variations || product?.variations || {}) as Record<string, CatalogVariation>
       const unitPrice = Number(showcase?.price ?? product?.pricing?.salePrice ?? 0)
+      const image = showcase?.image || product?.image || ''
+      const mainImageZoom = Number(showcase?.mainImageZoom ?? product?.mainImageZoom ?? 1)
+      const mainImageOffsetX = Number(showcase?.mainImageOffsetX ?? product?.mainImageOffsetX ?? 0)
+      const mainImageOffsetY = Number(showcase?.mainImageOffsetY ?? product?.mainImageOffsetY ?? 0)
 
       return Object.entries(variations)
         .map(([variationKey, variation]) => {
@@ -269,6 +273,10 @@ export const buildCounterSaleCatalogRows = (
               ...variation,
               stock: effectiveStock,
             },
+            image,
+            mainImageZoom,
+            mainImageOffsetX,
+            mainImageOffsetY,
             searchText: buildCounterSaleSearchText(
               productId,
               showcase?.name,
