@@ -4,6 +4,7 @@ import { variationLabel } from '../../../utils/catalog'
 import { cardStyle, formatCurrency, formatDateTime } from './helpers'
 import type { CounterSaleItem, SaleableVariationRow } from './types'
 import { logistaInputStyle, logistaTheme } from '../logistaTheme'
+import FramedImage from '../../../components/FramedImage'
 
 type CounterSaleSectionProps = {
   loading: boolean
@@ -117,7 +118,7 @@ export default function CounterSaleSection({
           </div>
         </div>
 
-        <div style={{ marginTop: 20, display: 'grid', gap: 12 }}>
+        <div style={{ marginTop: 20, display: 'flex' }}>
           {loading ? <div style={{ color: logistaTheme.colors.textMuted }}>Carregando dados da tela...</div> : null}
 
           {!loading && !shouldShowResults ? (
@@ -147,69 +148,98 @@ export default function CounterSaleSection({
               Tente outro codigo ou descricao, ou sincronize o catalogo com o banco online.
             </div>
           ) : null}
-
+        </div>
+        <div style={{ marginTop: 20, display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fill, minmax(310px, 1fr))' }}>
           {!loading && shouldShowResults
             ? filteredCatalog.map((row) => (
                 <div
                   key={row.id}
                   style={{
-                    border: `1px solid ${logistaTheme.colors.border}`,
-                    borderRadius: 14,
-                    padding: 16,
+                    border: '1px solid #e5e7eb',
+                    borderRadius: 12,
+                    background: '#fff',
+                    boxShadow: '0 1px 2px rgba(0, 0, 0, 0.04)',
+                    overflow: 'hidden',
                     display: 'grid',
-                    gap: 12,
-                    gridTemplateColumns: isMobile ? '1fr' : 'minmax(0, 1fr) auto',
-                    alignItems: 'center',
+                    gridTemplateColumns: '100px 1fr',
+                    gridGap: 8,
+                    cursor: 'pointer',
+                    padding: 8,  
                   }}
                 >
+                  <span
+                    aria-hidden="true"
+                    style={{
+                      borderRadius: 8,
+                      aspectRatio: '1 / 1',
+                      position: 'relative',
+                      overflow: 'hidden',
+                    }}
+                  >
+                    <FramedImage
+                      src={row.image || ''}
+                      alt={row.productName}
+                      zoom={Number(row.mainImageZoom || 1)}
+                      offsetX={Number(row.mainImageOffsetX || 0)}
+                      offsetY={Number(row.mainImageOffsetY || 0)}
+                      fallback={
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: '#636872ff',
+                            background: '#bec1c4ff',
+                            height: '100px',
+                            width: '100px',
+                            objectFit: 'cover',
+                          }}
+                        >
+                          Sem foto
+                        </div>
+                      }
+                      fallbackStyle={{ position: 'absolute', inset: 0 }}
+                    />
+                  </span>
                   <div>
-                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 6 }}>
-                      <span style={{ fontWeight: 700, color: logistaTheme.colors.text }}>{row.productName}</span>
-                      <span
-                        style={{
-                          padding: '2px 10px',
-                          borderRadius: 999,
-                          background: logistaTheme.colors.accentSoft,
-                          color: logistaTheme.colors.accentDark,
-                          fontSize: 12,
-                        }}
-                      >
-                        Codigo: {row.productId}
-                      </span>
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 6, justifyContent: 'flex-start ' }}>
+                      <span style={{ textAlign: 'left', fontWeight: 700, color: logistaTheme.colors.text }}>{row.productName}</span>
                     </div>
-                    <div style={{ color: logistaTheme.colors.textMuted, fontSize: 14 }}>
-                      {row.description || 'Sem descricao cadastrada.'}
-                    </div>
+                    
                     <div
                       style={{
                         display: 'flex',
-                        gap: 12,
                         flexWrap: 'wrap',
-                        marginTop: 10,
+                        marginBottom: 6,
+                        justifyContent: 'flex-start',
                         color: logistaTheme.colors.text,
                         fontSize: 14,
                       }}
                     >
-                      <span>{variationLabel(row.variation)}</span>
-                      <span>Disponivel: {row.variation.stock}</span>
-                      <span>{formatCurrency(row.price)}</span>
+                      <span style={{textAlign: 'left'}}>{variationLabel(row.variation)} • Disponivel: {row.variation.stock}</span>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 84px', gap: 8, alignItems: 'center', justifyItems: 'end' }}>
+                      <div style={{ color: logistaTheme.colors.accent, fontSize: 20, fontWeight: 700 }}>{formatCurrency(row.price)}</div>
+                      <button
+                        onClick={() => onAddItem(row)}
+                        style={{
+                          width: '84px',
+                          padding: '12px 12px',
+                          borderRadius: 12,
+                          border: 'none',
+                          background: logistaTheme.colors.accent,
+                          color: logistaTheme.colors.surface,
+                          fontWeight: 700,
+                          fontSize: 14,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Adicionar
+                      </button>
                     </div>
                   </div>
-
-                  <button
-                    onClick={() => onAddItem(row)}
-                    style={{
-                      padding: '12px 14px',
-                      borderRadius: 12,
-                      border: 'none',
-                      background: logistaTheme.colors.accent,
-                      color: logistaTheme.colors.surface,
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Adicionar
-                  </button>
+                  
                 </div>
               ))
             : null}

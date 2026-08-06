@@ -9,6 +9,10 @@ export type SaleableVariationRow = {
   variationKey: string
   variation: CatalogVariation
   searchText: string
+  image?: string | null
+  mainImageZoom?: number | null
+  mainImageOffsetX?: number | null
+  mainImageOffsetY?: number | null
 }
 
 export type CounterSaleItem = SaleableVariationRow & {
