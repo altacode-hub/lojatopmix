@@ -11,8 +11,20 @@ import PendingDeliveriesSection from './vendas/PendingDeliveriesSection'
 import ReservedSalesSection from './vendas/ReservedSalesSection'
 import SalesHeader from './vendas/SalesHeader'
 import SalesHistorySection from './vendas/SalesHistorySection'
-import { getDateInputValue, getDateRange, hasVariationStock } from './vendas/helpers'
-import type { CounterSaleItem, ReservedSaleViewRecord, SaleItemRecord, SaleRecord, SaleableVariationRow } from './vendas/types'
+import { formatCurrency, getDateInputValue, getDateRange, hasVariationStock } from './vendas/helpers'
+import {
+  isAdHocCounterSaleItem,
+  isRegisteredCounterSaleItem,
+} from './vendas/types'
+import type {
+  AdHocCounterSaleItem,
+  CounterSaleItem,
+  RegisteredCounterSaleItem,
+  ReservedSaleViewRecord,
+  SaleItemRecord,
+  SaleRecord,
+  SaleableVariationRow,
+} from './vendas/types'
 import {
   CATALOG_SYNC_PATH,
   buildCounterSaleCatalogRows,
@@ -402,12 +414,35 @@ export default function VendasLogista() {
     setSelectedItems((current) => {
       const existing = current.find((item) => item.id === row.id)
 
-      if (existing) {
+      if (existing && isRegisteredCounterSaleItem(existing)) {
         const nextQty = Math.min(existing.qty + 1, Number(row.variation.stock || 0))
         return current.map((item) => (item.id === row.id ? { ...item, qty: nextQty } : item))
       }
 
-      return [...current, { ...row, qty: 1 }]
+      const nextItem: RegisteredCounterSaleItem = {
+        ...row,
+        itemType: 'registered',
+        qty: 1,
+      }
+
+      return [...current, nextItem]
+    })
+  }
+
+  const addAdHocItem = () => {
+    setSuccessMessage(null)
+    setError(null)
+    setSelectedItems((current) => {
+      const nextItem: AdHocCounterSaleItem = {
+        itemType: 'ad_hoc',
+        id: `ad_hoc_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        productName: '',
+        description: '',
+        price: 0,
+        qty: 1,
+      }
+
+      return [...current, nextItem]
     })
   }
 
@@ -417,13 +452,48 @@ export default function VendasLogista() {
         .map((item) => {
           if (item.id !== itemId) return item
 
-          const maxQty = Math.max(1, Number(item.variation.stock || 0))
+          const sanitizedQty = Number.isFinite(nextQty) && nextQty > 0 ? nextQty : 1
+
+          if (isRegisteredCounterSaleItem(item)) {
+            const maxQty = Math.max(1, Number(item.variation.stock || 0))
+            return {
+              ...item,
+              qty: Math.max(1, Math.min(sanitizedQty, maxQty)),
+            }
+          }
+
           return {
             ...item,
-            qty: Math.max(1, Math.min(nextQty, maxQty)),
+            qty: sanitizedQty,
           }
         })
         .filter((item) => item.qty > 0),
+    )
+  }
+
+  const updateAdHocField = (
+    itemId: string,
+    field: 'productName' | 'price',
+    rawValue: string,
+  ) => {
+    setSelectedItems((current) =>
+      current.map((item) => {
+        if (item.id !== itemId || !isAdHocCounterSaleItem(item)) return item
+
+        if (field === 'productName') {
+          return {
+            ...item,
+            productName: rawValue,
+          }
+        }
+
+        const digits = rawValue.replace(/[^0-9]/g, '')
+        const priceCents = digits ? Number(digits) : 0
+        return {
+          ...item,
+          price: priceCents / 100,
+        }
+      }),
     )
   }
 
@@ -431,9 +501,26 @@ export default function VendasLogista() {
     setSelectedItems((current) => current.filter((item) => item.id !== itemId))
   }
 
+  const getSelectedItemLineTotal = (item: CounterSaleItem) => {
+    const price = Number.isFinite(item.price) ? item.price : 0
+    const qty = Number.isFinite(item.qty) ? item.qty : 0
+    return price * qty
+  }
+
   const openPaymentForSelectedItems = () => {
     if (selectedItems.length === 0) {
       setError('Selecione ao menos um item para seguir para a forma de pagamento.')
+      return
+    }
+
+    const invalidAdHoc = selectedItems.find((item) => {
+      if (!isAdHocCounterSaleItem(item)) return false
+      return !item.productName.trim() || item.price <= 0 || item.qty <= 0
+    })
+
+    if (invalidAdHoc && isAdHocCounterSaleItem(invalidAdHoc)) {
+      setError('Preencha o nome do produto, a quantidade e o valor unitario para os itens avulsos antes de prosseguir.')
+      setOpeningPayment(false)
       return
     }
 
@@ -461,6 +548,17 @@ export default function VendasLogista() {
     setError(null)
     setSuccessMessage(null)
 
+    const invalidAdHoc = selectedItems.find((item) => {
+      if (!isAdHocCounterSaleItem(item)) return false
+      return !item.productName.trim() || item.price <= 0 || item.qty <= 0
+    })
+
+    if (invalidAdHoc && isAdHocCounterSaleItem(invalidAdHoc)) {
+      setReservingProducts(false)
+      setError('Preencha o nome do produto, a quantidade e o valor unitario dos itens avulsos antes de reservar.')
+      return
+    }
+
     try {
       const saleRef = push(ref(rtdb, 'sales'))
       const saleId = saleRef.key
@@ -472,8 +570,24 @@ export default function VendasLogista() {
       const now = Date.now()
       const updates: Record<string, unknown> = {}
       const saleItems: SaleItemRecord[] = []
+      const reservedRegisteredProductIds = new Set<string>()
 
       for (const item of selectedItems) {
+        if (isAdHocCounterSaleItem(item)) {
+          saleItems.push({
+            productId: null,
+            variationKey: null,
+            productName: item.productName.trim(),
+            description: 'Item avulso da venda no balcao.',
+            quantity: item.qty,
+            unitPrice: item.price,
+            lineTotal: item.qty * item.price,
+            size: null,
+            color: null,
+          })
+          continue
+        }
+
         const [productSnapshot, showcaseSnapshot, inventorySnapshot] = await Promise.all([
           get(ref(rtdb, `products/${item.productId}`)),
           get(ref(rtdb, `showcase/${item.productId}`)),
@@ -533,6 +647,7 @@ export default function VendasLogista() {
         updates[`showcase/${item.productId}/updatedAt`] = now
         updates[`products/${item.productId}/variations`] = productVariations
         updates[`products/${item.productId}/updatedAt`] = now
+        reservedRegisteredProductIds.add(item.productId)
 
         const movementKey = push(ref(rtdb, 'stockMovements')).key
         if (movementKey) {
@@ -582,13 +697,15 @@ export default function VendasLogista() {
       updates[`${CATALOG_SYNC_PATH}/source`] = 'reserva_balcao'
 
       await update(ref(rtdb), updates)
-      selectedItems.forEach((item) => {
-        const inventoryUpdate = updates[`inventory/${item.productId}`] as { total?: number; reserved?: number; available?: number; cartReserved?: number } | undefined
+      reservedRegisteredProductIds.forEach((productId) => {
+        const inventoryUpdate = updates[`inventory/${productId}`] as
+          | { total?: number; reserved?: number; available?: number; cartReserved?: number }
+          | undefined
         if (!inventoryUpdate) return
 
         const cartReserved = Number(inventoryUpdate.cartReserved || 0)
         patchCachedStockProduct(
-          item.productId,
+          productId,
           {
             totalStock: Number(inventoryUpdate.total || 0),
             reservedStock: Number(inventoryUpdate.reserved || 0) + cartReserved,
@@ -938,7 +1055,9 @@ export default function VendasLogista() {
         reservingProducts={reservingProducts}
         onSearchChange={setSearch}
         onAddItem={addSelectedItem}
+        onAddAdHocItem={addAdHocItem}
         onUpdateSelectedQty={updateSelectedQty}
+        onUpdateAdHocField={updateAdHocField}
         onRemoveSelectedItem={removeSelectedItem}
         onFinalizeCounterSale={openPaymentForSelectedItems}
         onReserveProducts={() => {
@@ -947,6 +1066,8 @@ export default function VendasLogista() {
         onSyncCatalog={() => {
           void handleSyncCatalog()
         }}
+        formatCurrency={formatCurrency}
+        getSelectedItemLineTotal={getSelectedItemLineTotal}
       />
 
       <PendingDeliveriesSection

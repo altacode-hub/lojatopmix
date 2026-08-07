@@ -8,6 +8,7 @@ interface FramedImageProps {
   offsetX?: number
   offsetY?: number
   imgStyle?: React.CSSProperties
+  style?: React.CSSProperties
   fallback?: React.ReactNode
   fallbackStyle?: React.CSSProperties
   onError?: () => void
@@ -20,6 +21,7 @@ export default function FramedImage({
   offsetX = 0,
   offsetY = 0,
   imgStyle,
+  style,
   fallback,
   fallbackStyle,
   onError,
@@ -76,7 +78,7 @@ export default function FramedImage({
     }
   }, [onError, src])
 
-  const style = useMemo<React.CSSProperties>(
+  const imageStyle = useMemo<React.CSSProperties>(
     () => ({
       position: 'absolute',
       left: '50%',
@@ -113,6 +115,14 @@ export default function FramedImage({
     [isVisible],
   )
 
+  const wrapperStyle: React.CSSProperties = {
+    position: 'relative',
+    width: '100%',
+    height: '100%',
+    overflow: 'hidden',
+    ...style,
+  }
+
   if (!src || hasError) {
     if (!fallback) return null
 
@@ -120,7 +130,7 @@ export default function FramedImage({
   }
 
   return (
-    <>
+    <div style={wrapperStyle}>
       <img
         src={loadingSvg}
         alt=""
@@ -130,7 +140,7 @@ export default function FramedImage({
       <img
         src={src}
         alt={alt}
-        style={style}
+        style={imageStyle}
         onError={() => {
           setHasError(true)
           setIsVisible(false)
@@ -141,6 +151,6 @@ export default function FramedImage({
           onError?.()
         }}
       />
-    </>
+    </div>
   )
 }

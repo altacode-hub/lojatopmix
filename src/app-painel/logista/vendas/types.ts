@@ -15,9 +15,27 @@ export type SaleableVariationRow = {
   mainImageOffsetY?: number | null
 }
 
-export type CounterSaleItem = SaleableVariationRow & {
+export type RegisteredCounterSaleItem = SaleableVariationRow & {
+  itemType: 'registered'
   qty: number
 }
+
+export type AdHocCounterSaleItem = {
+  itemType: 'ad_hoc'
+  id: string
+  productName: string
+  description: string
+  price: number
+  qty: number
+}
+
+export type CounterSaleItem = RegisteredCounterSaleItem | AdHocCounterSaleItem
+
+export const isRegisteredCounterSaleItem = (item: CounterSaleItem): item is RegisteredCounterSaleItem =>
+  item.itemType === 'registered'
+
+export const isAdHocCounterSaleItem = (item: CounterSaleItem): item is AdHocCounterSaleItem =>
+  item.itemType === 'ad_hoc'
 
 export type SaleItemRecord = {
   productId?: string | null

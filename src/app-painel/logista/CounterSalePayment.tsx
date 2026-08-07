@@ -4,12 +4,14 @@ import { FiArrowLeft, FiCreditCard, FiDollarSign } from 'react-icons/fi'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { rtdb } from '../../service/firebase'
+import FramedImage from '../../components/FramedImage'
 import type { InternalProductRecord, ShowcaseRecord } from '../../types/catalog'
 import { variationLabel } from '../../utils/catalog'
 import { CATALOG_SYNC_PATH, patchCachedStockProduct } from './stockCache'
 import { useMediaQuery } from '../../hooks/useMediaQuery'
 import { logistaInputStyle, logistaTheme } from './logistaTheme'
 import { cardStyle, formatCurrency, hasVariationStock } from './vendas/helpers'
+import { isAdHocCounterSaleItem, isRegisteredCounterSaleItem } from './vendas/types'
 import type { CounterSaleItem, SaleItemRecord, SaleRecord } from './vendas/types'
 
 type PaymentLocationState = {
@@ -24,6 +26,19 @@ const paymentOptions = [
   { value: 'cartao_debito', label: 'Cartao de debito' },
 ] as const
 
+const getItemLineTotal = (item: CounterSaleItem | SaleItemRecord) => {
+  if ('qty' in item) {
+    return Number(item.qty || 0) * Number((item as CounterSaleItem).price || 0)
+  }
+
+  return Number(item.lineTotal || 0)
+}
+
+const formatPriceInputValue = (value: number) => {
+  if (!Number.isFinite(value) || value <= 0) return 'R$ 0,00'
+  return formatCurrency(value)
+}
+
 export default function CounterSalePayment() {
   const { user } = useAuth()
   const location = useLocation()
@@ -35,29 +50,35 @@ export default function CounterSalePayment() {
   const locationState = (location.state as PaymentLocationState | null) ?? null
   const selectedItems = Array.isArray(locationState?.selectedItems) ? locationState.selectedItems : []
   const reservedSale = locationState?.reservedSale?.saleId ? locationState.reservedSale : null
+  const localSelectedItems = selectedItems
+  const hasAdHocItems = localSelectedItems.some((item) => isAdHocCounterSaleItem(item))
+  const hasInvalidAdHocItem = localSelectedItems.some((item) => {
+    if (!isAdHocCounterSaleItem(item)) return false
+    return !item.productName.trim() || item.price <= 0 || item.qty <= 0
+  })
 
   const [paymentMethod, setPaymentMethod] = useState<string>(reservedSale?.paymentMethod || 'pix')
   const [customerName, setCustomerName] = useState(reservedSale?.customer?.name || '')
   const [customerPhone, setCustomerPhone] = useState(reservedSale?.customer?.phone_number || '')
   const [notes, setNotes] = useState(reservedSale?.notes || '')
 
-  const hasPaymentContext = selectedItems.length > 0 || Boolean(reservedSale)
+  const hasPaymentContext = localSelectedItems.length > 0 || Boolean(reservedSale)
 
   const totalAmount = useMemo(() => {
     if (reservedSale) {
       return Number(reservedSale.totalAmount || 0)
     }
 
-    return selectedItems.reduce((sum, item) => sum + item.qty * item.price, 0)
-  }, [reservedSale, selectedItems])
+    return localSelectedItems.reduce((sum, item) => sum + (Number(item.qty || 0) * Number(item.price || 0)), 0)
+  }, [reservedSale, localSelectedItems])
 
   const totalItems = useMemo(() => {
     if (reservedSale) {
       return Number(reservedSale.totalItems || 0)
     }
 
-    return selectedItems.reduce((sum, item) => sum + item.qty, 0)
-  }, [reservedSale, selectedItems])
+    return localSelectedItems.reduce((sum, item) => sum + Number(item.qty || 0), 0)
+  }, [reservedSale, localSelectedItems])
 
   const buildCustomer = () => {
     const trimmedName = customerName.trim()
@@ -85,6 +106,11 @@ export default function CounterSalePayment() {
       return
     }
 
+    if (!reservedSale && hasInvalidAdHocItem) {
+      setError('Preencha o nome do produto, a quantidade e o valor unitario dos itens avulsos antes de confirmar.')
+      return
+    }
+
     setSaving(true)
     setError(null)
 
@@ -93,7 +119,9 @@ export default function CounterSalePayment() {
       const updates: Record<string, unknown> = {}
       const inventoryPatches: Array<{ productId: string; total: number; reserved: number; available: number }> = []
       const customer = buildCustomer()
-      const normalizedNotes = notes.trim() || null
+      const normalizedNotes = hasAdHocItems && notes.trim()
+        ? `${notes.trim()}${reservedSale ? '' : ' (inclui item avulso de venda no balcao)'}`
+        : notes.trim() || null
 
       if (reservedSale) {
         for (const item of reservedSale.items || []) {
@@ -140,7 +168,7 @@ export default function CounterSalePayment() {
         updates[`sales/${reservedSale.saleId}/paymentStatus`] = 'paid'
         updates[`sales/${reservedSale.saleId}/paymentMethod`] = paymentMethod
         updates[`sales/${reservedSale.saleId}/fulfillmentStatus`] = 'delivered'
-        updates[`sales/${reservedSale.saleId}/stockStatus`] = 'deducted'
+        updates[`sales/${reservedSale.saleId}/stockStatus`] = hasAdHocItems ? 'mixed' : 'deducted'
         updates[`sales/${reservedSale.saleId}/customer`] = customer
         updates[`sales/${reservedSale.saleId}/notes`] = normalizedNotes
         updates[`sales/${reservedSale.saleId}/paidAt`] = now
@@ -156,8 +184,24 @@ export default function CounterSalePayment() {
         }
 
         const saleItems: SaleItemRecord[] = []
+        const deductedRegisteredItemCount = localSelectedItems.filter((item) => isRegisteredCounterSaleItem(item)).length
 
-        for (const item of selectedItems) {
+        for (const item of localSelectedItems) {
+          if (isAdHocCounterSaleItem(item)) {
+            saleItems.push({
+              productId: null,
+              variationKey: null,
+              productName: item.productName.trim(),
+              description: 'Item avulso da venda no balcao.',
+              quantity: Number(item.qty || 0),
+              unitPrice: Number(item.price || 0),
+              lineTotal: Number(item.qty || 0) * Number(item.price || 0),
+              size: null,
+              color: null,
+            })
+            continue
+          }
+
           const [productSnapshot, showcaseSnapshot, inventorySnapshot] = await Promise.all([
             get(ref(rtdb, `products/${item.productId}`)),
             get(ref(rtdb, `showcase/${item.productId}`)),
@@ -237,6 +281,15 @@ export default function CounterSalePayment() {
           })
         }
 
+        const finalTotalAmount = saleItems.reduce((sum, item) => sum + Number(item.lineTotal || 0), 0)
+        const finalTotalItems = saleItems.reduce((sum, item) => sum + Number(item.quantity || 0), 0)
+        const stockStatus =
+          hasAdHocItems && deductedRegisteredItemCount === 0
+            ? 'no_stock'
+            : hasAdHocItems && deductedRegisteredItemCount > 0
+              ? 'mixed'
+              : 'deducted'
+
         updates[`sales/${saleId}`] = {
           saleId,
           channel: 'balcao',
@@ -244,17 +297,18 @@ export default function CounterSalePayment() {
           paymentStatus: 'paid',
           paymentMethod,
           fulfillmentStatus: 'delivered',
-          stockStatus: 'deducted',
+          stockStatus,
           customer,
           items: saleItems,
-          totalAmount: saleItems.reduce((sum, item) => sum + item.lineTotal, 0),
-          totalItems: saleItems.reduce((sum, item) => sum + item.quantity, 0),
+          totalAmount: finalTotalAmount,
+          totalItems: finalTotalItems,
           notes: normalizedNotes,
           createdAt: now,
           paidAt: now,
           deliveredAt: now,
           updatedAt: now,
           sellerUid: user.uid,
+          ...(hasAdHocItems ? { hasAdHocItems: true } : {}),
         }
       }
 
@@ -444,38 +498,120 @@ export default function CounterSalePayment() {
                         border: `1px solid ${logistaTheme.colors.border}`,
                         borderRadius: 14,
                         padding: 14,
-                        display: 'grid',
-                        gap: 8,
+                        display: 'flex',
+                        gap: 12,
+                        alignItems: 'flex-start',
+                        flexWrap: 'wrap',
                         background: logistaTheme.colors.surface,
                       }}
                     >
-                      <div style={{ fontWeight: 700 }}>{item.productName}</div>
-                      <div style={{ color: logistaTheme.colors.textMuted, fontSize: 14 }}>
-                        {item.size || '-'} {item.color ? `• ${item.color}` : ''}
+                      <div
+                        style={{
+                          width: 72,
+                          flex: '0 0 72px',
+                          aspectRatio: '1 / 1',
+                          borderRadius: 12,
+                          overflow: 'hidden',
+                          border: `1px solid ${logistaTheme.colors.border}`,
+                          background: logistaTheme.colors.surfaceAlt,
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: logistaTheme.colors.textMuted,
+                            fontSize: 12,
+                          }}
+                        >
+                          Reserva
+                        </div>
                       </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
-                        <span>{item.quantity} item(ns)</span>
-                        <strong>{formatCurrency(item.lineTotal)}</strong>
+                      <div style={{ flex: '1 1 200px', minWidth: 0, display: 'grid', gap: 6 }}>
+                        <div style={{ fontWeight: 700 }}>{item.productName}</div>
+                        <div style={{ color: logistaTheme.colors.textMuted, fontSize: 14 }}>
+                          {item.size || '-'} {item.color ? `• ${item.color}` : ''}
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
+                          <span>{item.quantity} item(ns)</span>
+                          <strong>{formatCurrency(item.lineTotal)}</strong>
+                        </div>
                       </div>
                     </div>
                   ))
-                : selectedItems.map((item) => (
+                : localSelectedItems.map((item) => (
                     <div
                       key={item.id}
                       style={{
                         border: `1px solid ${logistaTheme.colors.border}`,
                         borderRadius: 14,
                         padding: 14,
-                        display: 'grid',
-                        gap: 8,
+                        display: 'flex',
+                        gap: 12,
+                        alignItems: 'flex-start',
+                        flexWrap: 'wrap',
                         background: logistaTheme.colors.surface,
                       }}
                     >
-                      <div style={{ fontWeight: 700 }}>{item.productName}</div>
-                      <div style={{ color: logistaTheme.colors.textMuted, fontSize: 14 }}>{variationLabel(item.variation)}</div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
-                        <span>{item.qty} item(ns)</span>
-                        <strong>{formatCurrency(item.qty * item.price)}</strong>
+                      <div
+                        style={{
+                          width: 72,
+                          flex: '0 0 72px',
+                          aspectRatio: '1 / 1',
+                          borderRadius: 12,
+                          overflow: 'hidden',
+                          border: `1px solid ${logistaTheme.colors.border}`,
+                          background: logistaTheme.colors.surfaceAlt,
+                        }}
+                      >
+                        {isRegisteredCounterSaleItem(item) ? (
+                          <FramedImage
+                            src={item.image || ''}
+                            alt={item.productName}
+                            zoom={Number(item.mainImageZoom ?? 1)}
+                            offsetX={Number(item.mainImageOffsetX ?? 0)}
+                            offsetY={Number(item.mainImageOffsetY ?? 0)}
+                            style={{ width: '100%', height: '100%', display: 'block' }}
+                          />
+                        ) : (
+                          <div
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              color: logistaTheme.colors.textMuted,
+                              fontWeight: 700,
+                              fontSize: 14,
+                            }}
+                          >
+                            Avulso
+                          </div>
+                        )}
+                      </div>
+                      <div style={{ flex: '1 1 200px', minWidth: 0, display: 'grid', gap: 6 }}>
+                        <div style={{ fontWeight: 700 }}>
+                          {isRegisteredCounterSaleItem(item) || item.productName.trim()
+                            ? item.productName
+                            : '(Item avulso sem nome)'}
+                        </div>
+                        <div style={{ color: logistaTheme.colors.textMuted, fontSize: 14 }}>
+                          {isRegisteredCounterSaleItem(item) ? (
+                            variationLabel(item.variation)
+                          ) : (
+                            <>Item não cadastrado · Unitário: {formatPriceInputValue(item.price)}</>
+                          )}
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
+                          <span>
+                            {Number(item.qty || 0)} item(ns)
+                          </span>
+                          <strong>{formatCurrency(getItemLineTotal(item))}</strong>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -491,11 +627,27 @@ export default function CounterSalePayment() {
                 <strong>{formatCurrency(totalAmount)}</strong>
               </div>
 
+              {hasInvalidAdHocItem && !reservedSale ? (
+                <div
+                  style={{
+                    marginBottom: 12,
+                    padding: '10px 12px',
+                    borderRadius: 12,
+                    border: `1px solid ${logistaTheme.colors.warningBorder}`,
+                    background: logistaTheme.colors.warningBackground,
+                    color: logistaTheme.colors.warningText,
+                    fontSize: 13,
+                  }}
+                >
+                  Volte para a tela de vendas e preencha nome do produto, quantidade e valor unitário dos itens avulsos antes de confirmar.
+                </div>
+              ) : null}
+
               <button
                 onClick={() => {
                   void handleSubmitPayment()
                 }}
-                disabled={saving}
+                disabled={saving || (!reservedSale && hasInvalidAdHocItem)}
                 style={{
                   width: '100%',
                   padding: '14px 16px',
@@ -504,11 +656,15 @@ export default function CounterSalePayment() {
                   background: logistaTheme.colors.accent,
                   color: logistaTheme.colors.surface,
                   fontWeight: 800,
-                  cursor: saving ? 'not-allowed' : 'pointer',
-                  opacity: saving ? 0.7 : 1,
+                  cursor: saving || (!reservedSale && hasInvalidAdHocItem) ? 'not-allowed' : 'pointer',
+                  opacity: saving || (!reservedSale && hasInvalidAdHocItem) ? 0.7 : 1,
                 }}
               >
-                {saving ? 'Concluindo pagamento...' : reservedSale ? 'Concluir reserva e pagar' : 'Confirmar pagamento'}
+                {saving
+                  ? 'Concluindo pagamento...'
+                  : reservedSale
+                    ? 'Concluir reserva e pagar'
+                    : 'Confirmar pagamento'}
               </button>
             </div>
           </aside>
