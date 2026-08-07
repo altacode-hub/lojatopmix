@@ -28,9 +28,12 @@ import type {
 import {
   CATALOG_SYNC_PATH,
   buildCounterSaleCatalogRows,
+  clearCounterSaleDraft,
   patchCachedStockProduct,
   readCounterSaleCatalogCache,
+  readCounterSaleDraft,
   writeCounterSaleCatalogCache,
+  writeCounterSaleDraft,
 } from './stockCache'
 import { useMediaQuery } from '../../hooks/useMediaQuery'
 import { logistaTheme } from './logistaTheme'
@@ -45,7 +48,11 @@ export default function VendasLogista() {
   const [catalogRows, setCatalogRows] = useState<SaleableVariationRow[]>([])
   const [sales, setSales] = useState<SaleRecord[]>([])
   const [cartReservedSales, setCartReservedSales] = useState<ReservedSaleViewRecord[]>([])
-  const [selectedItems, setSelectedItems] = useState<CounterSaleItem[]>([])
+  const [selectedItems, setSelectedItems] = useState<CounterSaleItem[]>(() => readCounterSaleDraft() ?? [])
+  const [draftLoadedFromCache, setDraftLoadedFromCache] = useState<number>(() => {
+    const cachedDraft = readCounterSaleDraft()
+    return Array.isArray(cachedDraft) && cachedDraft.length > 0 ? Date.now() : 0
+  })
   const [search, setSearch] = useState('')
   const [periodStart, setPeriodStart] = useState(getDateInputValue(0))
   const [periodEnd, setPeriodEnd] = useState(getDateInputValue(0))
@@ -274,6 +281,16 @@ export default function VendasLogista() {
     }
   }, [loadCounterSaleCatalogFromRemote])
 
+  useEffect(() => {
+    writeCounterSaleDraft(selectedItems)
+  }, [selectedItems])
+
+  const clearDraft = useCallback(() => {
+    setSelectedItems([])
+    setDraftLoadedFromCache(0)
+    clearCounterSaleDraft()
+  }, [])
+
   const loadData = useCallback(
     async (options?: { forceRemote?: boolean }) => {
       const forceRemote = Boolean(options?.forceRemote)
@@ -331,15 +348,22 @@ export default function VendasLogista() {
   }, [loadCounterSaleCatalog, loadSalesAndReservations])
 
   useEffect(() => {
-    const navigationState = location.state as { successMessage?: string } | null
+    const navigationState = location.state as { successMessage?: string; clearCounterSaleDraft?: boolean } | null
+
+    if (navigationState?.clearCounterSaleDraft) {
+      clearDraft()
+    }
 
     if (!navigationState?.successMessage) {
+      if (navigationState?.clearCounterSaleDraft) {
+        navigate(location.pathname, { replace: true, state: null })
+      }
       return
     }
 
     setSuccessMessage(navigationState.successMessage)
     navigate(location.pathname, { replace: true, state: null })
-  }, [location.pathname, location.state, navigate])
+  }, [location.pathname, location.state, navigate, clearDraft])
 
   const filteredCatalog = useMemo(() => {
     const normalizedSearch = search.trim()
@@ -696,6 +720,8 @@ export default function VendasLogista() {
       updates[`${CATALOG_SYNC_PATH}/updatedAt`] = now
       updates[`${CATALOG_SYNC_PATH}/source`] = 'reserva_balcao'
 
+      clearCounterSaleDraft()
+      setDraftLoadedFromCache(0)
       await update(ref(rtdb), updates)
       reservedRegisteredProductIds.forEach((productId) => {
         const inventoryUpdate = updates[`inventory/${productId}`] as
@@ -1051,6 +1077,7 @@ export default function VendasLogista() {
         filteredCatalog={filteredCatalog}
         selectedItems={selectedItems}
         selectedTotal={selectedTotal}
+        draftLoadedFromCache={Boolean(draftLoadedFromCache && selectedItems.length > 0)}
         openingPayment={openingPayment}
         reservingProducts={reservingProducts}
         onSearchChange={setSearch}
@@ -1059,6 +1086,7 @@ export default function VendasLogista() {
         onUpdateSelectedQty={updateSelectedQty}
         onUpdateAdHocField={updateAdHocField}
         onRemoveSelectedItem={removeSelectedItem}
+        onClearAllSelectedItems={clearDraft}
         onFinalizeCounterSale={openPaymentForSelectedItems}
         onReserveProducts={() => {
           void reserveCounterSale()

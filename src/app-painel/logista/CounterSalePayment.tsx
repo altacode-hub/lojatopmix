@@ -7,7 +7,7 @@ import { rtdb } from '../../service/firebase'
 import FramedImage from '../../components/FramedImage'
 import type { InternalProductRecord, ShowcaseRecord } from '../../types/catalog'
 import { variationLabel } from '../../utils/catalog'
-import { CATALOG_SYNC_PATH, patchCachedStockProduct } from './stockCache'
+import { CATALOG_SYNC_PATH, clearCounterSaleDraft, patchCachedStockProduct } from './stockCache'
 import { useMediaQuery } from '../../hooks/useMediaQuery'
 import { logistaInputStyle, logistaTheme } from './logistaTheme'
 import { cardStyle, formatCurrency, hasVariationStock } from './vendas/helpers'
@@ -61,6 +61,8 @@ export default function CounterSalePayment() {
   const [customerName, setCustomerName] = useState(reservedSale?.customer?.name || '')
   const [customerPhone, setCustomerPhone] = useState(reservedSale?.customer?.phone_number || '')
   const [notes, setNotes] = useState(reservedSale?.notes || '')
+  const [discountValueText, setDiscountValueText] = useState<string>('')
+  const [discountPercentText, setDiscountPercentText] = useState<string>('')
 
   const hasPaymentContext = localSelectedItems.length > 0 || Boolean(reservedSale)
 
@@ -79,6 +81,115 @@ export default function CounterSalePayment() {
 
     return localSelectedItems.reduce((sum, item) => sum + Number(item.qty || 0), 0)
   }, [reservedSale, localSelectedItems])
+
+  const parseCurrencyCents = (value: string) => {
+    const digits = value.replace(/[^0-9]/g, '')
+    if (!digits) return 0
+    return Number(digits) / 100
+  }
+
+  const parseNumericText = (value: string) => {
+    const normalized = value.replace(',', '.').replace(/[^0-9.]/g, '')
+    if (!normalized) return 0
+    const parsed = Number(normalized)
+    return Number.isFinite(parsed) ? parsed : 0
+  }
+
+  const discountValue = parseCurrencyCents(discountValueText)
+  const discountPercent = parseNumericText(discountPercentText)
+
+  const clampedDiscountValue = totalAmount > 0 ? Math.max(0, Math.min(discountValue, totalAmount)) : 0
+  const clampedDiscountPercent = totalAmount > 0 ? Math.max(0, Math.min(discountPercent, 100)) : 0
+
+  const finalDiscountValue = useMemo(() => {
+    if (discountValueText && !discountPercentText) {
+      return clampedDiscountValue
+    }
+
+    if (discountPercentText && !discountValueText) {
+      return (clampedDiscountPercent / 100) * totalAmount
+    }
+
+    if (discountValueText && discountPercentText) {
+      return clampedDiscountValue
+    }
+
+    return 0
+  }, [discountValueText, discountPercentText, clampedDiscountValue, clampedDiscountPercent, totalAmount])
+
+  const finalDiscountPercent = useMemo(() => {
+    if (totalAmount <= 0) return 0
+    if (discountPercentText && !discountValueText) {
+      return clampedDiscountPercent
+    }
+    return (finalDiscountValue / totalAmount) * 100
+  }, [discountPercentText, discountValueText, totalAmount, clampedDiscountPercent, finalDiscountValue])
+
+  const finalTotalAmount = Math.max(0, totalAmount - finalDiscountValue)
+
+  const handleDiscountValueChange = (rawValue: string) => {
+    
+    setDiscountValueText(rawValue)
+    if (!rawValue) {
+      setDiscountPercentText('')
+      return
+    }
+
+    const nextValueCents = parseCurrencyCents(rawValue)
+    const safeTotal = Math.max(0, totalAmount)
+
+    if (safeTotal <= 0) {
+      setDiscountPercentText('')
+      return
+    }
+
+    const clampedValue = Math.max(0, Math.min(nextValueCents, safeTotal))
+    const percent = safeTotal > 0 ? (clampedValue / safeTotal) * 100 : 0
+    setDiscountPercentText(percent.toFixed(2).replace('.', ','))
+  }
+
+  const handleDiscountPercentChange = (rawValue: string) => {
+    setDiscountPercentText(rawValue)
+    if (!rawValue) {
+      setDiscountValueText('')
+      return
+    }
+
+    const nextPercent = parseNumericText(rawValue)
+    const clampedPercent = Math.max(0, Math.min(nextPercent, 100))
+    const safeTotal = Math.max(0, totalAmount)
+
+    if (safeTotal <= 0) {
+      setDiscountValueText('')
+      return
+    }
+
+    const rawDiscountValue = (clampedPercent / 100) * safeTotal
+    const exactFinalTotal = safeTotal - rawDiscountValue
+    const roundedFinalTotal = Math.round(exactFinalTotal)
+    let finalDiscountValue = rawDiscountValue
+
+    if (roundedFinalTotal >= 0 && roundedFinalTotal <= safeTotal) {
+      const candidateDiscountValue = safeTotal - roundedFinalTotal
+      if (candidateDiscountValue >= 0 && candidateDiscountValue <= safeTotal) {
+        finalDiscountValue = candidateDiscountValue
+      }
+    }
+
+    const formatted = new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+    }).format(finalDiscountValue)
+    setDiscountValueText(formatted)
+  }
+
+  const discountApplied = finalDiscountValue > 0
+  const discountDetails = discountApplied
+    ? {
+        discountValue: finalDiscountValue,
+        discountPercent: finalDiscountPercent,
+      }
+    : null
 
   const buildCustomer = () => {
     const trimmedName = customerName.trim()
@@ -108,6 +219,11 @@ export default function CounterSalePayment() {
 
     if (!reservedSale && hasInvalidAdHocItem) {
       setError('Preencha o nome do produto, a quantidade e o valor unitario dos itens avulsos antes de confirmar.')
+      return
+    }
+
+    if (finalTotalAmount <= 0) {
+      setError('O valor total final da venda deve ser maior que zero para concluir o pagamento.')
       return
     }
 
@@ -175,6 +291,11 @@ export default function CounterSalePayment() {
         updates[`sales/${reservedSale.saleId}/deliveredAt`] = now
         updates[`sales/${reservedSale.saleId}/updatedAt`] = now
         updates[`sales/${reservedSale.saleId}/sellerUid`] = user.uid
+        updates[`sales/${reservedSale.saleId}/originalTotalAmount`] = Number(reservedSale.totalAmount || 0)
+        updates[`sales/${reservedSale.saleId}/discountValue`] = discountDetails?.discountValue ?? 0
+        updates[`sales/${reservedSale.saleId}/discountPercent`] = discountDetails?.discountPercent ?? 0
+        updates[`sales/${reservedSale.saleId}/discountApplied`] = Boolean(discountDetails)
+        updates[`sales/${reservedSale.saleId}/totalAmount`] = finalTotalAmount
       } else {
         const saleRef = push(ref(rtdb, 'sales'))
         const saleId = saleRef.key
@@ -281,7 +402,7 @@ export default function CounterSalePayment() {
           })
         }
 
-        const finalTotalAmount = saleItems.reduce((sum, item) => sum + Number(item.lineTotal || 0), 0)
+        const originalTotalAmount = saleItems.reduce((sum, item) => sum + Number(item.lineTotal || 0), 0)
         const finalTotalItems = saleItems.reduce((sum, item) => sum + Number(item.quantity || 0), 0)
         const stockStatus =
           hasAdHocItems && deductedRegisteredItemCount === 0
@@ -300,6 +421,10 @@ export default function CounterSalePayment() {
           stockStatus,
           customer,
           items: saleItems,
+          originalTotalAmount,
+          discountValue: discountDetails?.discountValue ?? 0,
+          discountPercent: discountDetails?.discountPercent ?? 0,
+          discountApplied: Boolean(discountDetails),
           totalAmount: finalTotalAmount,
           totalItems: finalTotalItems,
           notes: normalizedNotes,
@@ -315,6 +440,7 @@ export default function CounterSalePayment() {
       updates[`${CATALOG_SYNC_PATH}/updatedAt`] = now
       updates[`${CATALOG_SYNC_PATH}/source`] = reservedSale ? 'pagamento_reserva_balcao' : 'pagamento_venda_balcao'
 
+      clearCounterSaleDraft()
       await update(ref(rtdb), updates)
 
       inventoryPatches.forEach((patch) => {
@@ -333,6 +459,7 @@ export default function CounterSalePayment() {
       navigate('/vendas', {
         replace: true,
         state: {
+          clearCounterSaleDraft: true,
           successMessage: reservedSale
             ? 'Pagamento registrado e venda reservada concluida com sucesso.'
             : 'Venda no balcao finalizada com sucesso.',
@@ -347,7 +474,7 @@ export default function CounterSalePayment() {
   }
 
   return (
-    <div style={{ maxWidth: 1100, margin: '0 auto', display: 'grid', gap: 24 }}>
+    <div style={{ maxWidth: 1100, margin: '0 auto', display: 'grid', gap: 24, padding: 24 }}>
       <section
         style={{
           ...cardStyle,
@@ -618,13 +745,83 @@ export default function CounterSalePayment() {
             </div>
 
             <div style={{ marginTop: 18, paddingTop: 18, borderTop: `1px solid ${logistaTheme.colors.border}` }}>
+              <div style={{ display: 'grid', gap: 12, marginBottom: 12 }}>
+                <div style={{ fontSize: 14, color: logistaTheme.colors.text, fontWeight: 600 }}>
+                  Desconto
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 12 }}>
+                  <label style={{ display: 'grid', gap: 6 }}>
+                    <span style={{ fontSize: 12, color: logistaTheme.colors.textMuted }}>
+                      Valor do desconto (R$)
+                    </span>
+                    <input
+                      inputMode="decimal"
+                      value={discountValueText}
+                      onChange={(event) => handleDiscountValueChange(event.target.value)}
+                      placeholder="R$ 0,00"
+                      disabled={totalAmount <= 0}
+                      style={{
+                        ...logistaInputStyle,
+                        width: '100%',
+                        maxWidth: '100%',
+                        boxSizing: 'border-box',
+                        padding: '10px 12px',
+                      }}
+                    />
+                  </label>
+                  <label style={{ display: 'grid', gap: 6 }}>
+                    <span style={{ fontSize: 12, color: logistaTheme.colors.textMuted }}>
+                      Porcentagem do desconto (%)
+                    </span>
+                    <input
+                      inputMode="decimal"
+                      value={discountPercentText}
+                      onChange={(event) => handleDiscountPercentChange(event.target.value)}
+                      placeholder="0,00%"
+                      disabled={totalAmount <= 0}
+                      style={{
+                        ...logistaInputStyle,
+                        width: '100%',
+                        maxWidth: '100%',
+                        boxSizing: 'border-box',
+                        padding: '10px 12px',
+                      }}
+                    />
+                  </label>
+                </div>
+                {totalAmount <= 0 ? (
+                  <div
+                    style={{
+                      fontSize: 12,
+                      color: logistaTheme.colors.textMuted,
+                    }}
+                  >
+                    O desconto só pode ser aplicado após o total da venda ser maior que zero.
+                  </div>
+                ) : null}
+              </div>
+            </div>
+            
+            <div style={{ marginTop: 18, paddingTop: 18, borderTop: `1px solid ${logistaTheme.colors.border}` }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, color: logistaTheme.colors.textMuted }}>
                 <span>Itens</span>
                 <strong>{totalItems}</strong>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 18, color: logistaTheme.colors.text, fontSize: 18 }}>
-                <span>Total</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, color: logistaTheme.colors.textMuted }}>
+                <span>Subtotal</span>
                 <strong>{formatCurrency(totalAmount)}</strong>
+              </div>
+              {discountApplied ? (
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, color: logistaTheme.colors.errorText }}>
+                  <span>
+                    Desconto ({finalDiscountPercent.toFixed(2).replace('.', ',')}%)
+                  </span>
+                  <strong>- {formatCurrency(finalDiscountValue)}</strong>
+                </div>
+              ) : null}
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 18, color: logistaTheme.colors.text, fontSize: 18 }}>
+                <span>Total final</span>
+                <strong>{formatCurrency(finalTotalAmount)}</strong>
               </div>
 
               {hasInvalidAdHocItem && !reservedSale ? (
@@ -647,7 +844,7 @@ export default function CounterSalePayment() {
                 onClick={() => {
                   void handleSubmitPayment()
                 }}
-                disabled={saving || (!reservedSale && hasInvalidAdHocItem)}
+                disabled={saving || (!reservedSale && hasInvalidAdHocItem) || finalTotalAmount <= 0}
                 style={{
                   width: '100%',
                   padding: '14px 16px',
@@ -656,8 +853,8 @@ export default function CounterSalePayment() {
                   background: logistaTheme.colors.accent,
                   color: logistaTheme.colors.surface,
                   fontWeight: 800,
-                  cursor: saving || (!reservedSale && hasInvalidAdHocItem) ? 'not-allowed' : 'pointer',
-                  opacity: saving || (!reservedSale && hasInvalidAdHocItem) ? 0.7 : 1,
+                  cursor: saving || (!reservedSale && hasInvalidAdHocItem) || finalTotalAmount <= 0 ? 'not-allowed' : 'pointer',
+                  opacity: saving || (!reservedSale && hasInvalidAdHocItem) || finalTotalAmount <= 0 ? 0.7 : 1,
                 }}
               >
                 {saving

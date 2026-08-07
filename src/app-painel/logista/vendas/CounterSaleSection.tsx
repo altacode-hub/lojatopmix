@@ -18,6 +18,7 @@ type CounterSaleSectionProps = {
   filteredCatalog: SaleableVariationRow[]
   selectedItems: CounterSaleItem[]
   selectedTotal: number
+  draftLoadedFromCache: boolean
   openingPayment: boolean
   reservingProducts: boolean
   onSearchChange: (value: string) => void
@@ -26,6 +27,7 @@ type CounterSaleSectionProps = {
   onUpdateSelectedQty: (itemId: string, nextQty: number) => void
   onUpdateAdHocField: (itemId: string, field: 'productName' | 'price', rawValue: string) => void
   onRemoveSelectedItem: (itemId: string) => void
+  onClearAllSelectedItems: () => void
   onFinalizeCounterSale: () => void
   onReserveProducts: () => void
   onSyncCatalog: () => void
@@ -44,6 +46,7 @@ export default function CounterSaleSection({
   filteredCatalog,
   selectedItems,
   selectedTotal,
+  draftLoadedFromCache,
   openingPayment,
   reservingProducts,
   onSearchChange,
@@ -52,6 +55,7 @@ export default function CounterSaleSection({
   onUpdateSelectedQty,
   onUpdateAdHocField,
   onRemoveSelectedItem,
+  onClearAllSelectedItems,
   onFinalizeCounterSale,
   onReserveProducts,
   onSyncCatalog,
@@ -260,33 +264,74 @@ export default function CounterSaleSection({
       </section>
 
       <aside style={{ ...cardStyle, flex: '1 1 380px', minWidth: 0, width: '100%' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <FiShoppingCart size={18} />
             <h2 style={{ margin: 0, fontSize: 24 }}>Itens da venda</h2>
           </div>
 
-          <button
-            type="button"
-            onClick={onAddAdHocItem}
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+            <button
+              type="button"
+              onClick={onAddAdHocItem}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 8,
+                padding: '10px 14px',
+                borderRadius: logistaTheme.radius.md,
+                border: `1px solid ${logistaTheme.colors.warningBorder}`,
+                background: logistaTheme.colors.warningBackground,
+                color: logistaTheme.colors.warningText,
+                fontWeight: 700,
+                fontSize: 14,
+                cursor: 'pointer',
+              }}
+            >
+              <FiPlusCircle size={16} />
+              Adicionar produto avulso
+            </button>
+
+            {selectedItems.length > 0 ? (
+              <button
+                type="button"
+                onClick={onClearAllSelectedItems}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  padding: '10px 14px',
+                  borderRadius: logistaTheme.radius.md,
+                  border: `1px solid ${logistaTheme.colors.errorBorder}`,
+                  background: logistaTheme.colors.errorBackground,
+                  color: logistaTheme.colors.errorText,
+                  fontWeight: 700,
+                  fontSize: 14,
+                  cursor: 'pointer',
+                }}
+              >
+                <FiX size={16} />
+                Limpar itens
+              </button>
+            ) : null}
+          </div>
+        </div>
+
+        {draftLoadedFromCache ? (
+          <div
             style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 8,
-              padding: '10px 14px',
-              borderRadius: logistaTheme.radius.md,
-              border: `1px solid ${logistaTheme.colors.warningBorder}`,
-              background: logistaTheme.colors.warningBackground,
-              color: logistaTheme.colors.warningText,
-              fontWeight: 700,
-              fontSize: 14,
-              cursor: 'pointer',
+              marginBottom: 12,
+              padding: '10px 12px',
+              borderRadius: 12,
+              border: `1px solid ${logistaTheme.colors.infoBorder}`,
+              background: logistaTheme.colors.infoBackground,
+              color: logistaTheme.colors.infoText,
+              fontSize: 13,
             }}
           >
-            <FiPlusCircle size={16} />
-            Adicionar produto avulso
-          </button>
-        </div>
+            Os itens abaixo foram restaurados automaticamente a partir do rascunho local.
+          </div>
+        ) : null}
 
         {selectedItems.length === 0 ? (
           <div
@@ -299,6 +344,7 @@ export default function CounterSaleSection({
           >
             Adicione um ou mais itens para registrar a venda do atendimento no balcão.
             Para itens não cadastrados, use o botão Adicionar produto avulso.
+            Os itens são salvos automaticamente no cache local desta área.
           </div>
         ) : (
           <div style={{ display: 'grid', gap: 12 }}>

@@ -1,7 +1,30 @@
 import type { CSSProperties } from 'react'
 import { siteTheme } from '../../app-cliente/siteTheme'
+import type { UiRadiusTokens, UiSemanticColorTokens, UiShadowTokens } from '../../app-cliente/siteTheme'
 
-export const logistaTheme = {
+export interface LogistaThemeBaseColors {
+  pageBackground: string
+  surface: string
+  surfaceAlt: string
+  text: string
+  textMuted: string
+  textSoft: string
+  border: string
+  borderStrong: string
+  accent: string
+  accentDark: string
+  accentSoft: string
+  accentBorder: string
+  overlay: string
+}
+
+export interface LogistaThemeTokens {
+  colors: LogistaThemeBaseColors & UiSemanticColorTokens
+  radius: UiRadiusTokens
+  shadow: UiShadowTokens
+}
+
+export const logistaTheme: LogistaThemeTokens = {
   colors: {
     pageBackground: siteTheme.colors.pageBackground,
     surface: siteTheme.colors.surface,
@@ -24,11 +47,14 @@ export const logistaTheme = {
     errorBackground: siteTheme.colors.errorBackground,
     errorText: siteTheme.colors.errorText,
     errorBorder: siteTheme.colors.errorBorder,
+    infoBackground: siteTheme.colors.infoBackground,
+    infoText: siteTheme.colors.infoText,
+    infoBorder: siteTheme.colors.infoBorder,
     overlay: siteTheme.colors.overlay,
   },
   radius: siteTheme.radius,
   shadow: siteTheme.shadow,
-} as const
+}
 
 export const logistaCardStyle: CSSProperties = {
   background: logistaTheme.colors.surface,

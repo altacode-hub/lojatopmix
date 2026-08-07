@@ -1,5 +1,5 @@
 import type { CatalogVariation, InternalProductRecord, ShowcaseRecord } from '../../types/catalog'
-import type { SaleableVariationRow } from './vendas/types'
+import type { CounterSaleItem, SaleableVariationRow } from './vendas/types'
 
 export interface InventoryRecord {
   total?: number
@@ -327,4 +327,51 @@ export const writeCounterSaleCatalogCache = (
   }
 
   window.localStorage.setItem(COUNTER_SALE_CATALOG_CACHE_KEY, JSON.stringify(cachePayload))
+}
+
+export interface CounterSaleDraftCache {
+  version: number
+  savedAt: number
+  items: CounterSaleItem[]
+}
+
+const COUNTER_SALE_DRAFT_CACHE_KEY = 'logista-counter-sale-draft-v1'
+const COUNTER_SALE_DRAFT_CACHE_VERSION = 1
+
+export const readCounterSaleDraft = (): CounterSaleItem[] | null => {
+  if (typeof window === 'undefined') return null
+
+  try {
+    const rawDraft = window.localStorage.getItem(COUNTER_SALE_DRAFT_CACHE_KEY)
+    if (!rawDraft) return null
+
+    const parsed = JSON.parse(rawDraft) as Partial<CounterSaleDraftCache>
+    if (parsed.version !== COUNTER_SALE_DRAFT_CACHE_VERSION || !Array.isArray(parsed.items)) {
+      window.localStorage.removeItem(COUNTER_SALE_DRAFT_CACHE_KEY)
+      return null
+    }
+
+    return parsed.items
+  } catch (error) {
+    console.error('Erro ao ler rascunho local de venda no balcao:', error)
+    window.localStorage.removeItem(COUNTER_SALE_DRAFT_CACHE_KEY)
+    return null
+  }
+}
+
+export const writeCounterSaleDraft = (items: CounterSaleItem[]) => {
+  if (typeof window === 'undefined') return
+
+  const payload: CounterSaleDraftCache = {
+    version: COUNTER_SALE_DRAFT_CACHE_VERSION,
+    savedAt: Date.now(),
+    items,
+  }
+
+  window.localStorage.setItem(COUNTER_SALE_DRAFT_CACHE_KEY, JSON.stringify(payload))
+}
+
+export const clearCounterSaleDraft = () => {
+  if (typeof window === 'undefined') return
+  window.localStorage.removeItem(COUNTER_SALE_DRAFT_CACHE_KEY)
 }
