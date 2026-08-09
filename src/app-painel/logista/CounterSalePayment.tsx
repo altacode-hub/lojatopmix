@@ -82,10 +82,20 @@ export default function CounterSalePayment() {
     return localSelectedItems.reduce((sum, item) => sum + Number(item.qty || 0), 0)
   }, [reservedSale, localSelectedItems])
 
+  const discountCurrencyFormatter = new Intl.NumberFormat('pt-BR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })
+
   const parseCurrencyCents = (value: string) => {
-    const digits = value.replace(/[^0-9]/g, '')
-    if (!digits) return 0
-    return Number(digits) / 100
+    const digitsOnly = value.replace(/\D/g, '')
+    if (!digitsOnly) return 0
+    return Number(digitsOnly) / 100
+  }
+
+  const getDiscountCurrencyDisplayValue = (value: number) => {
+    if (!Number.isFinite(value) || value <= 0) return ''
+    return discountCurrencyFormatter.format(value)
   }
 
   const parseNumericText = (value: string) => {
@@ -128,22 +138,23 @@ export default function CounterSalePayment() {
   const finalTotalAmount = Math.max(0, totalAmount - finalDiscountValue)
 
   const handleDiscountValueChange = (rawValue: string) => {
-    
-    setDiscountValueText(rawValue)
     if (!rawValue) {
+      setDiscountValueText('')
       setDiscountPercentText('')
       return
     }
 
-    const nextValueCents = parseCurrencyCents(rawValue)
+    const numericValue = parseCurrencyCents(rawValue)
     const safeTotal = Math.max(0, totalAmount)
+    const clampedValue = Math.max(0, Math.min(numericValue, safeTotal))
+
+    setDiscountValueText(getDiscountCurrencyDisplayValue(clampedValue))
 
     if (safeTotal <= 0) {
       setDiscountPercentText('')
       return
     }
 
-    const clampedValue = Math.max(0, Math.min(nextValueCents, safeTotal))
     const percent = safeTotal > 0 ? (clampedValue / safeTotal) * 100 : 0
     setDiscountPercentText(percent.toFixed(2).replace('.', ','))
   }
@@ -176,11 +187,7 @@ export default function CounterSalePayment() {
       }
     }
 
-    const formatted = new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    }).format(finalDiscountValue)
-    setDiscountValueText(formatted)
+    setDiscountValueText(getDiscountCurrencyDisplayValue(finalDiscountValue))
   }
 
   const discountApplied = finalDiscountValue > 0
