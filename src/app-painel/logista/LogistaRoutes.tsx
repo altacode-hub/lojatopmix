@@ -9,11 +9,13 @@ import EstoqueLogista from './EstoqueLogista'
 import ProdutoEstoque from './ProdutoEstoque'
 import CounterSalePayment from './CounterSalePayment'
 import CategoriasLogista from './CategoriasLogista'
+import ClientesLogista from './ClientesLogista'
 
 export const logistaRoutes = [
   { index: true, element: <Logista /> },
   { path: 'vendas', element: <VendasLogista /> },
   { path: 'vendas/pagamento', element: <CounterSalePayment /> },
+  { path: 'clientes', element: <ClientesLogista /> },
   { path: 'estoque', element: <EstoqueLogista /> },
   { path: 'estoque/:productId', element: <ProdutoEstoque /> },
   { path: 'categorias', element: <CategoriasLogista /> },

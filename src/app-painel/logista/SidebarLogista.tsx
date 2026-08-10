@@ -1,6 +1,6 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
-import { FiHome, FiPlusSquare, FiClock, FiTag, FiHelpCircle, FiLogOut, FiShoppingCart, FiPackage } from 'react-icons/fi'
+import { FiHome, FiPlusSquare, FiClock, FiTag, FiHelpCircle, FiLogOut, FiShoppingCart, FiPackage, FiUsers } from 'react-icons/fi'
 import { useMediaQuery } from '../../hooks/useMediaQuery'
 import { logistaTheme } from './logistaTheme'
 
@@ -101,6 +101,14 @@ export default function SidebarLogista({ isOpen, onClose }: SidebarLogistaProps)
         >
           <FiShoppingCart size={18} />
           {(!isMobile || isOpen) && <span>Vendas</span>}
+        </Link>
+        <Link
+          to="/clientes"
+          onClick={handleLinkClick}
+          style={getLinkStyle(location.pathname.startsWith('/clientes'))}
+        >
+          <FiUsers size={18} />
+          {(!isMobile || isOpen) && <span>Clientes</span>}
         </Link>
         <Link
           to="/novo-pedido"

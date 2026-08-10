@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { get, push, ref, update } from 'firebase/database'
-import { FiArrowLeft, FiCreditCard, FiDollarSign } from 'react-icons/fi'
+import { FiArrowLeft, FiCreditCard, FiDollarSign, FiUsers, FiUserPlus } from 'react-icons/fi'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { rtdb } from '../../service/firebase'
@@ -12,7 +12,7 @@ import { useMediaQuery } from '../../hooks/useMediaQuery'
 import { logistaInputStyle, logistaTheme } from './logistaTheme'
 import { cardStyle, formatCurrency, hasVariationStock } from './vendas/helpers'
 import { isAdHocCounterSaleItem, isRegisteredCounterSaleItem } from './vendas/types'
-import type { CounterSaleItem, SaleItemRecord, SaleRecord } from './vendas/types'
+import type { CounterSaleItem, SaleItemRecord, SaleRecord, CustomerRecord } from './vendas/types'
 
 type PaymentLocationState = {
   selectedItems?: CounterSaleItem[]
@@ -24,6 +24,7 @@ const paymentOptions = [
   { value: 'dinheiro', label: 'Dinheiro' },
   { value: 'cartao_credito', label: 'Cartao de credito' },
   { value: 'cartao_debito', label: 'Cartao de debito' },
+  { value: 'amortizacao', label: 'Amortização (pagamento parcial)' },
 ] as const
 
 const getItemLineTotal = (item: CounterSaleItem | SaleItemRecord) => {
@@ -46,6 +47,11 @@ export default function CounterSalePayment() {
   const isMobile = useMediaQuery('(max-width: 768px)')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [customers, setCustomers] = useState<CustomerRecord[]>([])
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string>('')
+  const [customerBirthDate, setCustomerBirthDate] = useState<string>('')
+  const [creatingNewCustomer, setCreatingNewCustomer] = useState(false)
+  const [loadingCustomers, setLoadingCustomers] = useState(true)
 
   const locationState = (location.state as PaymentLocationState | null) ?? null
   const selectedItems = Array.isArray(locationState?.selectedItems) ? locationState.selectedItems : []
@@ -63,6 +69,38 @@ export default function CounterSalePayment() {
   const [notes, setNotes] = useState(reservedSale?.notes || '')
   const [discountValueText, setDiscountValueText] = useState<string>('')
   const [discountPercentText, setDiscountPercentText] = useState<string>('')
+
+  const isAmortizacao = paymentMethod === 'amortizacao'
+
+  useEffect(() => {
+    const loadCustomers = async () => {
+      try {
+        const snapshot = await get(ref(rtdb, 'customers'))
+        if (snapshot.exists()) {
+          const data = snapshot.val() as Record<string, CustomerRecord>
+          const list = Object.entries(data)
+            .map(([id, c]) => ({ ...c, customerId: c.customerId || id }))
+            .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+          setCustomers(list)
+
+          if (reservedSale?.customer?.customerId) {
+            setSelectedCustomerId(reservedSale.customer.customerId)
+            const existing = list.find((c) => c.customerId === reservedSale.customer?.customerId)
+            if (existing) {
+              setCustomerName(existing.name || '')
+              setCustomerPhone(existing.phone_number || '')
+              setCustomerBirthDate(existing.birthDate || '')
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Erro ao carregar clientes:', err)
+      } finally {
+        setLoadingCustomers(false)
+      }
+    }
+    void loadCustomers()
+  }, [reservedSale])
 
   const hasPaymentContext = localSelectedItems.length > 0 || Boolean(reservedSale)
 
@@ -198,19 +236,65 @@ export default function CounterSalePayment() {
       }
     : null
 
+  const handleSelectExistingCustomer = (customerId: string) => {
+    setSelectedCustomerId(customerId)
+    const existing = customers.find((c) => c.customerId === customerId)
+    if (existing) {
+      setCustomerName(existing.name || '')
+      setCustomerPhone(existing.phone_number || '')
+      setCustomerBirthDate(existing.birthDate || '')
+      setCreatingNewCustomer(false)
+    } else {
+      setCustomerName('')
+      setCustomerPhone('')
+      setCustomerBirthDate('')
+    }
+  }
+
   const buildCustomer = () => {
     const trimmedName = customerName.trim()
     const trimmedPhone = customerPhone.trim()
+    const trimmedBirthDate = customerBirthDate.trim() || null
 
-    if (!trimmedName && !trimmedPhone && !reservedSale?.customer) {
+    if (!trimmedName && !trimmedPhone && !reservedSale?.customer && !selectedCustomerId) {
       return null
     }
 
     return {
       ...(reservedSale?.customer || {}),
+      ...(selectedCustomerId ? { customerId: selectedCustomerId } : {}),
       ...(trimmedName ? { name: trimmedName } : {}),
       ...(trimmedPhone ? { phone_number: trimmedPhone } : {}),
+      ...(trimmedBirthDate ? { birthDate: trimmedBirthDate } : {}),
     }
+  }
+
+  const ensureCustomerRecord = async (customerData: ReturnType<typeof buildCustomer>) => {
+    if (!customerData) return null
+    if (customerData.customerId) return customerData.customerId
+    if (!customerData.name?.trim()) return null
+
+    const now = Date.now()
+    const customerRef = push(ref(rtdb, 'customers'))
+    const customerId = customerRef.key
+    if (!customerId) return null
+
+    const updates: Record<string, unknown> = {}
+    updates[`customers/${customerId}`] = {
+      customerId,
+      name: customerData.name.trim(),
+      phone_number: customerData.phone_number || null,
+      birthDate: customerData.birthDate || null,
+      email: null,
+      notes: null,
+      createdAt: now,
+      updatedAt: now,
+      totalDebt: 0,
+      totalPurchased: 0,
+      totalPaid: 0,
+    }
+    await update(ref(rtdb), updates)
+    return customerId
   }
 
   const handleSubmitPayment = async () => {
@@ -234,6 +318,12 @@ export default function CounterSalePayment() {
       return
     }
 
+    const trimmedCustomerName = customerName.trim()
+    if (isAmortizacao && !trimmedCustomerName) {
+      setError('Para pagamento por amortização, é obrigatório informar o nome do cliente.')
+      return
+    }
+
     setSaving(true)
     setError(null)
 
@@ -241,10 +331,18 @@ export default function CounterSalePayment() {
       const now = Date.now()
       const updates: Record<string, unknown> = {}
       const inventoryPatches: Array<{ productId: string; total: number; reserved: number; available: number }> = []
-      const customer = buildCustomer()
+      let customer = buildCustomer()
       const normalizedNotes = hasAdHocItems && notes.trim()
         ? `${notes.trim()}${reservedSale ? '' : ' (inclui item avulso de venda no balcao)'}`
         : notes.trim() || null
+
+      let customerId: string | null = null
+      if (isAmortizacao && trimmedCustomerName) {
+        customerId = await ensureCustomerRecord(customer)
+        if (customerId && customer) {
+          customer = { ...customer, customerId }
+        }
+      }
 
       if (reservedSale) {
         for (const item of reservedSale.items || []) {
@@ -288,13 +386,13 @@ export default function CounterSalePayment() {
           }
         }
 
-        updates[`sales/${reservedSale.saleId}/paymentStatus`] = 'paid'
+        updates[`sales/${reservedSale.saleId}/paymentStatus`] = isAmortizacao ? 'pending' : 'paid'
         updates[`sales/${reservedSale.saleId}/paymentMethod`] = paymentMethod
         updates[`sales/${reservedSale.saleId}/fulfillmentStatus`] = 'delivered'
         updates[`sales/${reservedSale.saleId}/stockStatus`] = hasAdHocItems ? 'mixed' : 'deducted'
         updates[`sales/${reservedSale.saleId}/customer`] = customer
         updates[`sales/${reservedSale.saleId}/notes`] = normalizedNotes
-        updates[`sales/${reservedSale.saleId}/paidAt`] = now
+        if (!isAmortizacao) updates[`sales/${reservedSale.saleId}/paidAt`] = now
         updates[`sales/${reservedSale.saleId}/deliveredAt`] = now
         updates[`sales/${reservedSale.saleId}/updatedAt`] = now
         updates[`sales/${reservedSale.saleId}/sellerUid`] = user.uid
@@ -303,6 +401,11 @@ export default function CounterSalePayment() {
         updates[`sales/${reservedSale.saleId}/discountPercent`] = discountDetails?.discountPercent ?? 0
         updates[`sales/${reservedSale.saleId}/discountApplied`] = Boolean(discountDetails)
         updates[`sales/${reservedSale.saleId}/totalAmount`] = finalTotalAmount
+        if (isAmortizacao) {
+          updates[`sales/${reservedSale.saleId}/debtAmount`] = finalTotalAmount
+          updates[`sales/${reservedSale.saleId}/paidAmount`] = 0
+          updates[`sales/${reservedSale.saleId}/amortizationCount`] = 0
+        }
       } else {
         const saleRef = push(ref(rtdb, 'sales'))
         const saleId = saleRef.key
@@ -422,7 +525,7 @@ export default function CounterSalePayment() {
           saleId,
           channel: 'balcao',
           source: 'logista',
-          paymentStatus: 'paid',
+          paymentStatus: isAmortizacao ? 'pending' : 'paid',
           paymentMethod,
           fulfillmentStatus: 'delivered',
           stockStatus,
@@ -436,16 +539,47 @@ export default function CounterSalePayment() {
           totalItems: finalTotalItems,
           notes: normalizedNotes,
           createdAt: now,
-          paidAt: now,
+          paidAt: isAmortizacao ? undefined : now,
           deliveredAt: now,
           updatedAt: now,
           sellerUid: user.uid,
           ...(hasAdHocItems ? { hasAdHocItems: true } : {}),
+          ...(isAmortizacao
+            ? {
+                debtAmount: finalTotalAmount,
+                paidAmount: 0,
+                amortizationCount: 0,
+              }
+            : {}),
+        }
+      }
+
+      if (isAmortizacao && customerId) {
+        const customerRef = ref(rtdb, `customers/${customerId}`)
+        const customerSnap = await get(customerRef)
+        const existingCustomer = customerSnap.exists() ? (customerSnap.val() as CustomerRecord) : null
+        const currentDebt = Number(existingCustomer?.totalDebt || 0)
+        const currentPurchased = Number(existingCustomer?.totalPurchased || 0)
+
+        updates[`customers/${customerId}/totalDebt`] = currentDebt + finalTotalAmount
+        updates[`customers/${customerId}/totalPurchased`] = currentPurchased + finalTotalAmount
+        updates[`customers/${customerId}/updatedAt`] = now
+        if (customer?.phone_number) {
+          updates[`customers/${customerId}/phone_number`] = customer.phone_number
+        }
+        if (customer?.birthDate) {
+          updates[`customers/${customerId}/birthDate`] = customer.birthDate
         }
       }
 
       updates[`${CATALOG_SYNC_PATH}/updatedAt`] = now
-      updates[`${CATALOG_SYNC_PATH}/source`] = reservedSale ? 'pagamento_reserva_balcao' : 'pagamento_venda_balcao'
+      updates[`${CATALOG_SYNC_PATH}/source`] = reservedSale
+        ? isAmortizacao
+          ? 'pagamento_reserva_balcao_amortizacao'
+          : 'pagamento_reserva_balcao'
+        : isAmortizacao
+          ? 'pagamento_venda_balcao_amortizacao'
+          : 'pagamento_venda_balcao'
 
       clearCounterSaleDraft()
       await update(ref(rtdb), updates)
@@ -467,9 +601,13 @@ export default function CounterSalePayment() {
         replace: true,
         state: {
           clearCounterSaleDraft: true,
-          successMessage: reservedSale
-            ? 'Pagamento registrado e venda reservada concluida com sucesso.'
-            : 'Venda no balcao finalizada com sucesso.',
+          successMessage: isAmortizacao
+            ? reservedSale
+              ? 'Venda reservada concluída. Débito registrado no cliente para amortização.'
+              : 'Venda no balcão concluída. Débito registrado no cliente para amortização.'
+            : reservedSale
+              ? 'Pagamento registrado e venda reservada concluida com sucesso.'
+              : 'Venda no balcao finalizada com sucesso.',
         },
       })
     } catch (paymentError) {
@@ -554,35 +692,140 @@ export default function CounterSalePayment() {
                 </select>
               </label>
 
-              <label style={{ display: 'grid', gap: 6 }}>
-                <span style={{ fontSize: 14, color: logistaTheme.colors.text }}>Nome do cliente</span>
-                <input
-                  value={customerName}
-                  onChange={(event) => setCustomerName(event.target.value)}
-                  placeholder="Opcional"
+              {isAmortizacao ? (
+                <div
                   style={{
-                    ...logistaInputStyle,
-                    width: '100%',
-                    maxWidth: '100%',
-                    boxSizing: 'border-box',
+                    borderRadius: 14,
+                    border: `1px solid ${logistaTheme.colors.infoBorder ?? logistaTheme.colors.accentBorder}`,
+                    background: logistaTheme.colors.infoBackground ?? logistaTheme.colors.accentSoft,
+                    color: logistaTheme.colors.infoText ?? logistaTheme.colors.accentDark,
+                    padding: '12px 14px',
+                    display: 'grid',
+                    gap: 6,
                   }}
-                />
-              </label>
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700 }}>
+                    <FiUsers size={16} />
+                    Pagamento por Amortização
+                  </div>
+                  <div style={{ fontSize: 12 }}>
+                    O valor total desta venda será registrado como débito do cliente e baixado conforme os pagamentos parciais (amortizações) forem sendo realizados.
+                  </div>
+                </div>
+              ) : null}
 
-              <label style={{ display: 'grid', gap: 6 }}>
-                <span style={{ fontSize: 14, color: logistaTheme.colors.text }}>Telefone do cliente</span>
-                <input
-                  value={customerPhone}
-                  onChange={(event) => setCustomerPhone(event.target.value)}
-                  placeholder="Opcional"
-                  style={{
-                    ...logistaInputStyle,
-                    width: '100%',
-                    maxWidth: '100%',
-                    boxSizing: 'border-box',
-                  }}
-                />
-              </label>
+              {isAmortizacao && !loadingCustomers ? (
+                <div style={{ display: 'grid', gap: 8 }}>
+                  <label style={{ display: 'grid', gap: 6 }}>
+                    <span style={{ fontSize: 14, color: logistaTheme.colors.text, fontWeight: 600 }}>
+                      <FiUsers size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }} />
+                      Cliente
+                    </span>
+                    <select
+                      value={selectedCustomerId}
+                      onChange={(event) => handleSelectExistingCustomer(event.target.value)}
+                      style={{
+                        ...logistaInputStyle,
+                        width: '100%',
+                        maxWidth: '100%',
+                        boxSizing: 'border-box',
+                      }}
+                    >
+                      <option value="">-- Novo cliente / Digite abaixo --</option>
+                      {customers.map((c) => (
+                        <option key={c.customerId} value={c.customerId}>
+                          {c.name}
+                          {c.phone_number ? ` (${c.phone_number})` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  {!selectedCustomerId || creatingNewCustomer ? (
+                    <div style={{ display: 'grid', gap: 8, padding: 12, borderRadius: 12, border: `1px dashed ${logistaTheme.colors.border}` }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600, color: logistaTheme.colors.accentDark }}>
+                        <FiUserPlus size={14} />
+                        Dados do novo cliente
+                      </div>
+                      <label style={{ display: 'grid', gap: 6 }}>
+                        <span style={{ fontSize: 13, color: logistaTheme.colors.text }}>
+                          Nome completo <span style={{ color: logistaTheme.colors.errorText }}>*</span>
+                        </span>
+                        <input
+                          value={customerName}
+                          onChange={(event) => setCustomerName(event.target.value)}
+                          placeholder="Nome obrigatório para amortização"
+                          style={{
+                            ...logistaInputStyle,
+                            width: '100%',
+                            maxWidth: '100%',
+                            boxSizing: 'border-box',
+                          }}
+                        />
+                      </label>
+                      <label style={{ display: 'grid', gap: 6 }}>
+                        <span style={{ fontSize: 13, color: logistaTheme.colors.text }}>Telefone / WhatsApp</span>
+                        <input
+                          value={customerPhone}
+                          onChange={(event) => setCustomerPhone(event.target.value)}
+                          placeholder="(00) 00000-0000"
+                          style={{
+                            ...logistaInputStyle,
+                            width: '100%',
+                            maxWidth: '100%',
+                            boxSizing: 'border-box',
+                          }}
+                        />
+                      </label>
+                      <label style={{ display: 'grid', gap: 6 }}>
+                        <span style={{ fontSize: 13, color: logistaTheme.colors.text }}>Data de nascimento</span>
+                        <input
+                          type="date"
+                          value={customerBirthDate}
+                          onChange={(event) => setCustomerBirthDate(event.target.value)}
+                          style={{
+                            ...logistaInputStyle,
+                            width: '100%',
+                            maxWidth: '100%',
+                            boxSizing: 'border-box',
+                          }}
+                        />
+                      </label>
+                    </div>
+                  ) : null}
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gap: 8 }}>
+                  <label style={{ display: 'grid', gap: 6 }}>
+                    <span style={{ fontSize: 14, color: logistaTheme.colors.text }}>Nome do cliente</span>
+                    <input
+                      value={customerName}
+                      onChange={(event) => setCustomerName(event.target.value)}
+                      placeholder="Opcional"
+                      style={{
+                        ...logistaInputStyle,
+                        width: '100%',
+                        maxWidth: '100%',
+                        boxSizing: 'border-box',
+                      }}
+                    />
+                  </label>
+                  <label style={{ display: 'grid', gap: 6 }}>
+                    <span style={{ fontSize: 14, color: logistaTheme.colors.text }}>Telefone do cliente</span>
+                    <input
+                      value={customerPhone}
+                      onChange={(event) => setCustomerPhone(event.target.value)}
+                      placeholder="Opcional"
+                      style={{
+                        ...logistaInputStyle,
+                        width: '100%',
+                        maxWidth: '100%',
+                        boxSizing: 'border-box',
+                      }}
+                    />
+                  </label>
+                </div>
+              )}
 
               <label style={{ display: 'grid', gap: 6 }}>
                 <span style={{ fontSize: 14, color: logistaTheme.colors.text }}>Observacoes</span>

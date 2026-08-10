@@ -69,11 +69,135 @@
     },
     "sales": {
       ".read": "auth != null && root.child('loja/arealogista/' + auth.uid).val() === true",
-      ".write": "auth != null && root.child('loja/arealogista/' + auth.uid).val() === true"
+      ".write": "auth != null && root.child('loja/arealogista/' + auth.uid).val() === true",
+      ".indexOn": ["createdAt", "customer/customerId", "paymentStatus", "paymentMethod"],
+      "$saleId": {
+        "debtAmount": {
+          ".validate": "newData.val() === null || newData.isNumber()"
+        },
+        "paidAmount": {
+          ".validate": "newData.val() === null || (newData.isNumber() && newData.val() >= 0)"
+        },
+        "amortizationCount": {
+          ".validate": "newData.val() === null || (newData.isNumber() && newData.val() >= 0)"
+        },
+        "originalTotalAmount": {
+          ".validate": "newData.val() === null || newData.isNumber()"
+        },
+        "discountValue": {
+          ".validate": "newData.val() === null || newData.isNumber()"
+        },
+        "discountPercent": {
+          ".validate": "newData.val() === null || newData.isNumber()"
+        },
+        "discountApplied": {
+          ".validate": "newData.val() === null || newData.isBoolean()"
+        },
+        "hasAdHocItems": {
+          ".validate": "newData.val() === null || newData.isBoolean()"
+        },
+        "customer": {
+          ".validate": "newData.val() === null || newData.hasChildren(['name'])",
+          "customerId": {
+            ".validate": "newData.val() === null || (newData.isString() && newData.val().length > 0)"
+          },
+          "name": {
+            ".validate": "newData.val() === null || newData.isString()"
+          },
+          "phone_number": {
+            ".validate": "newData.val() === null || newData.isString()"
+          },
+          "birthDate": {
+            ".validate": "newData.val() === null || newData.isString()"
+          }
+        }
+      }
     },
     "stockMovements": {
       ".read": "auth != null && root.child('loja/arealogista/' + auth.uid).val() === true",
       ".write": "auth != null && root.child('loja/arealogista/' + auth.uid).val() === true"
+    },
+    "customers": {
+      ".read": "auth != null && root.child('loja/arealogista/' + auth.uid).val() === true",
+      ".write": "auth != null && root.child('loja/arealogista/' + auth.uid).val() === true",
+      ".indexOn": ["name", "createdAt", "totalDebt"],
+      "$customerId": {
+        ".validate": "newData.hasChildren(['customerId', 'name', 'createdAt'])",
+        "customerId": {
+          ".validate": "newData.isString() && newData.val().length > 0 && newData.val() === $customerId"
+        },
+        "name": {
+          ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 200"
+        },
+        "phone_number": {
+          ".validate": "newData.val() === null || newData.isString()"
+        },
+        "birthDate": {
+          ".validate": "newData.val() === null || newData.isString()"
+        },
+        "email": {
+          ".validate": "newData.val() === null || newData.isString()"
+        },
+        "notes": {
+          ".validate": "newData.val() === null || newData.isString()"
+        },
+        "createdAt": {
+          ".validate": "newData.isNumber() && newData.val() > 0",
+          ".write": "!data.exists()"
+        },
+        "updatedAt": {
+          ".validate": "newData.isNumber() && newData.val() > 0"
+        },
+        "totalDebt": {
+          ".validate": "newData.isNumber() && newData.val() >= 0"
+        },
+        "totalPurchased": {
+          ".validate": "newData.isNumber() && newData.val() >= 0"
+        },
+        "totalPaid": {
+          ".validate": "newData.isNumber() && newData.val() >= 0"
+        }
+      }
+    },
+    "amortizations": {
+      ".read": "auth != null && root.child('loja/arealogista/' + auth.uid).val() === true",
+      ".write": "auth != null && root.child('loja/arealogista/' + auth.uid).val() === true",
+      ".indexOn": ["createdAt", "customerId", "saleId"],
+      "$amortizationId": {
+        ".validate": "newData.hasChildren(['amortizationId', 'saleId', 'customerId', 'amount', 'paymentMethod', 'createdAt', 'createdBy'])",
+        "amortizationId": {
+          ".validate": "newData.isString() && newData.val().length > 0 && newData.val() === $amortizationId",
+          ".write": "!data.exists()"
+        },
+        "saleId": {
+          ".validate": "newData.isString() && newData.val().length > 0 && root.child('sales/' + newData.val()).exists()",
+          ".write": "!data.exists()"
+        },
+        "customerId": {
+          ".validate": "newData.isString() && newData.val().length > 0 && root.child('customers/' + newData.val()).exists()",
+          ".write": "!data.exists()"
+        },
+        "amount": {
+          ".validate": "newData.isNumber() && newData.val() > 0",
+          ".write": "!data.exists()"
+        },
+        "paymentMethod": {
+          ".validate": "newData.isString() && (newData.val() === 'pix' || newData.val() === 'dinheiro' || newData.val() === 'cartao_credito' || newData.val() === 'cartao_debito' || newData.val() === 'boleto' || newData.val() === 'transferencia' || newData.val() === 'outro')",
+          ".write": "!data.exists()"
+        },
+        "notes": {
+          ".validate": "newData.val() === null || newData.isString()",
+          ".write": "!data.exists() || (data.exists() && newData.isString())"
+        },
+        "createdAt": {
+          ".validate": "newData.isNumber() && newData.val() > 0",
+          ".write": "!data.exists()"
+        },
+        "createdBy": {
+          ".validate": "newData.isString() && newData.val() === auth.uid",
+          ".write": "!data.exists()"
+        }
+      }
     },
     "checkoutOrders": {
       ".read": "auth != null && root.child('loja/arealogista/' + auth.uid).val() === true",

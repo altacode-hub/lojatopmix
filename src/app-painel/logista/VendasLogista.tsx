@@ -18,6 +18,7 @@ import {
 } from './vendas/types'
 import type {
   AdHocCounterSaleItem,
+  AmortizationRecord,
   CounterSaleItem,
   RegisteredCounterSaleItem,
   ReservedSaleViewRecord,
@@ -48,6 +49,7 @@ export default function VendasLogista() {
   const [catalogRows, setCatalogRows] = useState<SaleableVariationRow[]>([])
   const [sales, setSales] = useState<SaleRecord[]>([])
   const [cartReservedSales, setCartReservedSales] = useState<ReservedSaleViewRecord[]>([])
+  const [amortizations, setAmortizations] = useState<AmortizationRecord[]>([])
   const [selectedItems, setSelectedItems] = useState<CounterSaleItem[]>(() => readCounterSaleDraft() ?? [])
   const [draftLoadedFromCache, setDraftLoadedFromCache] = useState<number>(() => {
     const cachedDraft = readCounterSaleDraft()
@@ -77,9 +79,10 @@ export default function VendasLogista() {
   }
 
   const loadSalesAndReservations = useCallback(async () => {
-    const [salesResult, cartReservationsResult] = await Promise.allSettled([
+    const [salesResult, cartReservationsResult, amortizationsResult] = await Promise.allSettled([
       get(ref(rtdb, 'sales')),
       get(ref(rtdb, 'cartReservations')),
+      get(ref(rtdb, 'amortizations')),
     ])
 
     if (salesResult.status === 'rejected') {
@@ -113,6 +116,16 @@ export default function VendasLogista() {
             }
           >)
         : {}
+
+    const amortizationsData =
+      amortizationsResult.status === 'fulfilled' && amortizationsResult.value.exists()
+        ? ((amortizationsResult.value.val()) as Record<string, AmortizationRecord>)
+        : {}
+    const loadedAmortizations = Object.entries(amortizationsData).map(([id, a]) => ({
+      ...a,
+      amortizationId: a.amortizationId || id,
+    }))
+    setAmortizations(loadedAmortizations)
 
     const productsForReservations =
       productsForReservationsResult.status === 'fulfilled' && productsForReservationsResult.value.exists()
@@ -395,12 +408,24 @@ export default function VendasLogista() {
   const filteredSales = useMemo(
     () =>
       sales.filter((sale) => {
-        if (sale.paymentStatus !== 'paid') return false
         if (periodStartTimestamp && sale.createdAt < periodStartTimestamp) return false
         if (periodEndTimestamp && sale.createdAt > periodEndTimestamp) return false
-        return true
+        if (sale.paymentMethod === 'amortizacao') {
+          return sale.paymentStatus === 'paid' || sale.paymentStatus === 'pending'
+        }
+        return sale.paymentStatus === 'paid'
       }),
     [periodEndTimestamp, periodStartTimestamp, sales],
+  )
+
+  const filteredAmortizations = useMemo(
+    () =>
+      amortizations.filter((a) => {
+        if (periodStartTimestamp && a.createdAt < periodStartTimestamp) return false
+        if (periodEndTimestamp && a.createdAt > periodEndTimestamp) return false
+        return true
+      }),
+    [amortizations, periodEndTimestamp, periodStartTimestamp],
   )
 
   const pendingDeliveries = useMemo(
@@ -423,14 +448,27 @@ export default function VendasLogista() {
     [cartReservedSales, sales],
   )
 
-  const historyStats = useMemo(
-    () => ({
-      totalSales: filteredSales.length,
-      totalRevenue: filteredSales.reduce((sum, sale) => sum + Number(sale.totalAmount || 0), 0),
-      totalItems: filteredSales.reduce((sum, sale) => sum + Number(sale.totalItems || 0), 0),
-    }),
-    [filteredSales],
-  )
+  const historyStats = useMemo(() => {
+    const paidDirectSales = filteredSales.filter((s) => s.paymentMethod !== 'amortizacao')
+    const directRevenue = paidDirectSales.reduce((sum, sale) => sum + Number(sale.totalAmount || 0), 0)
+    const amortizationsRevenue = filteredAmortizations.reduce((sum, a) => sum + Number(a.amount || 0), 0)
+    const totalItems = paidDirectSales.reduce((sum, sale) => sum + Number(sale.totalItems || 0), 0)
+    const fullyPaidAmortizedInPeriod = filteredSales.filter(
+      (s) => s.paymentMethod === 'amortizacao' && s.paymentStatus === 'paid' && s.paidAt
+        ? s.paidAt >= (periodStartTimestamp || 0) && s.paidAt <= (periodEndTimestamp || Infinity)
+        : false,
+    ).length
+
+    return {
+      totalSales: paidDirectSales.length + fullyPaidAmortizedInPeriod,
+      totalRevenue: directRevenue + amortizationsRevenue,
+      totalItems,
+      amortizationsCount: filteredAmortizations.length,
+      amortizationsRevenue,
+      directSalesCount: paidDirectSales.length,
+      directRevenue,
+    }
+  }, [filteredSales, filteredAmortizations, periodEndTimestamp, periodStartTimestamp])
 
   const addSelectedItem = (row: SaleableVariationRow) => {
     setSuccessMessage(null)

@@ -1,4 +1,4 @@
-import { FiCheckCircle, FiClock, FiPackage, FiShoppingCart } from 'react-icons/fi'
+import { FiCheckCircle, FiClock, FiDollarSign, FiPackage, FiShoppingCart } from 'react-icons/fi'
 import { cardStyle, formatCurrency, formatDateTime, getStatusMeta } from './helpers'
 import type { SaleRecord } from './types'
 import { logistaInputStyle, logistaTheme } from '../logistaTheme'
@@ -11,6 +11,10 @@ type SalesHistorySectionProps = {
     totalSales: number
     totalRevenue: number
     totalItems: number
+    amortizationsCount: number
+    amortizationsRevenue: number
+    directSalesCount: number
+    directRevenue: number
   }
   onPeriodStartChange: (value: string) => void
   onPeriodEndChange: (value: string) => void
@@ -58,16 +62,31 @@ export default function SalesHistorySection({
         <div style={{ ...cardStyle, padding: 16, background: logistaTheme.colors.accentSoft, border: `1px solid ${logistaTheme.colors.accentBorder}` }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: logistaTheme.colors.textMuted }}>
             <FiShoppingCart />
-            <span>Vendas</span>
+            <span>Vendas (pagas direto)</span>
           </div>
           <div style={{ marginTop: 8, fontSize: 28, fontWeight: 800, color: logistaTheme.colors.accentDark }}>
-            {historyStats.totalSales}
+            {historyStats.directSalesCount}
+          </div>
+          <div style={{ marginTop: 4, fontSize: 12, color: logistaTheme.colors.textMuted }}>
+            {formatCurrency(historyStats.directRevenue)}
+          </div>
+        </div>
+        <div style={{ ...cardStyle, padding: 16, background: logistaTheme.colors.infoBackground, border: `1px solid ${logistaTheme.colors.infoBorder}` }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: logistaTheme.colors.infoText }}>
+            <FiDollarSign />
+            <span>Amortizacoes recebidas</span>
+          </div>
+          <div style={{ marginTop: 8, fontSize: 28, fontWeight: 800, color: logistaTheme.colors.infoText }}>
+            {historyStats.amortizationsCount}
+          </div>
+          <div style={{ marginTop: 4, fontSize: 12, color: logistaTheme.colors.textMuted }}>
+            {formatCurrency(historyStats.amortizationsRevenue)}
           </div>
         </div>
         <div style={{ ...cardStyle, padding: 16, background: logistaTheme.colors.successBackground, border: `1px solid ${logistaTheme.colors.successBorder}` }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: logistaTheme.colors.successText }}>
             <FiCheckCircle />
-            <span>Faturamento</span>
+            <span>Faturamento total</span>
           </div>
           <div style={{ marginTop: 8, fontSize: 28, fontWeight: 800, color: logistaTheme.colors.successText }}>
             {formatCurrency(historyStats.totalRevenue)}
@@ -138,6 +157,11 @@ export default function SalesHistorySection({
                       {formatCurrency(sale.totalAmount)}
                     </div>
                     <div style={{ color: logistaTheme.colors.textMuted, fontSize: 14 }}>{sale.totalItems} item(ns)</div>
+                    {sale.paymentMethod === 'amortizacao' && sale.paymentStatus === 'pending' ? (
+                      <div style={{ marginTop: 6, fontSize: 13, color: logistaTheme.colors.warningText, fontWeight: 700 }}>
+                        Saldo em aberto: {formatCurrency(Number(sale.debtAmount || sale.totalAmount) - Number(sale.paidAmount || 0))}
+                      </div>
+                    ) : null}
                   </div>
                 </div>
 
@@ -168,6 +192,11 @@ export default function SalesHistorySection({
                   {sale.customer?.name ? <span>Cliente: {sale.customer.name}</span> : null}
                   {sale.orderNsu ? <span>Pedido online: {sale.orderNsu}</span> : null}
                   {sale.deliveredAt ? <span>Entregue em {formatDateTime(sale.deliveredAt)}</span> : null}
+                  {sale.paymentMethod === 'amortizacao' ? (
+                    <span>
+                      Pagamento: Amortizacao ({formatCurrency(Number(sale.paidAmount || 0))} pagos de {formatCurrency(Number(sale.debtAmount || sale.totalAmount))})
+                    </span>
+                  ) : null}
                 </div>
 
                 {sale.alerts && sale.alerts.length > 0 ? (

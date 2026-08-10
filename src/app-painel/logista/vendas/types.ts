@@ -50,6 +50,40 @@ export type SaleItemRecord = {
   color?: string | null
 }
 
+export type CustomerRecord = {
+  customerId: string
+  name: string
+  phone_number?: string | null
+  birthDate?: string | null
+  email?: string | null
+  address?: {
+    cep?: string
+    number?: string
+    complement?: string
+    street?: string
+    neighborhood?: string
+    city?: string
+    state?: string
+  } | null
+  notes?: string | null
+  createdAt: number
+  updatedAt?: number
+  totalDebt?: number
+  totalPurchased?: number
+  totalPaid?: number
+}
+
+export type AmortizationRecord = {
+  amortizationId: string
+  saleId: string
+  customerId: string
+  amount: number
+  paymentMethod: 'pix' | 'dinheiro' | 'cartao_credito' | 'cartao_debito' | string
+  notes?: string | null
+  createdAt: number
+  createdBy: string
+}
+
 export type SaleRecord = {
   saleId: string
   orderNsu?: string
@@ -62,6 +96,7 @@ export type SaleRecord = {
   totalItems: number
   items: SaleItemRecord[]
   customer?: {
+    customerId?: string
     name?: string
     email?: string
     phone_number?: string
@@ -80,6 +115,14 @@ export type SaleRecord = {
   cancelledAt?: number
   updatedAt?: number
   sellerUid?: string
+  originalTotalAmount?: number
+  discountValue?: number
+  discountPercent?: number
+  discountApplied?: boolean
+  hasAdHocItems?: boolean
+  debtAmount?: number
+  paidAmount?: number
+  amortizationCount?: number
 }
 
 export type ReservedSaleViewRecord = SaleRecord & {
