@@ -94,3 +94,20 @@ export const getStatusMeta = (sale: SaleRecord | ReservedSaleViewRecord) => {
     background: logistaTheme.colors.successBackground,
   }
 }
+
+export const normalizePhoneForIndex = (value: string | null | undefined): string => {
+  if (!value) return ''
+  const digitsOnly = String(value).replace(/\D+/g, '')
+  if (!digitsOnly) return ''
+  if (digitsOnly.length === 11 && digitsOnly.startsWith('0')) return digitsOnly.slice(1)
+  if (digitsOnly.length === 12 && digitsOnly.startsWith('55')) return digitsOnly.slice(2)
+  if (digitsOnly.length === 13 && digitsOnly.startsWith('055')) return digitsOnly.slice(3)
+  return digitsOnly
+}
+
+export const BR_PHONE_INDEX_REGEX = /^[0-9]{10,11}$/
+
+export const isValidPhoneIndex = (key: string | null | undefined): boolean => {
+  if (!key) return false
+  return BR_PHONE_INDEX_REGEX.test(key)
+}

@@ -182,7 +182,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     await fbSignOut(auth)
   }
 
-  const isCliente = Boolean(user) && !isLogista
+  const isCliente = Boolean(user)
 
   const value = useMemo(
     () => ({

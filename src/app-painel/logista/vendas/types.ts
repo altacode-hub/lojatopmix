@@ -54,8 +54,10 @@ export type CustomerRecord = {
   customerId: string
   name: string
   phone_number?: string | null
+  phoneIndexKey?: string | null
   birthDate?: string | null
   email?: string | null
+  cpf?: string | null
   address?: {
     cep?: string
     number?: string
@@ -66,11 +68,36 @@ export type CustomerRecord = {
     state?: string
   } | null
   notes?: string | null
+  authUids?: Array<string | null> | string | null
   createdAt: number
   updatedAt?: number
   totalDebt?: number
   totalPurchased?: number
   totalPaid?: number
+}
+
+export type CustomerAuthLinkRecord = {
+  customerId: string
+  linkedAt: number
+  phoneNumber?: string | null
+  source?: 'cliente_app' | 'painel_app' | 'manual' | string
+}
+
+export type CustomerPhoneIndexRecord = {
+  customerId: string
+  rawPhone?: string
+  lastSeenAt?: number
+  createdAt?: number
+}
+
+export type CustomerSaleIndexRecord = {
+  saleId: string
+  customerId: string
+  channel?: 'balcao' | 'online' | string
+  createdAt: number
+  totalAmount?: number
+  paidAmount?: number
+  paymentStatus?: string
 }
 
 export type AmortizationRecord = {

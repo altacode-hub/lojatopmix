@@ -28,7 +28,7 @@ export default function App() {
           ))}
         </Route>
         <Route
-          path="/cliente2"
+          path="/cliente"
           element={
             <ProtectedRoute requireCliente>
               <ClienteLayout />

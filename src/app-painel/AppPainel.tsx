@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import LogistaLayout from './logista/LogistaLayout'
 import { logistaRoutes } from './logista/LogistaRoutes'
@@ -9,8 +10,16 @@ import PoliticaPrivacidadePainel from './PoliticaPrivacidadePainel'
 import PainelLayout from './PainelLayout'
 import DebugAuth from './DebugAuth'
 import PainelLoading from './PainelLoading'
-import { logistaTheme } from './logista/logistaTheme'
 import '../App.css'
+
+const CLIENTE_APP_URL = 'https://lojatopmix.web.app'
+
+function RedirectToCliente() {
+  useEffect(() => {
+    window.location.href = CLIENTE_APP_URL
+  }, [])
+  return <PainelLoading />
+}
 
 function FallbackRoute() {
   const { user, loading, isLogista, isCliente, profileLoading } = useAuth()
@@ -25,64 +34,13 @@ function FallbackRoute() {
   }
   if (isCliente && !isLogista) {
     console.log('[AppPainel FallbackRoute] 🛒 É cliente (não logista) → redirecionando para lojatopmix.web.app', { isCliente, isLogista })
-    //window.location.href = 'https://lojatopmix.web.app'
-    return null
+    return <RedirectToCliente />
   }
   if (!isLogista) {
-    console.log('[AppPainel FallbackRoute] ❌ Usuário logado mas isLogista=false → exibindo tela de erro', {
+    console.log('[AppPainel FallbackRoute] 🚫 Usuário logado mas isLogista=false → redirecionando para app cliente', {
       uid: user.uid, isCliente, isLogista
     })
-    return (
-      <div style={{
-        maxWidth: 520,
-        margin: '80px auto',
-        padding: 24,
-        background: logistaTheme.colors.errorBackground,
-        border: `1px solid ${logistaTheme.colors.errorBorder}`,
-        borderRadius: logistaTheme.radius.lg,
-        color: logistaTheme.colors.errorText,
-      }}>
-        <h2 style={{ marginTop: 0, fontSize: 20 }}>🚫 Acesso não autorizado</h2>
-        <p style={{ marginTop: 0 }}>
-          A autenticação funcionou, mas o RTDB não reconhece este usuário como logista.
-        </p>
-        <ul style={{ marginTop: 12, paddingLeft: 20 }}>
-          <li>UID do usuário autenticado: <strong style={{ fontFamily: 'monospace' }}>{user.uid}</strong></li>
-          <li>Caminho esperado no RTDB: <strong style={{ fontFamily: 'monospace' }}>loja/arealogista/{user.uid}</strong></li>
-          <li>Valor esperado: <strong>true</strong> (boolean estrito)</li>
-        </ul>
-        <div style={{ marginTop: 16, padding: 12, background: logistaTheme.colors.surface, borderRadius: 10, border: `1px solid ${logistaTheme.colors.border}`, color: logistaTheme.colors.text }}>
-          <strong>Passos para diagnosticar:</strong>
-          <ol style={{ marginTop: 6, paddingLeft: 20 }}>
-            <li>Abra o Console do navegador (F12) e veja os logs com prefixo <code>[AuthContext]</code></li>
-            <li>Confira no Firebase Realtime Database se o caminho acima existe com valor <strong>true</strong></li>
-            <li>Acesse a página de <a href="/debug" style={{ color: logistaTheme.colors.accentDark }}>/debug</a> para ver o estado completo</li>
-          </ol>
-        </div>
-        <div style={{ marginTop: 16, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-          <button
-            onClick={() => (window.location.href = '/debug')}
-            style={{
-              padding: '10px 16px', borderRadius: 8, cursor: 'pointer',
-              background: logistaTheme.colors.accent, color: logistaTheme.colors.surface,
-              border: '1px solid transparent', fontWeight: 700,
-            }}
-          >
-            Ir para Debug
-          </button>
-          <button
-            onClick={() => (window.location.href = '/login')}
-            style={{
-              padding: '10px 16px', borderRadius: 8, cursor: 'pointer',
-              background: logistaTheme.colors.surfaceAlt, color: logistaTheme.colors.text,
-              border: `1px solid ${logistaTheme.colors.borderStrong}`,
-            }}
-          >
-            Refazer Login
-          </button>
-        </div>
-      </div>
-    )
+    return <RedirectToCliente />
   }
   console.log('[AppPainel FallbackRoute] ✅ Usuário logista confirmado → indo para home /')
   return <Navigate to="/" replace />

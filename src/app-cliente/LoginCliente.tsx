@@ -4,6 +4,8 @@ import { useAuth } from '../context/AuthContext'
 import type { ConfirmationResult } from 'firebase/auth'
 import { Link, useNavigate } from 'react-router-dom'
 import { siteTheme } from './siteTheme'
+import { get, ref, set } from 'firebase/database'
+import { rtdb } from '../service/firebase'
 
 const AUTH_ERROR_MESSAGES: Record<string, string> = {
   'auth/invalid-phone-number': 'O telefone informado e invalido. Digite o numero com DDD.',
@@ -34,7 +36,22 @@ const getErrorMessage = (error: unknown, fallback: string) => {
   return fallback
 }
 
-export default function Login() {
+const setupClienteProfileIfNotExists = async (uid: string, phoneNumber: string | null) => {
+  const profileRef = ref(rtdb, `clientes/${uid}/perfil`)
+  const snapshot = await get(profileRef)
+
+  if (!snapshot.exists()) {
+    const phone = phoneNumber ? phoneNumber.replace('+55', '') : ''
+    await set(profileRef, {
+      fullName: '',
+      email: '',
+      cpf: '',
+      phone,
+    })
+  }
+}
+
+export default function LoginCliente() {
   const { sendCode, signInAnonymously } = useAuth()
   const [phone, setPhone] = useState('')
   const [code, setCode] = useState('')
@@ -62,7 +79,6 @@ export default function Login() {
     setLoading(true)
     try {
       const phoneE164 = digits
-      //const phoneE164 = phone.startsWith('+') ? phone : digits ? `+${digits}` : ''
       const conf = await sendCode('+55' + phoneE164, 'recaptcha-container')
       setConfirmation(conf)
     } catch (error) {
@@ -77,7 +93,12 @@ export default function Login() {
     setError(null)
     setLoading(true)
     try {
-      await confirmation.confirm(code)
+      const result = await confirmation.confirm(code)
+      const uid = result.user.uid
+      const phoneNumber = result.user.phoneNumber
+
+      await setupClienteProfileIfNotExists(uid, phoneNumber)
+
       navigate('/cliente', { replace: true })
     } catch (error) {
       setError(getErrorMessage(error, 'Nao foi possivel confirmar o codigo informado. Revise o SMS e tente novamente.'))

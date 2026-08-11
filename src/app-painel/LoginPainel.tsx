@@ -5,6 +5,8 @@ import type { ConfirmationResult } from 'firebase/auth'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import PainelLoading from './PainelLoading'
 import { logistaTheme } from './logista/logistaTheme'
+import { get, ref } from 'firebase/database'
+import { rtdb } from '../service/firebase'
 
 const AUTH_ERROR_MESSAGES: Record<string, string> = {
   'auth/invalid-phone-number': 'O telefone informado e invalido. Digite o numero com DDD.',
@@ -33,6 +35,30 @@ const getErrorMessage = (error: unknown, fallback: string) => {
   }
   return fallback
 }
+
+const checkIsLogista = async (uid: string): Promise<boolean> => {
+  const logistaRef = ref(rtdb, `loja/arealogista/${uid}`)
+  const snapshot = await get(logistaRef)
+  return snapshot.val() === true
+}
+
+const setupClienteProfileIfNotExists = async (uid: string, phoneNumber: string | null) => {
+  const profileRef = ref(rtdb, `clientes/${uid}/perfil`)
+  const snapshot = await get(profileRef)
+
+  if (!snapshot.exists()) {
+    const { set } = await import('firebase/database')
+    const phone = phoneNumber ? phoneNumber.replace('+55', '') : ''
+    await set(profileRef, {
+      fullName: '',
+      email: '',
+      cpf: '',
+      phone,
+    })
+  }
+}
+
+const CLIENTE_APP_URL = 'https://lojatopmix.web.app'
 
 export default function LoginPainel() {
   const { sendCode, isLogista, loading: authLoading } = useAuth()
@@ -78,8 +104,18 @@ export default function LoginPainel() {
     setError(null)
     setLoading(true)
     try {
-      await confirmation.confirm(code)
-      navigate('/', { replace: true })
+      const result = await confirmation.confirm(code)
+      const uid = result.user.uid
+      const phoneNumber = result.user.phoneNumber
+
+      const logista = await checkIsLogista(uid)
+
+      if (logista) {
+        navigate('/', { replace: true })
+      } else {
+        await setupClienteProfileIfNotExists(uid, phoneNumber)
+        window.location.href = CLIENTE_APP_URL
+      }
     } catch (error) {
       setError(getErrorMessage(error, 'Nao foi possivel confirmar o codigo informado. Revise o SMS e tente novamente.'))
     } finally {
