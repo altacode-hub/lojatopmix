@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { get, push, ref, update } from 'firebase/database'
-import { FiArrowLeft, FiCreditCard, FiDollarSign, FiUsers, FiUserPlus } from 'react-icons/fi'
+import { FiArrowLeft, FiCreditCard, FiUsers, FiUserPlus } from 'react-icons/fi'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { rtdb } from '../../service/firebase'
@@ -670,10 +670,10 @@ export default function CounterSalePayment() {
         </section>
       ) : (
         <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', alignItems: 'flex-start' }}>
-          <section style={{ ...cardStyle, display: 'grid', gap: 16, flex: '1 1 520px', minWidth: 0, maxWidth: '380px' }}>
-            <div style={{ display: 'grid', gap: 8 }}>
+          <section style={{ display: 'grid', gap: 16, flex: '1 1 520px', minWidth: 0, maxWidth: '380px' }}>
+            <div style={{...cardStyle, display: 'grid', gap: 8 }}>
               <label style={{ display: 'grid', gap: 6 }}>
-                <span style={{ fontSize: 14, color: logistaTheme.colors.text }}>Forma de pagamento</span>
+                <h2 style={{ margin: 0, fontSize: 24 }}>Forma de pagamento</h2>
                 <select
                   value={paymentMethod}
                   onChange={(event) => setPaymentMethod(event.target.value)}
@@ -713,14 +713,13 @@ export default function CounterSalePayment() {
                   </div>
                 </div>
               ) : null}
+            </div>
 
-              {isAmortizacao && !loadingCustomers ? (
+            <div style={{...cardStyle, display: 'grid', gap: 8 }}>
+              {!loadingCustomers ? (
                 <div style={{ display: 'grid', gap: 8 }}>
                   <label style={{ display: 'grid', gap: 6 }}>
-                    <span style={{ fontSize: 14, color: logistaTheme.colors.text, fontWeight: 600 }}>
-                      <FiUsers size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }} />
-                      Cliente
-                    </span>
+                    <h2 style={{ margin: 0, fontSize: 24 }}>Cliente</h2>
                     <select
                       value={selectedCustomerId}
                       onChange={(event) => handleSelectExistingCustomer(event.target.value)}
@@ -861,8 +860,7 @@ export default function CounterSalePayment() {
           </section>
 
           <aside style={{ ...cardStyle, flex: '1 1 320px', width: '100%', maxWidth: 380, minWidth: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-              <FiDollarSign size={18} />
+            <div style={{ alignItems: 'center', marginBottom: 16 }}>
               <h2 style={{ margin: 0, fontSize: 24 }}>Resumo da venda</h2>
             </div>
 

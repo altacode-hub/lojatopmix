@@ -79,6 +79,9 @@ export default function ClientesLogista() {
             computedPaid: 0,
           })
         }
+      }else{
+        setError('Não foi possível carregar os clientes.')
+        console.log(customersResult)
       }
 
       const loadedSales: SaleRecord[] = []

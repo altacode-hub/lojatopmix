@@ -229,10 +229,11 @@
       ".write": "auth != null && root.child('loja/arealogista/' + auth.uid).val() === true"
     },
     "customers": {
-      ".read": "auth != null && (root.child('loja/arealogista/' + auth.uid).val() === true || (auth != null && root.child('customerAuthLinks/' + auth.uid + '/customerId').val() === $customerId))",
+      ".read": false,
       ".write": "auth != null && (root.child('loja/arealogista/' + auth.uid).val() === true)",
       ".indexOn": ["name", "createdAt", "totalDebt", "phoneIndexKey"],
       "$customerId": {
+        ".read": "auth != null && (root.child('loja/arealogista/' + auth.uid).val() === true || (auth != null && root.child('customerAuthLinks/' + auth.uid + '/customerId').val() === $customerId))",
         ".validate": "newData.hasChildren(['customerId', 'name', 'createdAt'])",
         "customerId": {
           ".validate": "newData.isString() && newData.val().length > 0 && newData.val() === $customerId"
@@ -253,7 +254,7 @@
           ".validate": "newData.val() === null || newData.isString()"
         },
         "cpf": {
-          ".validate": "newData.val() === null || (newData.isString() && newData.val().replace(/\\D/g,'').length <= 11)"
+          ".validate": "newData.val() === null || (newData.isString() && newData.val().length <= 11)"
         },
         "address": {
           ".validate": "newData.val() === null || newData.hasChildren()"
