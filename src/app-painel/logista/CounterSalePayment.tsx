@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { get, push, ref, update } from 'firebase/database'
 import { FiArrowLeft, FiCreditCard, FiUsers, FiUserPlus } from 'react-icons/fi'
 import { useLocation, useNavigate } from 'react-router-dom'
@@ -52,6 +52,9 @@ export default function CounterSalePayment() {
   const [customerBirthDate, setCustomerBirthDate] = useState<string>('')
   const [creatingNewCustomer, setCreatingNewCustomer] = useState(false)
   const [loadingCustomers, setLoadingCustomers] = useState(true)
+  const [customerSearchText, setCustomerSearchText] = useState<string>('')
+  const [showCustomerDropdown, setShowCustomerDropdown] = useState<boolean>(false)
+  const customerDropdownRef = useRef<HTMLDivElement | null>(null)
 
   const locationState = (location.state as PaymentLocationState | null) ?? null
   const selectedItems = Array.isArray(locationState?.selectedItems) ? locationState.selectedItems : []
@@ -90,6 +93,7 @@ export default function CounterSalePayment() {
               setCustomerName(existing.name || '')
               setCustomerPhone(existing.phone_number || '')
               setCustomerBirthDate(existing.birthDate || '')
+              setCustomerSearchText(existing.name || '')
             }
           }
         }
@@ -243,13 +247,36 @@ export default function CounterSalePayment() {
       setCustomerName(existing.name || '')
       setCustomerPhone(existing.phone_number || '')
       setCustomerBirthDate(existing.birthDate || '')
+      setCustomerSearchText(existing.name || '')
       setCreatingNewCustomer(false)
     } else {
       setCustomerName('')
       setCustomerPhone('')
       setCustomerBirthDate('')
+      setCustomerSearchText('')
     }
+    setShowCustomerDropdown(false)
   }
+
+  const filteredCustomers = useMemo(() => {
+    const search = customerSearchText.trim().toLowerCase()
+    if (!search) return customers
+    return customers.filter((c) => {
+      const nameMatch = (c.name || '').toLowerCase().includes(search)
+      const phoneMatch = (c.phone_number || '').replace(/\D/g, '').includes(search)
+      return nameMatch || phoneMatch
+    })
+  }, [customers, customerSearchText])
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (customerDropdownRef.current && !customerDropdownRef.current.contains(event.target as Node)) {
+        setShowCustomerDropdown(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   const buildCustomer = () => {
     const trimmedName = customerName.trim()
@@ -337,7 +364,8 @@ export default function CounterSalePayment() {
         : notes.trim() || null
 
       let customerId: string | null = null
-      if (isAmortizacao && trimmedCustomerName) {
+      const hasAnyCustomerInfo = trimmedCustomerName || selectedCustomerId
+      if (hasAnyCustomerInfo) {
         customerId = await ensureCustomerRecord(customer)
         if (customerId && customer) {
           customer = { ...customer, customerId }
@@ -554,16 +582,23 @@ export default function CounterSalePayment() {
         }
       }
 
-      if (isAmortizacao && customerId) {
+      if (customerId) {
         const customerRef = ref(rtdb, `customers/${customerId}`)
         const customerSnap = await get(customerRef)
         const existingCustomer = customerSnap.exists() ? (customerSnap.val() as CustomerRecord) : null
         const currentDebt = Number(existingCustomer?.totalDebt || 0)
         const currentPurchased = Number(existingCustomer?.totalPurchased || 0)
+        const currentPaid = Number(existingCustomer?.totalPaid || 0)
 
-        updates[`customers/${customerId}/totalDebt`] = currentDebt + finalTotalAmount
         updates[`customers/${customerId}/totalPurchased`] = currentPurchased + finalTotalAmount
         updates[`customers/${customerId}/updatedAt`] = now
+
+        if (isAmortizacao) {
+          updates[`customers/${customerId}/totalDebt`] = currentDebt + finalTotalAmount
+        } else {
+          updates[`customers/${customerId}/totalPaid`] = currentPaid + finalTotalAmount
+        }
+
         if (customer?.phone_number) {
           updates[`customers/${customerId}/phone_number`] = customer.phone_number
         }
@@ -718,27 +753,156 @@ export default function CounterSalePayment() {
             <div style={{...cardStyle, display: 'grid', gap: 8 }}>
               {!loadingCustomers ? (
                 <div style={{ display: 'grid', gap: 8 }}>
-                  <label style={{ display: 'grid', gap: 6 }}>
+                  <div ref={customerDropdownRef} style={{ display: 'grid', gap: 6, position: 'relative' }}>
                     <h2 style={{ margin: 0, fontSize: 24 }}>Cliente</h2>
-                    <select
-                      value={selectedCustomerId}
-                      onChange={(event) => handleSelectExistingCustomer(event.target.value)}
+                    <input
+                      value={customerSearchText}
+                      onChange={(event) => {
+                        setCustomerSearchText(event.target.value)
+                        if (event.target.value && selectedCustomerId) {
+                          setSelectedCustomerId('')
+                          setCustomerName('')
+                          setCustomerPhone('')
+                          setCustomerBirthDate('')
+                        }
+                      }}
+                      onFocus={() => setShowCustomerDropdown(true)}
+                      onClick={() => setShowCustomerDropdown(true)}
+                      placeholder="Digite o nome ou telefone para buscar..."
                       style={{
                         ...logistaInputStyle,
                         width: '100%',
                         maxWidth: '100%',
                         boxSizing: 'border-box',
                       }}
-                    >
-                      <option value="">-- Novo cliente / Digite abaixo --</option>
-                      {customers.map((c) => (
-                        <option key={c.customerId} value={c.customerId}>
-                          {c.name}
-                          {c.phone_number ? ` (${c.phone_number})` : ''}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+                    />
+                    {showCustomerDropdown ? (
+                      <div
+                        style={{
+                          position: 'absolute',
+                          top: '100%',
+                          left: 0,
+                          right: 0,
+                          marginTop: 4,
+                          maxHeight: 240,
+                          overflowY: 'auto',
+                          background: logistaTheme.colors.surface,
+                          border: `1px solid ${logistaTheme.colors.border}`,
+                          borderRadius: 12,
+                          zIndex: 50,
+                          boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+                        }}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedCustomerId('')
+                            setCustomerSearchText('')
+                            setCustomerName('')
+                            setCustomerPhone('')
+                            setCustomerBirthDate('')
+                            setCreatingNewCustomer(true)
+                            setShowCustomerDropdown(false)
+                          }}
+                          style={{
+                            width: '100%',
+                            textAlign: 'left',
+                            padding: '10px 14px',
+                            background: selectedCustomerId === '' && !creatingNewCustomer ? logistaTheme.colors.accentSoft : 'transparent',
+                            border: 'none',
+                            borderBottom: `1px solid ${logistaTheme.colors.border}`,
+                            color: logistaTheme.colors.text,
+                            cursor: 'pointer',
+                            fontSize: 14,
+                          }}
+                        >
+                          <span style={{ fontWeight: 600 }}>+ Novo cliente</span>
+                          <span style={{ color: logistaTheme.colors.textMuted, fontSize: 12, display: 'block' }}>
+                            Cadastrar cliente com os dados abaixo
+                          </span>
+                        </button>
+                        {filteredCustomers.length === 0 ? (
+                          <div
+                            style={{
+                              padding: '14px',
+                              color: logistaTheme.colors.textMuted,
+                              fontSize: 13,
+                              textAlign: 'center',
+                            }}
+                          >
+                            {customerSearchText.trim() ? 'Nenhum cliente encontrado para esta busca.' : 'Nenhum cliente cadastrado.'}
+                          </div>
+                        ) : (
+                          filteredCustomers.map((c) => (
+                            <button
+                              key={c.customerId}
+                              type="button"
+                              onClick={() => handleSelectExistingCustomer(c.customerId || '')}
+                              style={{
+                                width: '100%',
+                                textAlign: 'left',
+                                padding: '10px 14px',
+                                background: selectedCustomerId === c.customerId ? logistaTheme.colors.accentSoft : 'transparent',
+                                border: 'none',
+                                borderBottom: `1px solid ${logistaTheme.colors.border}`,
+                                color: logistaTheme.colors.text,
+                                cursor: 'pointer',
+                              }}
+                            >
+                              <div style={{ fontWeight: 600, fontSize: 14 }}>{c.name}</div>
+                              <div style={{ color: logistaTheme.colors.textMuted, fontSize: 12 }}>
+                                {c.phone_number || 'Telefone não informado'}
+                              </div>
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    ) : null}
+                    {selectedCustomerId && !creatingNewCustomer ? (
+                      <div
+                        style={{
+                          marginTop: 4,
+                          padding: '10px 12px',
+                          borderRadius: 10,
+                          background: logistaTheme.colors.surfaceAlt,
+                          border: `1px solid ${logistaTheme.colors.border}`,
+                          display: 'grid',
+                          gap: 2,
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontWeight: 700, fontSize: 14 }}>
+                            {customerName || 'Cliente selecionado'}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedCustomerId('')
+                              setCustomerSearchText('')
+                              setCustomerName('')
+                              setCustomerPhone('')
+                              setCustomerBirthDate('')
+                            }}
+                            style={{
+                              padding: '4px 8px',
+                              fontSize: 12,
+                              border: `1px solid ${logistaTheme.colors.borderStrong}`,
+                              background: logistaTheme.colors.surface,
+                              borderRadius: 8,
+                              cursor: 'pointer',
+                              color: logistaTheme.colors.text,
+                            }}
+                          >
+                            Limpar
+                          </button>
+                        </div>
+                        <div style={{ color: logistaTheme.colors.textMuted, fontSize: 12 }}>
+                          {customerPhone || 'Telefone não informado'}
+                          {customerBirthDate ? ` · Nascimento: ${customerBirthDate}` : ''}
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
 
                   {!selectedCustomerId || creatingNewCustomer ? (
                     <div style={{ display: 'grid', gap: 8, padding: 12, borderRadius: 12, border: `1px dashed ${logistaTheme.colors.border}` }}>
@@ -748,12 +912,13 @@ export default function CounterSalePayment() {
                       </div>
                       <label style={{ display: 'grid', gap: 6 }}>
                         <span style={{ fontSize: 13, color: logistaTheme.colors.text }}>
-                          Nome completo <span style={{ color: logistaTheme.colors.errorText }}>*</span>
+                          Nome completo
+                          {isAmortizacao ? <span style={{ color: logistaTheme.colors.errorText }}>*</span> : null}
                         </span>
                         <input
                           value={customerName}
                           onChange={(event) => setCustomerName(event.target.value)}
-                          placeholder="Nome obrigatório para amortização"
+                          placeholder={isAmortizacao ? 'Nome obrigatório para amortização' : 'Opcional (preencha para vincular à venda)'}
                           style={{
                             ...logistaInputStyle,
                             width: '100%',

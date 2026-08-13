@@ -521,12 +521,6 @@ export default function ClientesLogista() {
                     </div>
                   </div>
 
-                  {c.birthDate ? (
-                    <div style={{ fontSize: 12, color: logistaTheme.colors.textMuted }}>
-                      Nascimento: {c.birthDate}
-                    </div>
-                  ) : null}
-
                   <div
                     style={{
                       display: 'grid',
