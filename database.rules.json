@@ -229,7 +229,7 @@
       ".write": "auth != null && root.child('loja/arealogista/' + auth.uid).val() === true"
     },
     "customers": {
-      ".read": false,
+      ".read": "auth != null && (root.child('loja/arealogista/' + auth.uid).val() === true)",
       ".write": "auth != null && (root.child('loja/arealogista/' + auth.uid).val() === true)",
       ".indexOn": ["name", "createdAt", "totalDebt", "phoneIndexKey"],
       "$customerId": {

@@ -72,6 +72,7 @@ export default function CounterSalePayment() {
   const [notes, setNotes] = useState(reservedSale?.notes || '')
   const [discountValueText, setDiscountValueText] = useState<string>('')
   const [discountPercentText, setDiscountPercentText] = useState<string>('')
+  const [cashReceivedText, setCashReceivedText] = useState<string>('')
 
   const isAmortizacao = paymentMethod === 'amortizacao'
 
@@ -178,6 +179,20 @@ export default function CounterSalePayment() {
   }, [discountPercentText, discountValueText, totalAmount, clampedDiscountPercent, finalDiscountValue])
 
   const finalTotalAmount = Math.max(0, totalAmount - finalDiscountValue)
+
+  const isDinheiro = paymentMethod === 'dinheiro'
+
+  const cashReceivedAmount = parseCurrencyCents(cashReceivedText)
+  const cashChangeAmount = Math.max(0, cashReceivedAmount - finalTotalAmount)
+
+  const handleCashReceivedChange = (rawValue: string) => {
+    if (!rawValue) {
+      setCashReceivedText('')
+      return
+    }
+    const numericValue = parseCurrencyCents(rawValue)
+    setCashReceivedText(getDiscountCurrencyDisplayValue(numericValue))
+  }
 
   const handleDiscountValueChange = (rawValue: string) => {
     if (!rawValue) {
@@ -349,6 +364,19 @@ export default function CounterSalePayment() {
     if (isAmortizacao && !trimmedCustomerName) {
       setError('Para pagamento por amortização, é obrigatório informar o nome do cliente.')
       return
+    }
+
+    if (isDinheiro) {
+      if (!cashReceivedText || cashReceivedAmount <= 0) {
+        setError('Para pagamento em dinheiro, informe o valor recebido do cliente.')
+        return
+      }
+      if (cashReceivedAmount < finalTotalAmount) {
+        setError(
+          `Valor recebido (${formatCurrency(cashReceivedAmount)}) é menor que o total da venda (${formatCurrency(finalTotalAmount)}).`,
+        )
+        return
+      }
     }
 
     setSaving(true)
@@ -704,51 +732,8 @@ export default function CounterSalePayment() {
           </div>
         </section>
       ) : (
-        <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+        <div style={{ display: 'grid', gap: 24, gridTemplateColumns: '380px minmax(0, 1fr)', alignItems: 'flex-start' }}>
           <section style={{ display: 'grid', gap: 16, flex: '1 1 520px', minWidth: 0, maxWidth: '380px' }}>
-            <div style={{...cardStyle, display: 'grid', gap: 8 }}>
-              <label style={{ display: 'grid', gap: 6 }}>
-                <h2 style={{ margin: 0, fontSize: 24 }}>Forma de pagamento</h2>
-                <select
-                  value={paymentMethod}
-                  onChange={(event) => setPaymentMethod(event.target.value)}
-                  style={{
-                    ...logistaInputStyle,
-                    width: '100%',
-                    maxWidth: '100%',
-                    boxSizing: 'border-box',
-                  }}
-                >
-                  {paymentOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              {isAmortizacao ? (
-                <div
-                  style={{
-                    borderRadius: 14,
-                    border: `1px solid ${logistaTheme.colors.infoBorder ?? logistaTheme.colors.accentBorder}`,
-                    background: logistaTheme.colors.infoBackground ?? logistaTheme.colors.accentSoft,
-                    color: logistaTheme.colors.infoText ?? logistaTheme.colors.accentDark,
-                    padding: '12px 14px',
-                    display: 'grid',
-                    gap: 6,
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700 }}>
-                    <FiUsers size={16} />
-                    Pagamento por Amortização
-                  </div>
-                  <div style={{ fontSize: 12 }}>
-                    O valor total desta venda será registrado como débito do cliente e baixado conforme os pagamentos parciais (amortizações) forem sendo realizados.
-                  </div>
-                </div>
-              ) : null}
-            </div>
 
             <div style={{...cardStyle, display: 'grid', gap: 8 }}>
               {!loadingCustomers ? (
@@ -1024,7 +1009,7 @@ export default function CounterSalePayment() {
             ) : null}
           </section>
 
-          <aside style={{ ...cardStyle, flex: '1 1 320px', width: '100%', maxWidth: 380, minWidth: 0 }}>
+          <aside style={{ ...cardStyle, flex: '1 1 320px', width: '100%', minWidth: 380 }}>
             <div style={{ alignItems: 'center', marginBottom: 16 }}>
               <h2 style={{ margin: 0, fontSize: 24 }}>Resumo da venda</h2>
             </div>
@@ -1158,6 +1143,52 @@ export default function CounterSalePayment() {
             </div>
 
             <div style={{ marginTop: 18, paddingTop: 18, borderTop: `1px solid ${logistaTheme.colors.border}` }}>
+              <label style={{ display: 'grid', gap: 6 }}>
+                <div style={{ fontSize: 14, color: logistaTheme.colors.text, fontWeight: 600 }}>
+                  Forma de pagamento
+                </div>
+                <select
+                  value={paymentMethod}
+                  onChange={(event) => setPaymentMethod(event.target.value)}
+                  style={{
+                    ...logistaInputStyle,
+                    width: '100%',
+                    maxWidth: '100%',
+                    boxSizing: 'border-box',
+                  }}
+                >
+                  {paymentOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              {isAmortizacao ? (
+                <div
+                  style={{
+                    borderRadius: 14,
+                    border: `1px solid ${logistaTheme.colors.infoBorder ?? logistaTheme.colors.accentBorder}`,
+                    background: logistaTheme.colors.infoBackground ?? logistaTheme.colors.accentSoft,
+                    color: logistaTheme.colors.infoText ?? logistaTheme.colors.accentDark,
+                    padding: '12px 14px',
+                    display: 'grid',
+                    gap: 6,
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700 }}>
+                    <FiUsers size={16} />
+                    Pagamento por Amortização
+                  </div>
+                  <div style={{ fontSize: 12 }}>
+                    O valor total desta venda será registrado como débito do cliente e baixado conforme os pagamentos parciais (amortizações) forem sendo realizados.
+                  </div>
+                </div>
+              ) : null}
+            </div>
+
+            <div style={{ marginTop: 18, paddingTop: 18, borderTop: `1px solid ${logistaTheme.colors.border}` }}>
               <div style={{ display: 'grid', gap: 12, marginBottom: 12 }}>
                 <div style={{ fontSize: 14, color: logistaTheme.colors.text, fontWeight: 600 }}>
                   Desconto
@@ -1253,6 +1284,97 @@ export default function CounterSalePayment() {
                 </div>
               ) : null}
 
+              {isDinheiro ? (
+                <div style={{ marginTop: 18, paddingTop: 18, borderTop: `1px solid ${logistaTheme.colors.border}` }}>
+                  <div style={{ display: 'grid', gap: 12 }}>
+                    <div style={{ fontSize: 14, color: logistaTheme.colors.text, fontWeight: 600 }}>
+                      Pagamento em dinheiro
+                    </div>
+                    <label style={{ display: 'grid', gap: 6 }}>
+                      <span style={{ fontSize: 12, color: logistaTheme.colors.textMuted }}>
+                        Valor recebido do cliente (R$)
+                      </span>
+                      <input
+                        inputMode="decimal"
+                        value={cashReceivedText}
+                        onChange={(event) => handleCashReceivedChange(event.target.value)}
+                        placeholder="R$ 0,00"
+                        disabled={finalTotalAmount <= 0}
+                        style={{
+                          ...logistaInputStyle,
+                          width: '100%',
+                          maxWidth: '100%',
+                          boxSizing: 'border-box',
+                          padding: '10px 12px',
+                          borderColor:
+                            cashReceivedText && cashReceivedAmount < finalTotalAmount
+                              ? logistaTheme.colors.warningBorder
+                              : cashReceivedAmount >= finalTotalAmount && finalTotalAmount > 0
+                                ? logistaTheme.colors.accentBorder
+                                : undefined,
+                        }}
+                      />
+                    </label>
+                    {cashReceivedText ? (
+                      <div
+                        style={{
+                          display: 'grid',
+                          gap: 6,
+                          padding: '12px 14px',
+                          borderRadius: 12,
+                          background:
+                            cashReceivedAmount < finalTotalAmount
+                              ? logistaTheme.colors.warningBackground
+                              : logistaTheme.colors.accentSoft,
+                          border: `1px solid ${
+                            cashReceivedAmount < finalTotalAmount
+                              ? logistaTheme.colors.warningBorder
+                              : logistaTheme.colors.accentBorder
+                          }`,
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: logistaTheme.colors.text }}>
+                          <span style={{ fontSize: 13, color: logistaTheme.colors.textMuted }}>Total a pagar</span>
+                          <strong>{formatCurrency(finalTotalAmount)}</strong>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: logistaTheme.colors.text }}>
+                          <span style={{ fontSize: 13, color: logistaTheme.colors.textMuted }}>Valor recebido</span>
+                          <strong>{formatCurrency(cashReceivedAmount)}</strong>
+                        </div>
+                        <div
+                          style={{
+                            marginTop: 4,
+                            paddingTop: 8,
+                            borderTop: `1px dashed ${logistaTheme.colors.border}`,
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            fontWeight: 700,
+                            fontSize: 16,
+                          }}
+                        >
+                          <span style={{ color: logistaTheme.colors.text }}>
+                            {cashReceivedAmount < finalTotalAmount ? 'Valor faltante' : 'Troco'}
+                          </span>
+                          <strong
+                            style={{
+                              color:
+                                cashReceivedAmount < finalTotalAmount
+                                  ? logistaTheme.colors.warningText
+                                  : logistaTheme.colors.accentDark,
+                            }}
+                          >
+                            {cashReceivedAmount < finalTotalAmount
+                              ? `- ${formatCurrency(finalTotalAmount - cashReceivedAmount)}`
+                              : formatCurrency(cashChangeAmount)}
+                          </strong>
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+              ) : null}
+
               <button
                 onClick={() => {
                   void handleSubmitPayment()
@@ -1260,6 +1382,7 @@ export default function CounterSalePayment() {
                 disabled={saving || (!reservedSale && hasInvalidAdHocItem) || finalTotalAmount <= 0}
                 style={{
                   width: '100%',
+                  marginTop: 18,
                   padding: '14px 16px',
                   borderRadius: 14,
                   border: 'none',
