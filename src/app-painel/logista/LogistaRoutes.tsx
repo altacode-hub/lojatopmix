@@ -20,6 +20,7 @@ export const logistaRoutes = [
   { path: 'estoque/:productId', element: <ProdutoEstoque /> },
   { path: 'categorias', element: <CategoriasLogista /> },
   { path: 'novo-pedido', element: <NovoPedido /> },
+  { path: 'novo-pedido/:purchaseId/editar', element: <NovoPedido /> },
   { path: 'novo-pedido/:purchaseId/produtos', element: <AdicionarProdutos /> },
   { path: 'pedido/:purchaseId/vitrine', element: <PublicarVitrine /> },
   { path: 'pedido/:purchaseId', element: <PedidoDetalhes /> },

@@ -595,7 +595,7 @@ export default function CounterSalePayment() {
           totalItems: finalTotalItems,
           notes: normalizedNotes,
           createdAt: now,
-          paidAt: isAmortizacao ? undefined : now,
+          paidAt: isAmortizacao ? null : now,
           deliveredAt: now,
           updatedAt: now,
           sellerUid: user.uid,

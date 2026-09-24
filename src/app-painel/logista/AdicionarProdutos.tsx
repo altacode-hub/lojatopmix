@@ -4,7 +4,7 @@ import { useAuth } from '../../context/AuthContext'
 import { rtdb, storage } from '../../service/firebase'
 import { get, push, ref, update } from 'firebase/database'
 import { getDownloadURL, ref as storageRef, uploadBytes } from 'firebase/storage'
-import { FiEdit, FiPackage, FiTrash2, FiTrendingUp } from 'react-icons/fi'
+import { FiCopy, FiEdit, FiPackage, FiTrash2, FiTrendingUp } from 'react-icons/fi'
 import { buildVariationKey } from '../../utils/catalog'
 import type { CatalogCategoryRecord, InternalProductRecord, ShowcaseRecord } from '../../types/catalog'
 import { buildInventoryProductRow, CATALOG_SYNC_PATH, upsertCachedStockProduct } from './stockCache'
@@ -120,6 +120,7 @@ export default function AdicionarProdutos() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [editingProductId, setEditingProductId] = useState<string | null>(null)
+  const [showForm, setShowForm] = useState(false)
   
   // Current form state
   const [productName, setProductName] = useState('')
@@ -653,6 +654,7 @@ export default function AdicionarProdutos() {
   }
   
   const handleEditProduct = (product: Product) => {
+    setShowForm(true)
     setEditingProductId(product.id)
     setProductName(product.name)
     setProductDescription(product.description)
@@ -674,9 +676,77 @@ export default function AdicionarProdutos() {
     setFinalPrice(product.finalPrice)
     setPromotionPrice(product.promotionPrice)
     setVariations(product.variations)
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+  }
+  
+  const handleDuplicateProduct = (product: Product) => {
+    setShowForm(true)
+    setEditingProductId(null)
+    setProductName(product.name)
+    setGroupCode(product.groupCode || '')
+    setProductDescription(product.description)
+    setSupplierName(product.supplierName)
+    setCategoryId(product.categoryId)
+    setProductImages([])
+    setMainImageZoom(1)
+    setMainImageOffsetX(0)
+    setMainImageOffsetY(0)
+    setUnitCost(product.unitCost)
+    setPackaging(product.packaging)
+    setGifts(product.gifts)
+    setAccessories(product.accessories)
+    setSellerCommission(product.sellerCommission)
+    setTaxes(product.taxes)
+    setOperational(product.operational)
+    setGrossMargin(product.grossMargin)
+    setCardFee(product.cardFee)
+    setFinalPrice(product.finalPrice)
+    setPromotionPrice(product.promotionPrice)
+    setVariations([])
+    setNewVariationSize('')
+    setNewVariationColor('')
+    setNewVariationQuantity('')
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+  }
+  
+  const openNewProductForm = () => {
+    setShowForm(true)
+    setEditingProductId(null)
+    setProductName('')
+    setGroupCode('')
+    setProductDescription('')
+    setSupplierName('')
+    setCategoryId('')
+    setProductImages([])
+    setMainImageZoom(1)
+    setMainImageOffsetX(0)
+    setMainImageOffsetY(0)
+    setUnitCost('')
+    setPackaging('')
+    setGifts('')
+    setAccessories('')
+    setSellerCommission('')
+    setTaxes('')
+    setOperational('')
+    setGrossMargin('')
+    setCardFee('')
+    setFinalPrice('')
+    setPromotionPrice('')
+    setVariations([])
+    setNewVariationSize('')
+    setNewVariationColor('')
+    setNewVariationQuantity('')
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
   }
   
   const cancelEdit = () => {
+    setShowForm(false)
     setEditingProductId(null)
     setProductName('')
     setGroupCode('')
@@ -893,121 +963,144 @@ export default function AdicionarProdutos() {
         </button>
       </div>
       
-      <SharedProductEditorForm
-        categories={categories}
-        sizes={sizes}
-        productName={productName}
-        groupCode={groupCode}
-        onProductNameChange={setProductName}
-        supplierName={supplierName}
-        onSupplierNameChange={setSupplierName}
-        productDescription={productDescription}
-        onProductDescriptionChange={setProductDescription}
-        categoryId={categoryId}
-        onCategoryIdChange={setCategoryId}
-        images={productImages}
-        mainImageZoom={mainImageZoom}
-        onMainImageZoomChange={setMainImageZoom}
-        mainImageOffsetX={mainImageOffsetX}
-        onMainImageOffsetXChange={setMainImageOffsetX}
-        mainImageOffsetY={mainImageOffsetY}
-        onMainImageOffsetYChange={setMainImageOffsetY}
-        uploadingImages={uploadingImages}
-        onUploadImages={(files) => void handleImageUpload(files)}
-        onRemoveImage={removeImage}
-        newVariationSize={newVariationSize}
-        onNewVariationSizeChange={setNewVariationSize}
-        newVariationColor={newVariationColor}
-        onNewVariationColorChange={setNewVariationColor}
-        newVariationQuantity={newVariationQuantity}
-        onNewVariationQuantityChange={setNewVariationQuantity}
-        variations={variations}
-        onAddVariation={addVariation}
-        onRemoveVariation={removeVariation}
-        unitCost={unitCost}
-        onUnitCostChange={setUnitCost}
-        packaging={packaging}
-        onPackagingChange={setPackaging}
-        gifts={gifts}
-        onGiftsChange={setGifts}
-        accessories={accessories}
-        onAccessoriesChange={setAccessories}
-        sellerCommission={sellerCommission}
-        onSellerCommissionChange={setSellerCommission}
-        taxes={taxes}
-        onTaxesChange={setTaxes}
-        operational={operational}
-        onOperationalChange={setOperational}
-        grossMargin={grossMargin}
-        onGrossMarginChange={setGrossMargin}
-        cardFee={cardFee}
-        onCardFeeChange={setCardFee}
-        finalPrice={finalPrice}
-        onFinalPriceChange={setFinalPrice}
-        promotionPrice={promotionPrice}
-        onPromotionPriceChange={setPromotionPrice}
-        pricingPreview={pricingPreview}
-        onManageCategories={() => navigate('/categorias')}
-      />
-
-      {/* Add Product Button */}
-      <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: 16, marginBottom: 24 }}>
-        <button
-          onClick={finalizePurchase}
-          disabled={saving}
-          style={{
-            padding: '12px 20px',
-            borderRadius: 12,
-            border: `1px solid ${logistaTheme.colors.border}`,
-            background: logistaTheme.colors.surface,
-            color: logistaTheme.colors.text,
-            cursor: saving ? 'not-allowed' : 'pointer',
-            opacity: saving ? 0.7 : 1,
-            alignSelf: 'flex-start',
-            fontSize: '12px',
-            width: isMobile ? '100%' : '200px',
-          }}
-        >
-          {saving ? 'Finalizando...' : 'Finalizar Pedido'}
-        </button>
-        
-        {editingProductId && (
+      {!showForm && (
+        <div style={{ marginBottom: 24 }}>
           <button
-            onClick={cancelEdit}
+            onClick={openNewProductForm}
             style={{
-              padding: '12px 20px',
+              width: '100%',
+              padding: '16px',
               borderRadius: 12,
-              border: `1px solid ${logistaTheme.colors.border}`,
-              background: logistaTheme.colors.surface,
-              color: logistaTheme.colors.text,
+              border: 'none',
+              background: logistaTheme.colors.accent,
+              color: logistaTheme.colors.surface,
+              fontSize: 16,
+              fontWeight: 600,
               cursor: 'pointer',
-              alignSelf: 'flex-start',
-              fontSize: '14px',
             }}
           >
-            Cancelar
+            + Adicionar Produto
           </button>
-        )}
+        </div>
+      )}
 
-        <button
-          onClick={addProduct}
-          disabled={!productName.trim() || typeof unitCost !== 'number' || unitCost <= 0 || variations.length === 0}
-          style={{
-            width: '100%',
-            padding: '11px',
-            borderRadius: 12,
-            border: 'none',
-            background: logistaTheme.colors.accent,
-            color: logistaTheme.colors.surface,
-            fontSize: 14,
-            fontWeight: 600,
-            cursor: (!productName.trim() || typeof unitCost !== 'number' || unitCost <= 0 || variations.length === 0) ? 'not-allowed' : 'pointer',
-            opacity: (!productName.trim() || typeof unitCost !== 'number' || unitCost <= 0 || variations.length === 0) ? 0.7 : 1,
-          }}
-        >
-          {editingProductId ? 'Atualizar Produto' : '+ Adicionar Produto'}
-        </button>
-      </div>
+      {showForm && (
+        <>
+          <SharedProductEditorForm
+            categories={categories}
+            sizes={sizes}
+            productName={productName}
+            groupCode={groupCode}
+            onProductNameChange={setProductName}
+            supplierName={supplierName}
+            onSupplierNameChange={setSupplierName}
+            productDescription={productDescription}
+            onProductDescriptionChange={setProductDescription}
+            categoryId={categoryId}
+            onCategoryIdChange={setCategoryId}
+            images={productImages}
+            mainImageZoom={mainImageZoom}
+            onMainImageZoomChange={setMainImageZoom}
+            mainImageOffsetX={mainImageOffsetX}
+            onMainImageOffsetXChange={setMainImageOffsetX}
+            mainImageOffsetY={mainImageOffsetY}
+            onMainImageOffsetYChange={setMainImageOffsetY}
+            uploadingImages={uploadingImages}
+            onUploadImages={(files) => void handleImageUpload(files)}
+            onRemoveImage={removeImage}
+            newVariationSize={newVariationSize}
+            onNewVariationSizeChange={setNewVariationSize}
+            newVariationColor={newVariationColor}
+            onNewVariationColorChange={setNewVariationColor}
+            newVariationQuantity={newVariationQuantity}
+            onNewVariationQuantityChange={setNewVariationQuantity}
+            variations={variations}
+            onAddVariation={addVariation}
+            onRemoveVariation={removeVariation}
+            unitCost={unitCost}
+            onUnitCostChange={setUnitCost}
+            packaging={packaging}
+            onPackagingChange={setPackaging}
+            gifts={gifts}
+            onGiftsChange={setGifts}
+            accessories={accessories}
+            onAccessoriesChange={setAccessories}
+            sellerCommission={sellerCommission}
+            onSellerCommissionChange={setSellerCommission}
+            taxes={taxes}
+            onTaxesChange={setTaxes}
+            operational={operational}
+            onOperationalChange={setOperational}
+            grossMargin={grossMargin}
+            onGrossMarginChange={setGrossMargin}
+            cardFee={cardFee}
+            onCardFeeChange={setCardFee}
+            finalPrice={finalPrice}
+            onFinalPriceChange={setFinalPrice}
+            promotionPrice={promotionPrice}
+            onPromotionPriceChange={setPromotionPrice}
+            pricingPreview={pricingPreview}
+            onManageCategories={() => navigate('/categorias')}
+          />
+
+          {/* Add Product Button */}
+          <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: 16, marginBottom: 24 }}>
+            <button
+              onClick={finalizePurchase}
+              disabled={saving}
+              style={{
+                padding: '12px 20px',
+                borderRadius: 12,
+                border: `1px solid ${logistaTheme.colors.border}`,
+                background: logistaTheme.colors.surface,
+                color: logistaTheme.colors.text,
+                cursor: saving ? 'not-allowed' : 'pointer',
+                opacity: saving ? 0.7 : 1,
+                alignSelf: 'flex-start',
+                fontSize: '12px',
+                width: isMobile ? '100%' : '200px',
+              }}
+            >
+              {saving ? 'Finalizando...' : 'Finalizar Pedido'}
+            </button>
+
+            <button
+              onClick={cancelEdit}
+              style={{
+                padding: '12px 20px',
+                borderRadius: 12,
+                border: `1px solid ${logistaTheme.colors.border}`,
+                background: logistaTheme.colors.surface,
+                color: logistaTheme.colors.text,
+                cursor: 'pointer',
+                alignSelf: 'flex-start',
+                fontSize: '14px',
+              }}
+            >
+              Cancelar
+            </button>
+
+            <button
+              onClick={addProduct}
+              disabled={!productName.trim() || typeof unitCost !== 'number' || unitCost <= 0 || variations.length === 0}
+              style={{
+                width: '100%',
+                padding: '11px',
+                borderRadius: 12,
+                border: 'none',
+                background: logistaTheme.colors.accent,
+                color: logistaTheme.colors.surface,
+                fontSize: 14,
+                fontWeight: 600,
+                cursor: (!productName.trim() || typeof unitCost !== 'number' || unitCost <= 0 || variations.length === 0) ? 'not-allowed' : 'pointer',
+                opacity: (!productName.trim() || typeof unitCost !== 'number' || unitCost <= 0 || variations.length === 0) ? 0.7 : 1,
+              }}
+            >
+              {editingProductId ? 'Atualizar Produto' : 'Salvar Produto'}
+            </button>
+          </div>
+        </>
+      )}
       
       {/* Added Products List */}
       {products.length > 0 && (
@@ -1065,6 +1158,23 @@ export default function AdicionarProdutos() {
                       }}
                     >
                       <FiEdit /> Editar
+                    </button>
+                    <button
+                      onClick={() => handleDuplicateProduct(product)}
+                      style={{
+                        padding: '8px 12px',
+                        borderRadius: 10,
+                        border: `1px solid ${logistaTheme.colors.border}`,
+                        background: logistaTheme.colors.surface,
+                        color: logistaTheme.colors.text,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        fontSize: 14
+                      }}
+                    >
+                      <FiCopy /> Duplicar
                     </button>
                     <button
                       onClick={() => removeProduct(product.id)}

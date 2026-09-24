@@ -750,35 +750,71 @@ export default function SharedProductEditorForm({
                   {currencyInput(promotionPrice, onPromotionPriceChange)}
                 </div>
                 <div>
-                  <label style={labelStyle}>Margem Real</label>
+                  <label style={labelStyle}>Margem à vista (R$)</label>
                   <div style={{ position: 'relative' }}>
                     <span style={{ position: 'absolute', left: 12, top: 12, color: logistaTheme.colors.textMuted }}>R$</span>
                     <input
                       type="text"
-                      value={formatCurrencyNumber(pricingPreview.realMargin)}
+                      value={formatCurrencyNumber(pricingPreview.cashRealMargin)}
                       readOnly
                       style={{
                         ...inputStyle,
                         padding: '12px 14px 12px 36px',
-                        background: logistaTheme.colors.surfaceAlt,
-                        color: pricingPreview.realMargin >= 0 ? logistaTheme.colors.successText : logistaTheme.colors.errorText,
+                        background: logistaTheme.colors.successBackground,
+                        color: pricingPreview.cashRealMargin >= 0 ? logistaTheme.colors.successText : logistaTheme.colors.errorText,
                         fontWeight: 700,
                       }}
                     />
                   </div>
                 </div>
                 <div>
-                  <label style={labelStyle}>Margem Real (%)</label>
+                  <label style={labelStyle}>Margem à vista (%)</label>
                   <div style={{ position: 'relative' }}>
                     <input
                       type="text"
-                      value={formatPercentNumber(pricingPreview.realMarginPercentage)}
+                      value={formatPercentNumber(pricingPreview.cashRealMarginPercentage)}
                       readOnly
                       style={{
                         ...inputStyle,
                         padding: '12px 40px 12px 14px',
-                        background: logistaTheme.colors.surfaceAlt,
-                        color: pricingPreview.realMarginPercentage >= 0 ? logistaTheme.colors.successText : logistaTheme.colors.errorText,
+                        background: logistaTheme.colors.successBackground,
+                        color: pricingPreview.cashRealMarginPercentage >= 0 ? logistaTheme.colors.successText : logistaTheme.colors.errorText,
+                        fontWeight: 700,
+                      }}
+                    />
+                    <span style={{ position: 'absolute', right: 12, top: 12, color: logistaTheme.colors.textMuted }}>%</span>
+                  </div>
+                </div>
+                <div>
+                  <label style={labelStyle}>Margem no Cartão (R$)</label>
+                  <div style={{ position: 'relative' }}>
+                    <span style={{ position: 'absolute', left: 12, top: 12, color: logistaTheme.colors.textMuted }}>R$</span>
+                    <input
+                      type="text"
+                      value={formatCurrencyNumber(pricingPreview.cardRealMargin)}
+                      readOnly
+                      style={{
+                        ...inputStyle,
+                        padding: '12px 14px 12px 36px',
+                        background: logistaTheme.colors.accentSoft,
+                        color: pricingPreview.cardRealMargin >= 0 ? logistaTheme.colors.accentDark : logistaTheme.colors.errorText,
+                        fontWeight: 700,
+                      }}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label style={labelStyle}>Margem no Cartão (%)</label>
+                  <div style={{ position: 'relative' }}>
+                    <input
+                      type="text"
+                      value={formatPercentNumber(pricingPreview.cardRealMarginPercentage)}
+                      readOnly
+                      style={{
+                        ...inputStyle,
+                        padding: '12px 40px 12px 14px',
+                        background: logistaTheme.colors.accentSoft,
+                        color: pricingPreview.cardRealMarginPercentage >= 0 ? logistaTheme.colors.accentDark : logistaTheme.colors.errorText,
                         fontWeight: 700,
                       }}
                     />

@@ -69,6 +69,18 @@ export default function VendasLogista() {
   const [error, setError] = useState<string | null>(null)
   const [warningMessage, setWarningMessage] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  const [isAdHocModalOpen, setIsAdHocModalOpen] = useState(false)
+  const [adHocDraft, setAdHocDraft] = useState<{
+    productName: string
+    description: string
+    price: number
+    qty: number
+  }>({
+    productName: '',
+    description: '',
+    price: 0,
+    qty: 1,
+  })
   const lastCatalogSyncRef = useRef(0)
 
   const setCatalogFromRows = (rows: SaleableVariationRow[], syncedAt: number, remoteUpdatedAt: number, source: 'local' | 'remote') => {
@@ -491,21 +503,78 @@ export default function VendasLogista() {
     })
   }
 
-  const addAdHocItem = () => {
+  const openAdHocModal = () => {
     setSuccessMessage(null)
+    setError(null)
+    setAdHocDraft({
+      productName: '',
+      description: '',
+      price: 0,
+      qty: 1,
+    })
+    setIsAdHocModalOpen(true)
+  }
+
+  const closeAdHocModal = () => {
+    setIsAdHocModalOpen(false)
+    setAdHocDraft({
+      productName: '',
+      description: '',
+      price: 0,
+      qty: 1,
+    })
+  }
+
+  const updateAdHocDraftField = (
+    field: 'productName' | 'description' | 'price' | 'qty',
+    rawValue: string,
+  ) => {
+    if (field === 'productName' || field === 'description') {
+      setAdHocDraft((current) => ({ ...current, [field]: rawValue }))
+      return
+    }
+
+    if (field === 'qty') {
+      const qty = Number.isFinite(Number(rawValue)) ? Number(rawValue) : 1
+      setAdHocDraft((current) => ({ ...current, qty: qty > 0 ? qty : 1 }))
+      return
+    }
+
+    const digits = rawValue.replace(/[^0-9]/g, '')
+    const priceCents = digits ? Number(digits) : 0
+    setAdHocDraft((current) => ({ ...current, price: priceCents / 100 }))
+  }
+
+  const saveAdHocItem = () => {
+    const trimmedName = adHocDraft.productName.trim()
+    if (!trimmedName) {
+      setError('Preencha o nome do produto avulso antes de salvar.')
+      return
+    }
+    if (adHocDraft.price <= 0) {
+      setError('Informe um valor unitario maior que zero para o produto avulso.')
+      return
+    }
+    if (adHocDraft.qty <= 0) {
+      setError('A quantidade do produto avulso deve ser maior que zero.')
+      return
+    }
+
     setError(null)
     setSelectedItems((current) => {
       const nextItem: AdHocCounterSaleItem = {
         itemType: 'ad_hoc',
         id: `ad_hoc_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-        productName: '',
-        description: '',
-        price: 0,
-        qty: 1,
+        productName: trimmedName,
+        description: adHocDraft.description.trim(),
+        price: adHocDraft.price,
+        qty: adHocDraft.qty,
       }
-
       return [...current, nextItem]
     })
+
+    setSuccessMessage('Produto avulso adicionado a venda.')
+    closeAdHocModal()
   }
 
   const updateSelectedQty = (itemId: string, nextQty: number) => {
@@ -530,32 +599,6 @@ export default function VendasLogista() {
           }
         })
         .filter((item) => item.qty > 0),
-    )
-  }
-
-  const updateAdHocField = (
-    itemId: string,
-    field: 'productName' | 'price',
-    rawValue: string,
-  ) => {
-    setSelectedItems((current) =>
-      current.map((item) => {
-        if (item.id !== itemId || !isAdHocCounterSaleItem(item)) return item
-
-        if (field === 'productName') {
-          return {
-            ...item,
-            productName: rawValue,
-          }
-        }
-
-        const digits = rawValue.replace(/[^0-9]/g, '')
-        const priceCents = digits ? Number(digits) : 0
-        return {
-          ...item,
-          price: priceCents / 100,
-        }
-      }),
     )
   }
 
@@ -1118,11 +1161,15 @@ export default function VendasLogista() {
         draftLoadedFromCache={Boolean(draftLoadedFromCache && selectedItems.length > 0)}
         openingPayment={openingPayment}
         reservingProducts={reservingProducts}
+        isAdHocModalOpen={isAdHocModalOpen}
+        adHocDraft={adHocDraft}
         onSearchChange={setSearch}
         onAddItem={addSelectedItem}
-        onAddAdHocItem={addAdHocItem}
+        onAddAdHocItem={openAdHocModal}
+        onCloseAdHocModal={closeAdHocModal}
+        onUpdateAdHocDraftField={updateAdHocDraftField}
+        onSaveAdHocItem={saveAdHocItem}
         onUpdateSelectedQty={updateSelectedQty}
-        onUpdateAdHocField={updateAdHocField}
         onRemoveSelectedItem={removeSelectedItem}
         onClearAllSelectedItems={clearDraft}
         onFinalizeCounterSale={openPaymentForSelectedItems}

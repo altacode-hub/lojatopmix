@@ -34,6 +34,10 @@ export interface ProductPricingPreview {
   chosenPromotionPrice: number
   realMargin: number
   realMarginPercentage: number
+  cashRealMargin: number
+  cashRealMarginPercentage: number
+  cardRealMargin: number
+  cardRealMarginPercentage: number
   promotionalRealMargin: number
   promotionalRealMarginPercentage: number
   projectedPieces: number
@@ -101,6 +105,8 @@ export const getProductPricingPreview = (
   const chosenPromotionPrice = informedPromotionPrice > 0 ? informedPromotionPrice : chosenFinalPrice
 
   const realMarginData = calculateRealMargin(baseCost, chosenFinalPrice, sellerCommission, taxes, operational, cardFee)
+  const cashRealMarginData = calculateRealMargin(baseCost, chosenFinalPrice, sellerCommission, taxes, operational, 0)
+  const cardRealMarginData = realMarginData
   const promotionalRealMarginData = calculateRealMargin(
     baseCost,
     chosenPromotionPrice,
@@ -146,6 +152,10 @@ export const getProductPricingPreview = (
     chosenPromotionPrice,
     realMargin: realMarginData.realMargin,
     realMarginPercentage: realMarginData.realMarginPercentage,
+    cashRealMargin: cashRealMarginData.realMargin,
+    cashRealMarginPercentage: cashRealMarginData.realMarginPercentage,
+    cardRealMargin: cardRealMarginData.realMargin,
+    cardRealMarginPercentage: cardRealMarginData.realMarginPercentage,
     promotionalRealMargin: promotionalRealMarginData.realMargin,
     promotionalRealMarginPercentage: promotionalRealMarginData.realMarginPercentage,
     projectedPieces,

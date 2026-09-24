@@ -2,8 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { rtdb } from '../../service/firebase'
-import { get, ref } from 'firebase/database'
-import { FiEdit, FiImage, FiPackage } from 'react-icons/fi'
+import { get, ref, remove, update } from 'firebase/database'
+import { FiEdit, FiImage, FiPackage, FiTrash2 } from 'react-icons/fi'
 import { useMediaQuery } from '../../hooks/useMediaQuery'
 import type { CatalogVariation, InternalProductRecord, ProductPricing, ShowcaseRecord } from '../../types/catalog'
 import FramedImage from '../../components/FramedImage'
@@ -112,13 +112,14 @@ const buildPricingFormValues = (pricing: ProductPricing) => ({
 
 export default function PedidoDetalhes() {
   const { purchaseId } = useParams<{ purchaseId: string }>()
-  useAuth() // We just need to call useAuth for context, even if we don't use the return value
+  const { user } = useAuth()
   const navigate = useNavigate()
   const isMobile = useMediaQuery('(max-width: 768px)')
   
   const [purchase, setPurchase] = useState<PurchaseRecord | null>(null)
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
   
   useEffect(() => {
     const loadData = async () => {
@@ -224,6 +225,45 @@ export default function PedidoDetalhes() {
   const totalAvailableStock = productCards.reduce((sum, item) => sum + item.availableStock, 0)
   const totalRevenue = productCards.reduce((sum, item) => sum + item.pricingPreview.projectedRevenue, 0)
   const totalProfit = productCards.reduce((sum, item) => sum + item.pricingPreview.projectedProfit, 0)
+
+  const handleEditPurchase = () => {
+    if (!purchaseId) return
+    navigate(`/novo-pedido/${purchaseId}/editar`)
+  }
+
+  const handleDeletePurchase = async () => {
+    if (!purchaseId || !user) return
+    if (!window.confirm('Tem certeza que deseja excluir este pedido? Todos os produtos e dados associados serão perdidos.')) {
+      return
+    }
+
+    try {
+      setSaving(true)
+
+      const purchaseItemsSnap = await get(ref(rtdb, `purchaseItems/${purchaseId}`))
+      if (purchaseItemsSnap.exists()) {
+        const productIds = Object.keys(purchaseItemsSnap.val() as Record<string, unknown>)
+        const updates: Record<string, unknown> = {}
+        updates[`purchases/${purchaseId}`] = null
+        updates[`purchaseItems/${purchaseId}`] = null
+        for (const productId of productIds) {
+          updates[`products/${productId}`] = null
+          updates[`inventory/${productId}`] = null
+          updates[`showcase/${productId}`] = null
+        }
+        await update(ref(rtdb), updates)
+      } else {
+        await remove(ref(rtdb, `purchases/${purchaseId}`))
+      }
+
+      navigate('/', { replace: true })
+    } catch (error) {
+      console.error('Error deleting purchase:', error)
+      alert('Não foi possível excluir o pedido.')
+    } finally {
+      setSaving(false)
+    }
+  }
   
   if (loading) {
     return <div style={{ padding: '24px', color: logistaTheme.colors.textMuted }}>Carregando...</div>
@@ -272,6 +312,44 @@ export default function PedidoDetalhes() {
               {purchase.status === 'completed' ? 'Concluído' : 'Rascunho'}
             </div>
           </div>
+          <button
+            onClick={handleEditPurchase}
+            disabled={saving}
+            style={{
+              padding: '10px 20px',
+              borderRadius: 12,
+              border: `1px solid ${logistaTheme.colors.border}`,
+              background: logistaTheme.colors.surface,
+              color: logistaTheme.colors.text,
+              fontWeight: 600,
+              cursor: saving ? 'not-allowed' : 'pointer',
+              opacity: saving ? 0.7 : 1,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+            }}
+          >
+            <FiEdit /> Editar Pedido
+          </button>
+          <button
+            onClick={handleDeletePurchase}
+            disabled={saving}
+            style={{
+              padding: '10px 20px',
+              borderRadius: 12,
+              border: `1px solid ${logistaTheme.colors.errorBorder}`,
+              background: logistaTheme.colors.errorBackground,
+              color: logistaTheme.colors.errorText,
+              fontWeight: 600,
+              cursor: saving ? 'not-allowed' : 'pointer',
+              opacity: saving ? 0.7 : 1,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+            }}
+          >
+            <FiTrash2 /> Excluir Pedido
+          </button>
           {purchase.status === 'completed' && (
             <button
               onClick={() => navigate(`/pedido/${purchaseId}/vitrine`)}

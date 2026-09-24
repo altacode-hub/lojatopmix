@@ -13,7 +13,7 @@ export default function SidebarLogista({ isOpen, onClose }: SidebarLogistaProps)
   const { user, signOut } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
-  const isMobile = useMediaQuery('(max-width: 768px)')
+  const isMobile = useMediaQuery('(max-width: 768px)') 
 
   const isActive = (path: string) => location.pathname === path
 

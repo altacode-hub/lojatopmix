@@ -7,6 +7,13 @@ import type { CounterSaleItem, SaleableVariationRow } from './types'
 import { isAdHocCounterSaleItem, isRegisteredCounterSaleItem } from './types'
 import { logistaInputStyle, logistaTheme } from '../logistaTheme'
 
+type AdHocDraft = {
+  productName: string
+  description: string
+  price: number
+  qty: number
+}
+
 type CounterSaleSectionProps = {
   loading: boolean
   syncingCatalog: boolean
@@ -21,11 +28,15 @@ type CounterSaleSectionProps = {
   draftLoadedFromCache: boolean
   openingPayment: boolean
   reservingProducts: boolean
+  isAdHocModalOpen: boolean
+  adHocDraft: AdHocDraft
   onSearchChange: (value: string) => void
   onAddItem: (row: SaleableVariationRow) => void
   onAddAdHocItem: () => void
+  onCloseAdHocModal: () => void
+  onUpdateAdHocDraftField: (field: 'productName' | 'description' | 'price' | 'qty', rawValue: string) => void
+  onSaveAdHocItem: () => void
   onUpdateSelectedQty: (itemId: string, nextQty: number) => void
-  onUpdateAdHocField: (itemId: string, field: 'productName' | 'price', rawValue: string) => void
   onRemoveSelectedItem: (itemId: string) => void
   onClearAllSelectedItems: () => void
   onFinalizeCounterSale: () => void
@@ -49,11 +60,15 @@ export default function CounterSaleSection({
   draftLoadedFromCache,
   openingPayment,
   reservingProducts,
+  isAdHocModalOpen,
+  adHocDraft,
   onSearchChange,
   onAddItem,
   onAddAdHocItem,
+  onCloseAdHocModal,
+  onUpdateAdHocDraftField,
+  onSaveAdHocItem,
   onUpdateSelectedQty,
-  onUpdateAdHocField,
   onRemoveSelectedItem,
   onClearAllSelectedItems,
   onFinalizeCounterSale,
@@ -404,22 +419,12 @@ export default function CounterSaleSection({
                           </>
                         ) : (
                           <>
-                            <label style={{ display: 'grid', gap: 4 }}>
-                              <span style={{ fontSize: 12, color: logistaTheme.colors.textMuted }}>Nome do produto</span>
-                              <input
-                                value={item.productName}
-                                onChange={(event) => onUpdateAdHocField(item.id, 'productName', event.target.value)}
-                                placeholder="Ex.: Serviço, taxa ou produto avulso"
-                                style={{
-                                  ...logistaInputStyle,
-                                  width: '100%',
-                                  maxWidth: '100%',
-                                  boxSizing: 'border-box',
-                                  padding: '10px 12px',
-                                  borderColor: !item.productName.trim() ? logistaTheme.colors.warningBorder : undefined,
-                                }}
-                              />
-                            </label>
+                            <div style={{ fontWeight: 700 }}>{item.productName}</div>
+                            {item.description ? (
+                              <div style={{ color: logistaTheme.colors.textMuted, fontSize: 13 }}>
+                                {item.description}
+                              </div>
+                            ) : null}
                             <span
                               style={{
                                 fontSize: 12,
@@ -475,40 +480,22 @@ export default function CounterSaleSection({
                         </label>
 
                         <label style={{ display: 'grid', gap: 4 }}>
-                          <span style={{ fontSize: 12, color: logistaTheme.colors.textMuted }}>
-                            {isRegisteredCounterSaleItem(item) ? 'Valor unitário' : 'Valor unitário (editar)'}
-                          </span>
-                          {isRegisteredCounterSaleItem(item) ? (
-                            <div
-                              style={{
-                                padding: '10px 12px',
-                                borderRadius: 12,
-                                border: `1px solid ${logistaTheme.colors.border}`,
-                                background: logistaTheme.colors.surfaceAlt,
-                                color: logistaTheme.colors.text,
-                                fontWeight: 700,
-                                width: isMobile ? '100%' : 140,
-                                maxWidth: isMobile ? '100%' : 140,
-                                boxSizing: 'border-box',
-                              }}
-                            >
-                              {formatCurrency(item.price)}
-                            </div>
-                          ) : (
-                            <input
-                              value={formatPriceInput(item.price)}
-                              onChange={(event) => onUpdateAdHocField(item.id, 'price', event.target.value)}
-                              inputMode="decimal"
-                              placeholder="R$ 0,00"
-                              style={{
-                                ...logistaInputStyle,
-                                width: isMobile ? '100%' : 140,
-                                maxWidth: isMobile ? '100%' : 140,
-                                padding: '10px 12px',
-                                borderColor: item.price <= 0 ? logistaTheme.colors.warningBorder : undefined,
-                              }}
-                            />
-                          )}
+                          <span style={{ fontSize: 12, color: logistaTheme.colors.textMuted }}>Valor unitário</span>
+                          <div
+                            style={{
+                              padding: '10px 12px',
+                              borderRadius: 12,
+                              border: `1px solid ${logistaTheme.colors.border}`,
+                              background: logistaTheme.colors.surfaceAlt,
+                              color: logistaTheme.colors.text,
+                              fontWeight: 700,
+                              width: isMobile ? '100%' : 140,
+                              maxWidth: isMobile ? '100%' : 140,
+                              boxSizing: 'border-box',
+                            }}
+                          >
+                            {formatCurrency(item.price)}
+                          </div>
                         </label>
                       </div>
 
@@ -604,6 +591,201 @@ export default function CounterSaleSection({
           </div>
         </div>
       </aside>
+
+      {isAdHocModalOpen ? (
+        <div
+          onClick={onCloseAdHocModal}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0, 0, 0, 0.5)',
+            zIndex: 9998,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 16,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: '100%',
+              maxWidth: 520,
+              maxHeight: '90vh',
+              overflowY: 'auto',
+              background: logistaTheme.colors.surface,
+              borderRadius: 18,
+              border: `1px solid ${logistaTheme.colors.border}`,
+              boxShadow: '0 24px 60px rgba(0, 0, 0, 0.25)',
+              padding: 24,
+              animation: 'adHocFadeIn 0.18s ease-out',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 18 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <FiPlusCircle size={20} />
+                <h3 style={{ margin: 0, fontSize: 22 }}>Adicionar produto avulso</h3>
+              </div>
+              <button
+                type="button"
+                onClick={onCloseAdHocModal}
+                style={{
+                  border: 'none',
+                  background: 'transparent',
+                  cursor: 'pointer',
+                  padding: 6,
+                  borderRadius: 999,
+                  color: logistaTheme.colors.textMuted,
+                }}
+                aria-label="Fechar"
+              >
+                <FiX size={22} />
+              </button>
+            </div>
+
+            <div style={{ display: 'grid', gap: 14 }}>
+              <label style={{ display: 'grid', gap: 6 }}>
+                <span style={{ fontSize: 14, color: logistaTheme.colors.text, fontWeight: 600 }}>
+                  Nome do produto <span style={{ color: logistaTheme.colors.errorText }}>*</span>
+                </span>
+                <input
+                  value={adHocDraft.productName}
+                  onChange={(event) => onUpdateAdHocDraftField('productName', event.target.value)}
+                  placeholder="Ex.: Serviço, taxa ou item não cadastrado"
+                  autoFocus
+                  style={{
+                    ...logistaInputStyle,
+                    width: '100%',
+                    boxSizing: 'border-box',
+                    padding: '12px 14px',
+                    borderColor: !adHocDraft.productName.trim() ? logistaTheme.colors.warningBorder : undefined,
+                  }}
+                />
+              </label>
+
+              <label style={{ display: 'grid', gap: 6 }}>
+                <span style={{ fontSize: 14, color: logistaTheme.colors.text, fontWeight: 600 }}>Descrição (opcional)</span>
+                <textarea
+                  value={adHocDraft.description}
+                  onChange={(event) => onUpdateAdHocDraftField('description', event.target.value)}
+                  placeholder="Observações ou detalhes adicionais"
+                  rows={3}
+                  style={{
+                    ...logistaInputStyle,
+                    width: '100%',
+                    boxSizing: 'border-box',
+                    padding: '12px 14px',
+                    resize: 'vertical',
+                    fontFamily: 'inherit',
+                  }}
+                />
+              </label>
+
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 12 }}>
+                <label style={{ display: 'grid', gap: 6 }}>
+                  <span style={{ fontSize: 14, color: logistaTheme.colors.text, fontWeight: 600 }}>
+                    Quantidade <span style={{ color: logistaTheme.colors.errorText }}>*</span>
+                  </span>
+                  <input
+                    type="number"
+                    min={1}
+                    value={adHocDraft.qty}
+                    onChange={(event) => onUpdateAdHocDraftField('qty', event.target.value)}
+                    style={{
+                      ...logistaInputStyle,
+                      width: '100%',
+                      boxSizing: 'border-box',
+                      padding: '12px 14px',
+                    }}
+                  />
+                </label>
+
+                <label style={{ display: 'grid', gap: 6 }}>
+                  <span style={{ fontSize: 14, color: logistaTheme.colors.text, fontWeight: 600 }}>
+                    Valor unitário <span style={{ color: logistaTheme.colors.errorText }}>*</span>
+                  </span>
+                  <input
+                    value={formatPriceInput(adHocDraft.price)}
+                    onChange={(event) => onUpdateAdHocDraftField('price', event.target.value)}
+                    inputMode="decimal"
+                    placeholder="R$ 0,00"
+                    style={{
+                      ...logistaInputStyle,
+                      width: '100%',
+                      boxSizing: 'border-box',
+                      padding: '12px 14px',
+                      borderColor: adHocDraft.price <= 0 ? logistaTheme.colors.warningBorder : undefined,
+                    }}
+                  />
+                </label>
+              </div>
+
+              {adHocDraft.price > 0 && adHocDraft.qty > 0 ? (
+                <div
+                  style={{
+                    marginTop: 4,
+                    padding: '12px 14px',
+                    borderRadius: 12,
+                    background: logistaTheme.colors.accentSoft,
+                    border: `1px solid ${logistaTheme.colors.accentBorder}`,
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    fontSize: 15,
+                  }}
+                >
+                  <span style={{ color: logistaTheme.colors.text }}>
+                    Subtotal ({adHocDraft.qty} x {formatCurrency(adHocDraft.price)})
+                  </span>
+                  <strong style={{ color: logistaTheme.colors.accentDark }}>
+                    {formatCurrency(adHocDraft.price * adHocDraft.qty)}
+                  </strong>
+                </div>
+              ) : null}
+            </div>
+
+            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'flex-end', marginTop: 22 }}>
+              <button
+                type="button"
+                onClick={onCloseAdHocModal}
+                style={{
+                  padding: '12px 18px',
+                  borderRadius: 12,
+                  border: `1px solid ${logistaTheme.colors.border}`,
+                  background: logistaTheme.colors.surfaceAlt,
+                  color: logistaTheme.colors.text,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  fontSize: 14,
+                }}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={onSaveAdHocItem}
+                style={{
+                  padding: '12px 18px',
+                  borderRadius: 12,
+                  border: 'none',
+                  background: logistaTheme.colors.accent,
+                  color: logistaTheme.colors.surface,
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  fontSize: 14,
+                }}
+              >
+                Salvar e adicionar
+              </button>
+            </div>
+          </div>
+          <style>{`
+            @keyframes adHocFadeIn {
+              from { opacity: 0; transform: translateY(-8px) scale(0.98); }
+              to   { opacity: 1; transform: translateY(0) scale(1); }
+            }
+          `}</style>
+        </div>
+      ) : null}
     </div>
   )
 }
