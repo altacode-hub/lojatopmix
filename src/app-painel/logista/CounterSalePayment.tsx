@@ -732,8 +732,13 @@ export default function CounterSalePayment() {
           </div>
         </section>
       ) : (
-        <div style={{ display: 'grid', gap: 24, gridTemplateColumns: '380px minmax(0, 1fr)', alignItems: 'flex-start' }}>
-          <section style={{ display: 'grid', gap: 16, flex: '1 1 520px', minWidth: 0, maxWidth: '380px' }}>
+        <div style={{ 
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: 24,
+          alignItems: 'flex-start' 
+        }}>
+          <section style={{ ...cardStyle, flex: '1 1 380px', minWidth: 0 }}>
 
             <div style={{...cardStyle, display: 'grid', gap: 8 }}>
               {!loadingCustomers ? (
@@ -888,60 +893,6 @@ export default function CounterSalePayment() {
                       </div>
                     ) : null}
                   </div>
-
-                  {!selectedCustomerId || creatingNewCustomer ? (
-                    <div style={{ display: 'grid', gap: 8, padding: 12, borderRadius: 12, border: `1px dashed ${logistaTheme.colors.border}` }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600, color: logistaTheme.colors.accentDark }}>
-                        <FiUserPlus size={14} />
-                        Dados do novo cliente
-                      </div>
-                      <label style={{ display: 'grid', gap: 6 }}>
-                        <span style={{ fontSize: 13, color: logistaTheme.colors.text }}>
-                          Nome completo
-                          {isAmortizacao ? <span style={{ color: logistaTheme.colors.errorText }}>*</span> : null}
-                        </span>
-                        <input
-                          value={customerName}
-                          onChange={(event) => setCustomerName(event.target.value)}
-                          placeholder={isAmortizacao ? 'Nome obrigatório para amortização' : 'Opcional (preencha para vincular à venda)'}
-                          style={{
-                            ...logistaInputStyle,
-                            width: '100%',
-                            maxWidth: '100%',
-                            boxSizing: 'border-box',
-                          }}
-                        />
-                      </label>
-                      <label style={{ display: 'grid', gap: 6 }}>
-                        <span style={{ fontSize: 13, color: logistaTheme.colors.text }}>Telefone / WhatsApp</span>
-                        <input
-                          value={customerPhone}
-                          onChange={(event) => setCustomerPhone(event.target.value)}
-                          placeholder="(00) 00000-0000"
-                          style={{
-                            ...logistaInputStyle,
-                            width: '100%',
-                            maxWidth: '100%',
-                            boxSizing: 'border-box',
-                          }}
-                        />
-                      </label>
-                      <label style={{ display: 'grid', gap: 6 }}>
-                        <span style={{ fontSize: 13, color: logistaTheme.colors.text }}>Data de nascimento</span>
-                        <input
-                          type="date"
-                          value={customerBirthDate}
-                          onChange={(event) => setCustomerBirthDate(event.target.value)}
-                          style={{
-                            ...logistaInputStyle,
-                            width: '100%',
-                            maxWidth: '100%',
-                            boxSizing: 'border-box',
-                          }}
-                        />
-                      </label>
-                    </div>
-                  ) : null}
                 </div>
               ) : (
                 <div style={{ display: 'grid', gap: 8 }}>
@@ -1009,7 +960,7 @@ export default function CounterSalePayment() {
             ) : null}
           </section>
 
-          <aside style={{ ...cardStyle, flex: '1 1 320px', width: '100%', minWidth: 380 }}>
+          <aside style={{ ...cardStyle, flex: '1 1 560px', minWidth: 0, width: '100%' }}>
             <div style={{ alignItems: 'center', marginBottom: 16 }}>
               <h2 style={{ margin: 0, fontSize: 24 }}>Resumo da venda</h2>
             </div>
@@ -1403,6 +1354,204 @@ export default function CounterSalePayment() {
           </aside>
         </div>
       )}
+
+      {creatingNewCustomer ? (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0, 0, 0, 0.45)',
+            zIndex: 1000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: isMobile ? 16 : 24,
+          }}
+          onClick={() => {
+            setCreatingNewCustomer(false)
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: logistaTheme.colors.surface,
+              borderRadius: 16,
+              width: '100%',
+              maxWidth: 480,
+              maxHeight: '90vh',
+              overflowY: 'auto',
+              boxShadow: '0 24px 48px rgba(0, 0, 0, 0.25), 0 8px 24px rgba(0, 0, 0, 0.15)',
+              border: `1px solid ${logistaTheme.colors.borderStrong}`,
+              animation: 'floatIn 0.2s ease-out',
+            }}
+          >
+            <div
+              style={{
+                padding: '20px 24px',
+                borderBottom: `1px solid ${logistaTheme.colors.border}`,
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                gap: 12,
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div
+                  style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: 10,
+                    background: logistaTheme.colors.accentSoft,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: logistaTheme.colors.accentDark,
+                  }}
+                >
+                  <FiUserPlus size={18} />
+                </div>
+                <div>
+                  <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>Novo Cliente</h2>
+                  <p style={{ margin: 0, fontSize: 12, color: logistaTheme.colors.textMuted }}>
+                    Preencha os dados do cliente para vincular à venda
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setCreatingNewCustomer(false)
+                }}
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: 8,
+                  border: `1px solid ${logistaTheme.colors.border}`,
+                  background: logistaTheme.colors.surface,
+                  color: logistaTheme.colors.textMuted,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: 18,
+                  fontWeight: 700,
+                  flexShrink: 0,
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            <div style={{ padding: 24, display: 'grid', gap: 16 }}>
+              <label style={{ display: 'grid', gap: 6 }}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: logistaTheme.colors.text }}>
+                  Nome completo
+                  {isAmortizacao ? <span style={{ color: logistaTheme.colors.errorText }}> *</span> : null}
+                </span>
+                <input
+                  value={customerName}
+                  onChange={(event) => setCustomerName(event.target.value)}
+                  placeholder={isAmortizacao ? 'Nome obrigatório para amortização' : 'Nome do cliente'}
+                  autoFocus
+                  style={{
+                    ...logistaInputStyle,
+                    width: '100%',
+                    boxSizing: 'border-box',
+                    padding: '12px 14px',
+                    fontSize: 14,
+                  }}
+                />
+              </label>
+
+              <label style={{ display: 'grid', gap: 6 }}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: logistaTheme.colors.text }}>
+                  Telefone / WhatsApp
+                </span>
+                <input
+                  value={customerPhone}
+                  onChange={(event) => setCustomerPhone(event.target.value)}
+                  placeholder="(00) 00000-0000"
+                  style={{
+                    ...logistaInputStyle,
+                    width: '100%',
+                    boxSizing: 'border-box',
+                    padding: '12px 14px',
+                    fontSize: 14,
+                  }}
+                />
+              </label>
+
+              <label style={{ display: 'grid', gap: 6 }}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: logistaTheme.colors.text }}>
+                  Data de nascimento
+                </span>
+                <input
+                  type="date"
+                  value={customerBirthDate}
+                  onChange={(event) => setCustomerBirthDate(event.target.value)}
+                  style={{
+                    ...logistaInputStyle,
+                    width: '100%',
+                    boxSizing: 'border-box',
+                    padding: '12px 14px',
+                    fontSize: 14,
+                  }}
+                />
+              </label>
+            </div>
+
+            <div
+              style={{
+                padding: '16px 24px 24px',
+                borderTop: `1px solid ${logistaTheme.colors.border}`,
+                display: 'flex',
+                gap: 12,
+                flexDirection: isMobile ? 'column-reverse' : 'row',
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => {
+                  setCreatingNewCustomer(false)
+                }}
+                style={{
+                  flex: isMobile ? '1 1 100%' : '0 0 auto',
+                  padding: '12px 18px',
+                  borderRadius: 10,
+                  border: `1px solid ${logistaTheme.colors.borderStrong}`,
+                  background: logistaTheme.colors.surface,
+                  color: logistaTheme.colors.text,
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                  fontSize: 14,
+                }}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setCreatingNewCustomer(false)
+                  setCustomerSearchText(customerName || '')
+                }}
+                style={{
+                  flex: 1,
+                  padding: '12px 18px',
+                  borderRadius: 10,
+                  border: 'none',
+                  background: logistaTheme.colors.accent,
+                  color: logistaTheme.colors.surface,
+                  cursor: 'pointer',
+                  fontWeight: 700,
+                  fontSize: 14,
+                }}
+              >
+                Salvar e usar cliente
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }

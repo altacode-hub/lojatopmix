@@ -104,7 +104,7 @@ export default function CounterSaleSection({
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <FiSearch size={18} />
-            <h2 style={{ margin: 0, fontSize: 24 }}>Venda no balcao</h2>
+            <h2 style={{ margin: 0, fontSize: 24 }}>Venda no balcão</h2>
           </div>
 
           <button
