@@ -629,6 +629,12 @@ export default function ClientesLogista() {
           setNewAmortization={setNewAmortization}
           handleRegisterAmortization={handleRegisterAmortization}
           getSaleRemainingDebt={getSaleRemainingDebt}
+          user={user}
+          onReabrirSaved={async () => {
+            await loadAllData()
+          }}
+          setError={setError}
+          setSuccessMessage={setSuccessMessage}
         />
       )}
     </div>

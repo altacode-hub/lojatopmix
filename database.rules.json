@@ -183,6 +183,13 @@
       ".write": "auth != null && root.child('loja/arealogista/' + auth.uid).val() === true",
       ".indexOn": ["createdAt", "customer/customerId", "paymentStatus", "paymentMethod"],
       "$saleId": {
+        "createdAt": {
+          ".validate": "newData.isNumber() && newData.val() > 0",
+          ".write": "!data.exists()"
+        },
+        "lastEditedBy": {
+          ".validate": "newData.val() === null || (newData.isString() && newData.val() === auth.uid)"
+        },
         "debtAmount": {
           ".validate": "newData.val() === null || newData.isNumber()"
         },
@@ -220,6 +227,37 @@
           },
           "birthDate": {
             ".validate": "newData.val() === null || newData.isString()"
+          }
+        }
+      }
+    },
+    "saleEditLogs": {
+      ".read": "auth != null && root.child('loja/arealogista/' + auth.uid).val() === true",
+      ".write": "auth != null && root.child('loja/arealogista/' + auth.uid).val() === true",
+      "$saleId": {
+        "$logId": {
+          ".validate": "newData.hasChildren(['logId', 'saleId', 'editedBy', 'editedAt', 'before', 'after']) && newData.child('saleId').val() === $saleId && newData.child('logId').val() === $logId && newData.child('editedBy').val() === auth.uid",
+          ".write": "!data.exists()",
+          "logId": {
+            ".validate": "newData.isString() && newData.val().length > 0"
+          },
+          "saleId": {
+            ".validate": "newData.isString() && newData.val().length > 0 && root.child('sales/' + newData.val()).exists()"
+          },
+          "editedBy": {
+            ".validate": "newData.isString() && newData.val() === auth.uid"
+          },
+          "editedByName": {
+            ".validate": "newData.val() === null || newData.isString()"
+          },
+          "editedAt": {
+            ".validate": "newData.isNumber() && newData.val() > 0"
+          },
+          "before": {
+            ".validate": "newData.hasChildren() || newData.val() === null"
+          },
+          "after": {
+            ".validate": "newData.hasChildren() || newData.val() === null"
           }
         }
       }

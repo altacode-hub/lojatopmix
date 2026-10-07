@@ -1,8 +1,10 @@
+import { useState } from 'react'
 import type { Dispatch, SetStateAction } from 'react'
-import { FiDollarSign, FiShoppingCart, FiUser, FiXSquare } from 'react-icons/fi'
+import { FiDollarSign, FiEdit, FiRefreshCw, FiShoppingCart, FiUser, FiXSquare } from 'react-icons/fi'
 import { logistaInputStyle, logistaTheme } from '../logistaTheme'
 import { cardStyle, formatCurrency, formatDateTime } from '../vendas/helpers'
 import type { AmortizationRecord, CustomerRecord, SaleRecord } from '../vendas/types'
+import ClienteReabrirCompra from './ClienteReabrirCompra'
 
 type CustomerView = CustomerRecord & {
   computedDebt: number
@@ -27,6 +29,10 @@ type ClienteDetalheProps = {
   setNewAmortization: Dispatch<SetStateAction<NewAmortizationState>>
   handleRegisterAmortization: () => Promise<void>
   getSaleRemainingDebt: (sale: SaleRecord) => number
+  user: { uid: string; phoneNumber: string | null } | null
+  onReabrirSaved: () => Promise<void>
+  setError: (message: string | null) => void
+  setSuccessMessage: (message: string | null) => void
 }
 
 export default function ClienteDetalhe({
@@ -39,7 +45,12 @@ export default function ClienteDetalhe({
   setNewAmortization,
   handleRegisterAmortization,
   getSaleRemainingDebt,
+  user,
+  onReabrirSaved,
+  setError,
+  setSuccessMessage,
 }: ClienteDetalheProps) {
+  const [reabrirSale, setReabrirSale] = useState<SaleRecord | null>(null)
   if (!detailCustomer) return null
 
   return (
@@ -359,12 +370,82 @@ export default function ClienteDetalhe({
                       </div>
                     ))}
                   </div>
+
+                  <div
+                    style={{
+                      display: 'flex',
+                      gap: 8,
+                      justifyContent: 'flex-end',
+                      flexWrap: 'wrap',
+                      paddingTop: 10,
+                      borderTop: `1px dashed ${logistaTheme.colors.border}`,
+                      marginTop: 4,
+                    }}
+                  >
+                    {(s as SaleRecord & { lastEditedBy?: unknown }).lastEditedBy ? (
+                      <span
+                        style={{
+                          padding: '3px 10px',
+                          borderRadius: 999,
+                          fontSize: 11,
+                          fontWeight: 600,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 4,
+                          background: logistaTheme.colors.surfaceAlt,
+                          color: logistaTheme.colors.textMuted,
+                          border: `1px solid ${logistaTheme.colors.border}`,
+                        }}
+                      >
+                        <FiEdit size={11} />
+                        Editada anteriormente
+                      </span>
+                    ) : null}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setError(null)
+                        setSuccessMessage(null)
+                        setReabrirSale(s)
+                      }}
+                      style={{
+                        padding: '8px 12px',
+                        borderRadius: 10,
+                        border: `1px solid ${logistaTheme.colors.accentBorder}`,
+                        background: logistaTheme.colors.accentSoft,
+                        color: logistaTheme.colors.accentDark,
+                        fontWeight: 700,
+                        fontSize: 13,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <FiRefreshCw size={13} />
+                      Reabrir compra
+                    </button>
+                  </div>
                 </div>
               )
             })}
           </div>
         )}
       </section>
+
+      <ClienteReabrirCompra
+        open={!!reabrirSale}
+        sale={reabrirSale}
+        user={user}
+        isMobile={isMobile}
+        onClose={() => setReabrirSale(null)}
+        onSaved={async () => {
+          setReabrirSale(null)
+          await onReabrirSaved()
+        }}
+        onError={(msg) => setError(msg)}
+        onSuccess={(msg) => setSuccessMessage(msg)}
+      />
 
       <section style={{ ...cardStyle, display: 'grid', gap: 14 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
