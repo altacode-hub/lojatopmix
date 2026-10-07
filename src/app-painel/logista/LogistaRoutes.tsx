@@ -9,7 +9,7 @@ import EstoqueLogista from './EstoqueLogista'
 import ProdutoEstoque from './ProdutoEstoque'
 import CounterSalePayment from './CounterSalePayment'
 import CategoriasLogista from './CategoriasLogista'
-import ClientesLogista from './ClientesLogista'
+import ClientesLogista from './clientes/ClientesLogista'
 
 export const logistaRoutes = [
   { index: true, element: <Logista /> },
