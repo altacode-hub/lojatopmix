@@ -633,6 +633,9 @@ export default function ClientesLogista() {
           onReabrirSaved={async () => {
             await loadAllData()
           }}
+          onPagamentoSaved={async () => {
+            await loadAllData()
+          }}
           setError={setError}
           setSuccessMessage={setSuccessMessage}
         />

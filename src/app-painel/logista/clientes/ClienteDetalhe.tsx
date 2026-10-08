@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import type { Dispatch, SetStateAction } from 'react'
-import { FiDollarSign, FiEdit, FiRefreshCw, FiShoppingCart, FiUser, FiXSquare } from 'react-icons/fi'
+import { FiDollarSign, FiEdit, FiEdit3, FiRefreshCw, FiShoppingCart, FiUser, FiXSquare } from 'react-icons/fi'
 import { logistaInputStyle, logistaTheme } from '../logistaTheme'
 import { cardStyle, formatCurrency, formatDateTime } from '../vendas/helpers'
 import type { AmortizationRecord, CustomerRecord, SaleRecord } from '../vendas/types'
 import ClienteReabrirCompra from './ClienteReabrirCompra'
+import ClienteEditarPagamento from './ClienteEditarPagamento'
 
 type CustomerView = CustomerRecord & {
   computedDebt: number
@@ -31,6 +32,7 @@ type ClienteDetalheProps = {
   getSaleRemainingDebt: (sale: SaleRecord) => number
   user: { uid: string; phoneNumber: string | null } | null
   onReabrirSaved: () => Promise<void>
+  onPagamentoSaved: () => Promise<void>
   setError: (message: string | null) => void
   setSuccessMessage: (message: string | null) => void
 }
@@ -47,10 +49,12 @@ export default function ClienteDetalhe({
   getSaleRemainingDebt,
   user,
   onReabrirSaved,
+  onPagamentoSaved,
   setError,
   setSuccessMessage,
 }: ClienteDetalheProps) {
   const [reabrirSale, setReabrirSale] = useState<SaleRecord | null>(null)
+  const [editarPagamento, setEditarPagamento] = useState<AmortizationRecord | null>(null)
   if (!detailCustomer) return null
 
   return (
@@ -461,7 +465,7 @@ export default function ClienteDetalhe({
             <div
               style={{
                 display: 'grid',
-                gridTemplateColumns: isMobile ? '1fr 1fr' : '1.2fr 1fr 1fr 1fr',
+                gridTemplateColumns: isMobile ? '1fr 1fr auto' : '1.2fr 1fr 1fr 1fr auto',
                 gap: 10,
                 fontSize: 12,
                 color: logistaTheme.colors.textMuted,
@@ -473,13 +477,14 @@ export default function ClienteDetalhe({
               <span>Venda</span>
               <span style={{ textAlign: isMobile ? 'right' : 'center' }}>Forma</span>
               <span style={{ textAlign: 'right' }}>Valor</span>
+              <span style={{ textAlign: 'center' }}>Ação</span>
             </div>
             {customerAmortizations.map((a) => (
               <div
                 key={a.amortizationId}
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: isMobile ? '1fr 1fr' : '1.2fr 1fr 1fr 1fr',
+                  gridTemplateColumns: isMobile ? '1fr 1fr auto' : '1.2fr 1fr 1fr 1fr auto',
                   gap: 10,
                   padding: 12,
                   borderRadius: 10,
@@ -497,16 +502,74 @@ export default function ClienteDetalhe({
                 <div style={{ textAlign: 'right', fontWeight: 800, color: logistaTheme.colors.successText }}>
                   + {formatCurrency(Number(a.amount || 0))}
                 </div>
+                <div style={{ display: 'flex', justifyContent: 'center' }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setError(null)
+                      setSuccessMessage(null)
+                      setEditarPagamento(a)
+                    }}
+                    title="Editar pagamento"
+                    style={{
+                      padding: '6px 10px',
+                      borderRadius: 10,
+                      border: `1px solid ${logistaTheme.colors.borderStrong}`,
+                      background: logistaTheme.colors.surfaceAlt,
+                      color: logistaTheme.colors.text,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      fontSize: 12,
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <FiEdit3 size={12} />
+                    Editar
+                  </button>
+                </div>
                 {a.notes ? (
                   <div style={{ gridColumn: '1 / -1', fontSize: 12, color: logistaTheme.colors.textMuted }}>
-                    📝 {a.notes}
-                  </div>
+                  📝 {a.notes}
+                </div>
+                ) : null}
+                {(a as AmortizationRecord & { lastEditedBy?: unknown }).lastEditedBy ? (
+                  <span
+                    style={{
+                      gridColumn: '1 / -1',
+                      justifySelf: 'start',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      fontSize: 11,
+                      color: logistaTheme.colors.textMuted,
+                    }}
+                  >
+                    <FiEdit size={11} />
+                    Editado anteriormente
+                  </span>
                 ) : null}
               </div>
             ))}
           </div>
         )}
       </section>
+
+      <ClienteEditarPagamento
+        open={!!editarPagamento}
+        amortization={editarPagamento}
+        sale={editarPagamento ? customerSales.find((s) => s.saleId === editarPagamento.saleId) || null : null}
+        user={user}
+        isMobile={isMobile}
+        onClose={() => setEditarPagamento(null)}
+        onSaved={async () => {
+          setEditarPagamento(null)
+          await onPagamentoSaved()
+        }}
+        onError={(msg) => setError(msg)}
+        onSuccess={(msg) => setSuccessMessage(msg)}
+      />
     </div>
   )
 }

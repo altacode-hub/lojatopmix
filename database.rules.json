@@ -318,6 +318,37 @@
         }
       }
     },
+    "amortizationEditLogs": {
+      ".read": "auth != null && root.child('loja/arealogista/' + auth.uid).val() === true",
+      ".write": "auth != null && root.child('loja/arealogista/' + auth.uid).val() === true",
+      "$amortizationId": {
+        "$logId": {
+          ".write": "!data.exists()",
+          ".validate": "newData.hasChildren(['logId', 'amortizationId', 'editedBy', 'editedAt', 'before', 'after']) && newData.child('amortizationId').val() === $amortizationId && newData.child('logId').val() === $logId && newData.child('editedBy').val() === auth.uid",
+          "logId": {
+            ".validate": "newData.isString() && newData.val().length > 0"
+          },
+          "amortizationId": {
+            ".validate": "newData.isString() && newData.val().length > 0 && root.child('amortizations/' + newData.val()).exists()"
+          },
+          "editedBy": {
+            ".validate": "newData.isString() && newData.val() === auth.uid"
+          },
+          "editedByName": {
+            ".validate": "newData.val() === null || newData.isString()"
+          },
+          "editedAt": {
+            ".validate": "newData.isNumber() && newData.val() > 0"
+          },
+          "before": {
+            ".validate": "newData.hasChildren() || newData.val() === null"
+          },
+          "after": {
+            ".validate": "newData.hasChildren() || newData.val() === null"
+          }
+        }
+      }
+    },
     "amortizations": {
       ".read": "auth != null && root.child('loja/arealogista/' + auth.uid).val() === true",
       ".write": "auth != null && root.child('loja/arealogista/' + auth.uid).val() === true",
@@ -337,16 +368,16 @@
           ".write": "!data.exists()"
         },
         "amount": {
-          ".validate": "newData.isNumber() && newData.val() > 0",
-          ".write": "!data.exists()"
+          ".validate": "newData.isNumber() && newData.val() > 0"
         },
         "paymentMethod": {
-          ".validate": "newData.isString() && (newData.val() === 'pix' || newData.val() === 'dinheiro' || newData.val() === 'cartao_credito' || newData.val() === 'cartao_debito' || newData.val() === 'boleto' || newData.val() === 'transferencia' || newData.val() === 'outro')",
-          ".write": "!data.exists()"
+          ".validate": "newData.isString() && (newData.val() === 'pix' || newData.val() === 'dinheiro' || newData.val() === 'cartao_credito' || newData.val() === 'cartao_debito' || newData.val() === 'boleto' || newData.val() === 'transferencia' || newData.val() === 'outro')"
         },
         "notes": {
-          ".validate": "newData.val() === null || newData.isString()",
-          ".write": "!data.exists() || (data.exists() && newData.isString())"
+          ".validate": "newData.val() === null || newData.isString()"
+        },
+        "lastEditedBy": {
+          ".validate": "newData.val() === null || (newData.isString() && newData.val() === auth.uid)"
         },
         "createdAt": {
           ".validate": "newData.isNumber() && newData.val() > 0",
