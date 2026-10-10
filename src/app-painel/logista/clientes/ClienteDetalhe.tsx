@@ -182,7 +182,7 @@ export default function ClienteDetalhe({
               >
                 <option value="">Selecione a venda...</option>
                 {customerSales
-                  .filter((s) => getSaleRemainingDebt(s) > 0)
+                  .filter((s) => getSaleRemainingDebt(s) >= 0.001 )
                   .map((s) => (
                     <option key={s.saleId} value={s.saleId}>
                       {formatDateTime(s.createdAt)} • {formatCurrency(getSaleRemainingDebt(s))} em aberto • {s.totalItems || 0} itens
@@ -267,6 +267,7 @@ export default function ClienteDetalhe({
         ) : (
           <div style={{ display: 'grid', gap: 12 }}>
             {customerSales.map((s) => {
+              console.log(s)
               const remaining = getSaleRemainingDebt(s)
               const isAmort = s.paymentMethod === 'amortizacao'
               return (
@@ -310,12 +311,12 @@ export default function ClienteDetalhe({
                               padding: '2px 8px',
                               borderRadius: 999,
                               fontSize: 12,
-                              background: remaining > 0 ? logistaTheme.colors.warningBackground : logistaTheme.colors.successBackground,
-                              color: remaining > 0 ? logistaTheme.colors.warningText : logistaTheme.colors.successText,
-                              border: `1px solid ${remaining > 0 ? logistaTheme.colors.warningBorder : logistaTheme.colors.successBorder}`,
+                              background: remaining >= 0.001 ? logistaTheme.colors.warningBackground : logistaTheme.colors.successBackground,
+                              color: remaining >= 0.001  ? logistaTheme.colors.warningText : logistaTheme.colors.successText,
+                              border: `1px solid ${remaining >= 0.001  ? logistaTheme.colors.warningBorder : logistaTheme.colors.successBorder}`,
                             }}
                           >
-                            {remaining > 0 ? `Em aberto: ${formatCurrency(remaining)}` : 'Quitada'}
+                            {remaining >= 0.001 ? `Em aberto: ${formatCurrency(remaining)}` : 'Quitada'}
                           </span>
                         </div>
                       ) : (
@@ -494,7 +495,7 @@ export default function ClienteDetalhe({
               >
                 <div style={{ fontSize: 13 }}>{formatDateTime(a.createdAt)}</div>
                 <div style={{ fontSize: 12, color: logistaTheme.colors.textMuted }}>
-                  #{a.saleId?.slice(-6) || '-'}
+                  ...{a.saleId?.slice(-6) || '-'}
                 </div>
                 <div style={{ textAlign: isMobile ? 'right' : 'center', fontSize: 13, textTransform: 'capitalize' }}>
                   {a.paymentMethod?.replace('_', ' ') || 'dinheiro'}

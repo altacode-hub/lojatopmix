@@ -86,15 +86,39 @@ export default function ClienteEditarPagamento({
     })()
   }, [open, user])
 
+  const currentAmount = useMemo(() => parseCurrencyCents(amountText), [amountText])
+
+  const summary = useMemo(() => {
+    if (!sale || !amortization) {
+      return {
+        otherPaid: 0,
+        totalDebt: 0,
+        nextPaid: 0,
+        nextRemaining: 0,
+        willBePaid: false,
+        delta: 0,
+      }
+    }
+    const otherPaid = Math.max(0, Number(sale.paidAmount || 0) - Number(amortization.amount || 0))
+    const totalDebt = Number(sale.debtAmount || sale.totalAmount || 0)
+    const delta = currentAmount - Number(amortization.amount || 0)
+    const nextPaid = Math.max(0, otherPaid + currentAmount)
+    const nextRemaining = Math.max(0, totalDebt - nextPaid)
+    return {
+      otherPaid,
+      totalDebt,
+      nextPaid,
+      nextRemaining,
+      willBePaid: nextRemaining <= 0.001,
+      delta,
+    }
+  }, [sale, amortization, currentAmount])
+
   const maxAllowedAmount = useMemo(() => {
     if (!sale || !amortization) return 0
-    const otherPaid = Math.max(
-      0,
-      Number(sale.paidAmount || 0) - Number(amortization.amount || 0),
-    )
     const totalDebt = Number(sale.debtAmount || sale.totalAmount || 0)
-    return Math.max(Number(amortization.amount || 0), totalDebt - otherPaid)
-  }, [sale, amortization])
+    return Math.max(Number(amortization.amount || 0), totalDebt - summary.otherPaid)
+  }, [sale, amortization, summary.otherPaid])
 
   if (!open || !amortization) return null
 
@@ -203,11 +227,13 @@ export default function ClienteEditarPagamento({
           background: logistaTheme.colors.surface,
           borderRadius: 20,
           width: '100%',
+          height: 'stretch',
           maxWidth: 720,
           padding: isMobile ? 16 : 28,
           display: 'grid',
           gap: 20,
           boxShadow: '0 24px 60px rgba(0,0,0,0.3)',
+          overflowY: 'scroll'
         }}
       >
         <header
@@ -323,6 +349,90 @@ export default function ClienteEditarPagamento({
               style={{ ...logistaInputStyle, width: '100%', boxSizing: 'border-box', resize: 'vertical' }}
             />
           </label>
+
+          <div
+            style={{
+              display: 'grid',
+              gap: 10,
+              padding: 14,
+              borderRadius: 12,
+              border: `1px solid ${logistaTheme.colors.border}`,
+              background: logistaTheme.colors.surfaceAlt,
+            }}
+          >
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: isMobile ? '1fr 1fr' : '1fr 1fr 1fr 1fr',
+                gap: 10,
+                fontSize: 13,
+              }}
+            >
+              <div>
+                <div style={{ color: logistaTheme.colors.textMuted, fontSize: 12 }}>Total da venda</div>
+                <strong style={{ color: logistaTheme.colors.text }}>{formatCurrency(summary.totalDebt)}</strong>
+              </div>
+              <div>
+                <div style={{ color: logistaTheme.colors.textMuted, fontSize: 12 }}>Outros pagamentos</div>
+                <strong style={{ color: logistaTheme.colors.successText }}>+ {formatCurrency(summary.otherPaid)}</strong>
+              </div>
+              <div>
+                <div style={{ color: logistaTheme.colors.textMuted, fontSize: 12 }}>Este pagamento (editado)</div>
+                <strong style={{ color: logistaTheme.colors.accentDark }}>+ {formatCurrency(currentAmount)}</strong>
+                {summary.delta !== 0 ? (
+                  <div style={{ fontSize: 11, color: summary.delta > 0 ? logistaTheme.colors.successText : logistaTheme.colors.warningText }}>
+                    {summary.delta > 0 ? '↑' : '↓'} {formatCurrency(Math.abs(summary.delta))}
+                  </div>
+                ) : null}
+              </div>
+              <div>
+                <div style={{ color: logistaTheme.colors.textMuted, fontSize: 12 }}>Restante após salvar</div>
+                <strong style={{ color: summary.nextRemaining <= 0.001 ? logistaTheme.colors.successText : logistaTheme.colors.warningText }}>
+                  {formatCurrency(summary.nextRemaining)}
+                </strong>
+              </div>
+            </div>
+
+            {summary.willBePaid ? (
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                  padding: '10px 14px',
+                  borderRadius: 12,
+                  border: `1px solid ${logistaTheme.colors.successBorder}`,
+                  background: logistaTheme.colors.successBackground,
+                  color: logistaTheme.colors.successText,
+                  fontWeight: 800,
+                  fontSize: 14,
+                  textAlign: 'center',
+                }}
+              >
+                ✅ Com este valor, a compra será QUITADA — o cliente não terá mais saldo devedor nesta venda.
+              </span>
+            ) : (
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                  padding: '10px 14px',
+                  borderRadius: 12,
+                  border: `1px solid ${logistaTheme.colors.warningBorder}`,
+                  background: logistaTheme.colors.warningBackground,
+                  color: logistaTheme.colors.warningText,
+                  fontWeight: 700,
+                  fontSize: 13,
+                  textAlign: 'center',
+                }}
+              >
+                ⚠️ Ainda restarão {formatCurrency(summary.nextRemaining)} em aberto nesta compra após salvar.
+              </span>
+            )}
+          </div>
         </section>
 
         <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
